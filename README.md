@@ -1,8 +1,8 @@
-# 🔪 kniferpy
+# 🔪 knifer-py
 
 A Python utility toolkit with focused `v*` domain facades.
 
-`kniferpy` follows the same maintenance model as `knifer-go`: public domain
+`knifer-py` follows the same maintenance model as `knifer-go`: public domain
 facades stay small and stable, while implementation details live under
 `kniferpy.internal`.
 
