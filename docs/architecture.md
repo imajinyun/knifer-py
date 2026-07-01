@@ -19,6 +19,10 @@ standard library can provide stable behavior:
 - 🔢 `vnum` aligns with `knifer-go/vnum` (validation, parsing, aggregation, rounding, ranges, factorial).
 - 🔁 `vconv` aligns with `knifer-go/vconv` scalar coercion with default and error variants.
 - ☑️ `vbool` aligns with `knifer-go/vbool` logical helpers.
+- 🧪 `vregex` aligns with `knifer-go/vregex` (match/find/replace/delete/groups, safe on invalid patterns).
+- 🆔 `vid` aligns with `knifer-go/vid` (UUID, NanoID, ObjectId, Snowflake with matching bit layout).
 - 🕵️ `vmask` aligns with `knifer-go/vmask` field masking strategies.
+- 🌐 `vnet` aligns with `knifer-go/vnet` IP/CIDR/port helpers via Python `ipaddress`.
+- 🔐 `vpass` aligns with `knifer-go/vpass` deterministic password strength scoring.
 - 🧺 `vseq`, `vdict`, and `vset` align with `vslice`, `vmap`, and `vset`.
 - 🧬 `vcodec` aligns with common `vcodec` Base64, Hex, and ROT helpers.

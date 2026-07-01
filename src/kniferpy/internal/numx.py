@@ -171,9 +171,7 @@ def max_value(values: Sequence[float]) -> float:
 
 def ceil_div(a: int, b: int) -> int:
     if b == 0:
-        raise ValidationError(
-            message="division by zero", code="knifer.num.div_zero"
-        )
+        raise ValidationError(message="division by zero", code="knifer.num.div_zero")
     return -(-a // b)
 
 

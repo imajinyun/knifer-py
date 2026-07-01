@@ -1,0 +1,151 @@
+from __future__ import annotations
+
+import os
+import secrets
+import threading
+import time
+import uuid
+
+from kniferpy.verr import ValidationError
+
+# Matches knifer-go internal/id nanoIDAlphabet (URL-safe, 64 characters).
+NANO_ID_ALPHABET = "_-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+DEFAULT_NANO_ID_LENGTH = 21
+
+# Snowflake bit layout aligned with knifer-go internal/id.
+_WORKER_ID_BITS = 5
+_DATACENTER_ID_BITS = 5
+_SEQUENCE_BITS = 12
+_MAX_WORKER_ID = -1 ^ (-1 << _WORKER_ID_BITS)
+_MAX_DATACENTER_ID = -1 ^ (-1 << _DATACENTER_ID_BITS)
+_SEQUENCE_MASK = -1 ^ (-1 << _SEQUENCE_BITS)
+_WORKER_ID_SHIFT = _SEQUENCE_BITS
+_DATACENTER_SHIFT = _SEQUENCE_BITS + _WORKER_ID_BITS
+_TIMESTAMP_SHIFT = _SEQUENCE_BITS + _WORKER_ID_BITS + _DATACENTER_ID_BITS
+_EPOCH = 1288834974657
+
+_object_id_counter = secrets.randbelow(0xFFFFFF)
+_object_id_lock = threading.Lock()
+
+
+def random_uuid() -> str:
+    return str(uuid.uuid4())
+
+
+def simple_uuid() -> str:
+    return uuid.uuid4().hex
+
+
+def nano_id(length: int = DEFAULT_NANO_ID_LENGTH, alphabet: str = NANO_ID_ALPHABET) -> str:
+    if length <= 0:
+        raise ValidationError(message="nano_id length must be positive", code="knifer.id.length")
+    if not alphabet:
+        raise ValidationError(
+            message="nano_id alphabet must not be empty", code="knifer.id.alphabet"
+        )
+    return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def _next_object_id_counter() -> int:
+    global _object_id_counter
+    with _object_id_lock:
+        _object_id_counter = (_object_id_counter + 1) & 0xFFFFFF
+        return _object_id_counter
+
+
+def object_id() -> str:
+    timestamp = int(time.time()) & 0xFFFFFFFF
+    random_part = secrets.token_bytes(5)
+    counter = _next_object_id_counter()
+    raw = (
+        timestamp.to_bytes(4, "big")
+        + random_part
+        + counter.to_bytes(3, "big")
+    )
+    return raw.hex()
+
+
+class Snowflake:
+    """A Twitter-style Snowflake generator matching the knifer-go bit layout."""
+
+    def __init__(self, worker_id: int = 0, datacenter_id: int = 0) -> None:
+        if not 0 <= worker_id <= _MAX_WORKER_ID:
+            raise ValidationError(
+                message=f"worker_id must be in [0, {_MAX_WORKER_ID}]",
+                code="knifer.id.worker",
+                context={"worker_id": worker_id},
+            )
+        if not 0 <= datacenter_id <= _MAX_DATACENTER_ID:
+            raise ValidationError(
+                message=f"datacenter_id must be in [0, {_MAX_DATACENTER_ID}]",
+                code="knifer.id.datacenter",
+                context={"datacenter_id": datacenter_id},
+            )
+        self._worker_id = worker_id
+        self._datacenter_id = datacenter_id
+        self._sequence = 0
+        self._last_timestamp = -1
+        self._lock = threading.Lock()
+
+    @staticmethod
+    def _now_ms() -> int:
+        return int(time.time() * 1000)
+
+    def _wait_next_millis(self, last: int) -> int:
+        now = self._now_ms()
+        while now <= last:
+            now = self._now_ms()
+        return now
+
+    def next_id(self) -> int:
+        with self._lock:
+            now = self._now_ms()
+            if now < self._last_timestamp:
+                raise ValidationError(
+                    message="clock moved backwards; refusing to generate id",
+                    code="knifer.id.clock",
+                    context={"now": now, "last": self._last_timestamp},
+                )
+            if now == self._last_timestamp:
+                self._sequence = (self._sequence + 1) & _SEQUENCE_MASK
+                if self._sequence == 0:
+                    now = self._wait_next_millis(self._last_timestamp)
+            else:
+                self._sequence = 0
+            self._last_timestamp = now
+            return (
+                ((now - _EPOCH) << _TIMESTAMP_SHIFT)
+                | (self._datacenter_id << _DATACENTER_SHIFT)
+                | (self._worker_id << _WORKER_ID_SHIFT)
+                | self._sequence
+            )
+
+    def next_id_str(self) -> str:
+        return str(self.next_id())
+
+
+_default_snowflake_lock = threading.Lock()
+_default_snowflake: Snowflake | None = None
+
+
+def _default_ids() -> tuple[int, int]:
+    worker = os.getpid() & _MAX_WORKER_ID
+    datacenter = (os.getpid() >> 8) & _MAX_DATACENTER_ID
+    return worker, datacenter
+
+
+def get_snowflake() -> Snowflake:
+    global _default_snowflake
+    with _default_snowflake_lock:
+        if _default_snowflake is None:
+            worker, datacenter = _default_ids()
+            _default_snowflake = Snowflake(worker, datacenter)
+        return _default_snowflake
+
+
+def snowflake_next_id() -> int:
+    return get_snowflake().next_id()
+
+
+def snowflake_next_id_str() -> str:
+    return get_snowflake().next_id_str()

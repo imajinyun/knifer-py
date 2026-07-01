@@ -51,6 +51,8 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 📄 Daily JSON and file workflows | `kniferpy.vjson`, `kniferpy.vfile` |
 | 🔤 String helpers | `kniferpy.vstr` |
 | 🔢 Number and conversion helpers | `kniferpy.vnum`, `kniferpy.vconv`, `kniferpy.vbool` |
+| 🧪 Regex helpers | `kniferpy.vregex` |
+| 🆔 ID generation | `kniferpy.vid` |
 | 🕵️ Data masking helpers | `kniferpy.vmask` |
 | 🧺 Sequence, dict, and set helpers | `kniferpy.vseq`, `kniferpy.vdict`, `kniferpy.vset` |
 | 🧬 Encoding helpers | `kniferpy.vcodec` |
@@ -83,6 +85,10 @@ Common safe defaults are visible at the call site:
 - 🪪 `vurl.redact_userinfo(...)` for log-safe URL rendering.
 - 🔤 `vstr.to_snake_case(...)`, `vstr.split_trim(...)`, and `vstr.default_if_blank(...)` for text cleanup.
 - 🔢 `vnum.round_half_up(...)`, `vconv.to_int(..., default=...)`, and `vbool.to_int(...)` for numeric coercion.
+- 🧪 `vregex.find_all(...)`, `vregex.replace(...)`, and `vregex.get_first_number(...)` with invalid patterns failing safe.
+- 🆔 `vid.random_uuid(...)`, `vid.nano_id(...)`, and `vid.object_id(...)` for identifiers backed by `secrets`.
 - 🕵️ `vmask.mobile_phone(...)`, `vmask.email(...)`, and `vmask.bank_card(...)` for log-safe redaction.
+- 🌐 `vnet.is_inner_ip(...)`, `vnet.is_in_range(...)`, and `vnet.hide_ip_part(...)` for IP checks and redaction.
+- 🔐 `vpass.analyze(...)`, `vpass.is_strong(...)`, and `vpass.is_weak(...)` for password strength gating.
 - 🧺 `vseq.group_by(...)`, `vdict.pick(...)`, and `vset.union(...)` for collection workflows.
 - 🧬 `vcodec.base64_encode_str(...)`, `vcodec.hex_decode_str(...)`, and `vcodec.rot13(...)` for encoding workflows.
