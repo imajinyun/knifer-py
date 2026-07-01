@@ -95,9 +95,7 @@ def _is_common_weak(password: str) -> bool:
     return password.strip().lower() in _COMMON_WEAK_PASSWORDS
 
 
-def _category_count(
-    has_lower: bool, has_upper: bool, has_digit: bool, has_symbol: bool
-) -> int:
+def _category_count(has_lower: bool, has_upper: bool, has_digit: bool, has_symbol: bool) -> int:
     return sum((has_lower, has_upper, has_digit, has_symbol))
 
 
@@ -128,9 +126,7 @@ def analyze(password: str) -> Analysis:
     has_lower = any(ch.islower() for ch in password)
     has_upper = any(ch.isupper() for ch in password)
     has_digit = any(ch.isdigit() for ch in password)
-    has_symbol = any(
-        not (ch.islower() or ch.isupper() or ch.isdigit()) for ch in password
-    )
+    has_symbol = any(not (ch.islower() or ch.isupper() or ch.isdigit()) for ch in password)
     repeated = _has_repeated(password)
     sequential = _has_sequential(password)
     common_weak = _is_common_weak(password)

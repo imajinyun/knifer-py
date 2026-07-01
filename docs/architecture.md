@@ -24,5 +24,6 @@ standard library can provide stable behavior:
 - 🕵️ `vmask` aligns with `knifer-go/vmask` field masking strategies.
 - 🌐 `vnet` aligns with `knifer-go/vnet` IP/CIDR/port helpers via Python `ipaddress`.
 - 🔐 `vpass` aligns with `knifer-go/vpass` deterministic password strength scoring.
+- 📅 `vdate` aligns with `knifer-go/vdate` Gregorian helpers (format, parse, begin/end, offset, between) via `datetime`; lunar/GanZhi/solar-term APIs are intentionally omitted.
 - 🧺 `vseq`, `vdict`, and `vset` align with `vslice`, `vmap`, and `vset`.
 - 🧬 `vcodec` aligns with common `vcodec` Base64, Hex, and ROT helpers.

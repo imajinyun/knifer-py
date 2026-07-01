@@ -54,6 +54,9 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 🧪 Regex helpers | `kniferpy.vregex` |
 | 🆔 ID generation | `kniferpy.vid` |
 | 🕵️ Data masking helpers | `kniferpy.vmask` |
+| 🌐 IP, CIDR, and port helpers | `kniferpy.vnet` |
+| 🔐 Password strength scoring | `kniferpy.vpass` |
+| 📅 Date and time helpers | `kniferpy.vdate` |
 | 🧺 Sequence, dict, and set helpers | `kniferpy.vseq`, `kniferpy.vdict`, `kniferpy.vset` |
 | 🧬 Encoding helpers | `kniferpy.vcodec` |
 
@@ -90,5 +93,6 @@ Common safe defaults are visible at the call site:
 - 🕵️ `vmask.mobile_phone(...)`, `vmask.email(...)`, and `vmask.bank_card(...)` for log-safe redaction.
 - 🌐 `vnet.is_inner_ip(...)`, `vnet.is_in_range(...)`, and `vnet.hide_ip_part(...)` for IP checks and redaction.
 - 🔐 `vpass.analyze(...)`, `vpass.is_strong(...)`, and `vpass.is_weak(...)` for password strength gating.
+- 📅 `vdate.parse(...)`, `vdate.end_of_month(...)`, and `vdate.between_days(...)` for date-only workflows.
 - 🧺 `vseq.group_by(...)`, `vdict.pick(...)`, and `vset.union(...)` for collection workflows.
 - 🧬 `vcodec.base64_encode_str(...)`, `vcodec.hex_decode_str(...)`, and `vcodec.rot13(...)` for encoding workflows.

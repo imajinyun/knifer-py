@@ -57,11 +57,7 @@ def object_id() -> str:
     timestamp = int(time.time()) & 0xFFFFFFFF
     random_part = secrets.token_bytes(5)
     counter = _next_object_id_counter()
-    raw = (
-        timestamp.to_bytes(4, "big")
-        + random_part
-        + counter.to_bytes(3, "big")
-    )
+    raw = timestamp.to_bytes(4, "big") + random_part + counter.to_bytes(3, "big")
     return raw.hex()
 
 
