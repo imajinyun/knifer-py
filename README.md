@@ -1,8 +1,8 @@
-# 🔪 knifer-py
+# 🔪 kniferpy
 
 A Python utility toolkit with focused `v*` domain facades.
 
-`knifer-py` follows the same maintenance model as `knifer-go`: public domain
+`kniferpy` follows the same maintenance model as `knifer-go`: public domain
 facades stay small and stable, while implementation details live under
 `kniferpy.internal`.
 
@@ -49,6 +49,11 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 🌐 Safe HTTP and URL handling | `kniferpy.vhttp`, `kniferpy.vurl` |
 | 🔐 Safe crypto and random tokens | `kniferpy.vcrypto`, `kniferpy.vrand`, `kniferpy.vjwt` |
 | 📄 Daily JSON and file workflows | `kniferpy.vjson`, `kniferpy.vfile` |
+| 🔤 String helpers | `kniferpy.vstr` |
+| 🔢 Number and conversion helpers | `kniferpy.vnum`, `kniferpy.vconv`, `kniferpy.vbool` |
+| 🕵️ Data masking helpers | `kniferpy.vmask` |
+| 🧺 Sequence, dict, and set helpers | `kniferpy.vseq`, `kniferpy.vdict`, `kniferpy.vset` |
+| 🧬 Encoding helpers | `kniferpy.vcodec` |
 
 ## 🧩 Examples
 
@@ -76,3 +81,8 @@ Common safe defaults are visible at the call site:
 - 🔑 `vcrypto.pbkdf2_sha256_hex(..., iterations=...)` for password-derived keys.
 - 🧾 `vcrypto.file_sha256_hex(...)` and `vcrypto.verify_file_sha256_hex(...)` for file checksums.
 - 🪪 `vurl.redact_userinfo(...)` for log-safe URL rendering.
+- 🔤 `vstr.to_snake_case(...)`, `vstr.split_trim(...)`, and `vstr.default_if_blank(...)` for text cleanup.
+- 🔢 `vnum.round_half_up(...)`, `vconv.to_int(..., default=...)`, and `vbool.to_int(...)` for numeric coercion.
+- 🕵️ `vmask.mobile_phone(...)`, `vmask.email(...)`, and `vmask.bank_card(...)` for log-safe redaction.
+- 🧺 `vseq.group_by(...)`, `vdict.pick(...)`, and `vset.union(...)` for collection workflows.
+- 🧬 `vcodec.base64_encode_str(...)`, `vcodec.hex_decode_str(...)`, and `vcodec.rot13(...)` for encoding workflows.

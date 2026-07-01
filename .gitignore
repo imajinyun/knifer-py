@@ -75,7 +75,7 @@ ENV/
 .ipynb_checkpoints/
 
 # Documentation builds
-docs/*
+docs/_build/
 site/
 
 # IDE / editor
