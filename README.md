@@ -94,5 +94,6 @@ Common safe defaults are visible at the call site:
 - 🌐 `vnet.is_inner_ip(...)`, `vnet.is_in_range(...)`, and `vnet.hide_ip_part(...)` for IP checks and redaction.
 - 🔐 `vpass.analyze(...)`, `vpass.is_strong(...)`, and `vpass.is_weak(...)` for password strength gating.
 - 📅 `vdate.parse(...)`, `vdate.end_of_month(...)`, and `vdate.between_days(...)` for date-only workflows.
+- 🧾 `vcsv.read_string_maps(...)`, `vcsv.write_string_maps(...)`, and `vcsv.records_to_maps(...)` for tabular data.
 - 🧺 `vseq.group_by(...)`, `vdict.pick(...)`, and `vset.union(...)` for collection workflows.
 - 🧬 `vcodec.base64_encode_str(...)`, `vcodec.hex_decode_str(...)`, and `vcodec.rot13(...)` for encoding workflows.

@@ -90,9 +90,7 @@ def begin_of_day(value: datetime) -> datetime:
 
 
 def end_of_day(value: datetime) -> datetime:
-    return value.replace(
-        hour=23, minute=59, second=59, microsecond=_END_OF_DAY_MICROSECOND
-    )
+    return value.replace(hour=23, minute=59, second=59, microsecond=_END_OF_DAY_MICROSECOND)
 
 
 def begin_of_month(value: datetime) -> datetime:
