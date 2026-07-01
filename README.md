@@ -22,6 +22,26 @@ python3 -m venv .venv
 make check
 ```
 
+## 🧰 Development
+
+```bash
+make install
+make format
+make check
+```
+
+CI runs `ruff`, `mypy`, and `pytest` on Python 3.11, 3.12, and 3.13.
+
+## 🚢 Release
+
+```bash
+make check
+make build
+```
+
+Tagged releases such as `v0.1.0` run the release workflow and publish through
+PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
+
 ## ⭐ Start With These Modules
 
 | Need | Module |
