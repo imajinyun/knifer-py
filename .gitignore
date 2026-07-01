@@ -78,6 +78,9 @@ ENV/
 docs/_build/
 site/
 
+# Project documentation (kept local; only code and README.md are committed)
+docs/
+
 # IDE / editor
 .idea/
 .vscode/
