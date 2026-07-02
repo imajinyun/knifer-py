@@ -27,6 +27,7 @@ __all__ = [
     "vrand",
     "vregex",
     "vseq",
+    "vsem",
     "vset",
     "vstr",
     "vurl",

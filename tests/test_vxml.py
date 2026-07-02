@@ -5,7 +5,7 @@ from kniferpy.verr import DecodeError
 
 
 def test_escape_unescape_roundtrip() -> None:
-    raw = "<tag attr=\"v\">a & b ' c</tag>"
+    raw = '<tag attr="v">a & b \' c</tag>'
     escaped = vxml.escape(raw)
     assert "&lt;" in escaped
     assert "&amp;" in escaped
@@ -79,11 +79,7 @@ def test_to_map_invalid_raises_decode_error() -> None:
 
 
 def test_doctype_is_rejected() -> None:
-    payload = (
-        '<?xml version="1.0"?>'
-        '<!DOCTYPE foo [<!ENTITY xxe "boom">]>'
-        "<root>&xxe;</root>"
-    )
+    payload = '<?xml version="1.0"?>' '<!DOCTYPE foo [<!ENTITY xxe "boom">]>' "<root>&xxe;</root>"
     assert vxml.is_valid(payload) is False
     with pytest.raises(DecodeError):
         vxml.to_map(payload)

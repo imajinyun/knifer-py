@@ -162,9 +162,7 @@ class BitSetBloomFilter:
         if c <= 0:
             raise ValidationError("vblf: parameter c must be positive", code="blf.invalid_capacity")
         if n <= 0:
-            raise ValidationError(
-                "vblf: parameter n must be positive", code="blf.invalid_expected"
-            )
+            raise ValidationError("vblf: parameter n must be positive", code="blf.invalid_expected")
         if k < 1 or k > 8:
             raise ValidationError(
                 "vblf: hash function number must be between 1 and 8",
