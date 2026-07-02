@@ -57,6 +57,8 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 🌐 IP, CIDR, and port helpers | `kniferpy.vnet` |
 | 🔐 Password strength scoring | `kniferpy.vpass` |
 | 📅 Date and time helpers | `kniferpy.vdate` |
+| 🧾 CSV read/write helpers | `kniferpy.vcsv` |
+| 🏷️ Version comparison helpers | `kniferpy.vver` |
 | 🧺 Sequence, dict, and set helpers | `kniferpy.vseq`, `kniferpy.vdict`, `kniferpy.vset` |
 | 🧬 Encoding helpers | `kniferpy.vcodec` |
 
@@ -95,5 +97,6 @@ Common safe defaults are visible at the call site:
 - 🔐 `vpass.analyze(...)`, `vpass.is_strong(...)`, and `vpass.is_weak(...)` for password strength gating.
 - 📅 `vdate.parse(...)`, `vdate.end_of_month(...)`, and `vdate.between_days(...)` for date-only workflows.
 - 🧾 `vcsv.read_string_maps(...)`, `vcsv.write_string_maps(...)`, and `vcsv.records_to_maps(...)` for tabular data.
+- 🏷️ `vver.compare_version(...)`, `vver.is_greater_than(...)`, and `vver.match_el(...)` for version gating.
 - 🧺 `vseq.group_by(...)`, `vdict.pick(...)`, and `vset.union(...)` for collection workflows.
 - 🧬 `vcodec.base64_encode_str(...)`, `vcodec.hex_decode_str(...)`, and `vcodec.rot13(...)` for encoding workflows.

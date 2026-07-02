@@ -24,4 +24,5 @@ __all__ = [
     "vset",
     "vstr",
     "vurl",
+    "vver",
 ]
