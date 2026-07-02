@@ -94,11 +94,7 @@ def parse_version(v: str) -> ParsedVersion:
         return parsed
     while i < n:
         c = v[i]
-        i = (
-            _take_number(v, i, parsed.pre)
-            if _is_digit(c)
-            else _take_string(v, i, parsed.pre)
-        )
+        i = _take_number(v, i, parsed.pre) if _is_digit(c) else _take_string(v, i, parsed.pre)
         if i >= n:
             break
         c = v[i]
@@ -112,11 +108,7 @@ def parse_version(v: str) -> ParsedVersion:
         return parsed
     while i < n:
         c = v[i]
-        i = (
-            _take_number(v, i, parsed.build)
-            if _is_digit(c)
-            else _take_string(v, i, parsed.build)
-        )
+        i = _take_number(v, i, parsed.build) if _is_digit(c) else _take_string(v, i, parsed.build)
         if i >= n:
             break
         c = v[i]
@@ -189,11 +181,7 @@ def _compare_op_prefix(s: str) -> str:
 
 
 def _valid_delimiter(delimiter: str) -> bool:
-    return not (
-        delimiter.strip() == ""
-        or delimiter == "-"
-        or _compare_op_prefix(delimiter) != ""
-    )
+    return not (delimiter.strip() == "" or delimiter == "-" or _compare_op_prefix(delimiter) != "")
 
 
 def _split_expression(expr: str, delimiter: str) -> list[str]:
@@ -235,9 +223,7 @@ def _match_one(current: str, expression: str) -> bool:
     return current == expression
 
 
-def match_el_with_delimiter(
-    current_version: str, version_el: str, delimiter: str
-) -> bool:
+def match_el_with_delimiter(current_version: str, version_el: str, delimiter: str) -> bool:
     if not _valid_delimiter(delimiter):
         return False
     if version_el.strip() == "":

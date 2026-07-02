@@ -51,7 +51,5 @@ def match_el(current_version: str, version_el: str) -> bool:
     return verx.match_el(current_version, version_el)
 
 
-def match_el_with_delimiter(
-    current_version: str, version_el: str, delimiter: str
-) -> bool:
+def match_el_with_delimiter(current_version: str, version_el: str, delimiter: str) -> bool:
     return verx.match_el_with_delimiter(current_version, version_el, delimiter)
