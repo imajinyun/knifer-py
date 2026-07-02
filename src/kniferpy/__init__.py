@@ -10,6 +10,7 @@ __all__ = [
     "vdate",
     "vdict",
     "vfile",
+    "vform",
     "vgeo",
     "vhttp",
     "vid",

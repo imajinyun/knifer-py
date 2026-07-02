@@ -54,6 +54,8 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 🧰 Object nil/empty and default helpers | `kniferpy.vobj` |
 | 🧪 Regex helpers | `kniferpy.vregex` |
 | 🆔 ID generation | `kniferpy.vid` |
+| 🪪 China ID card and credit code validation | `kniferpy.vident` |
+| 📝 Form field validators | `kniferpy.vform` |
 | 🕵️ Data masking helpers | `kniferpy.vmask` |
 | 🌐 IP, CIDR, and port helpers | `kniferpy.vnet` |
 | 🔐 Password strength scoring | `kniferpy.vpass` |
@@ -94,6 +96,7 @@ Common safe defaults are visible at the call site:
 - 🧪 `vregex.find_all(...)`, `vregex.replace(...)`, and `vregex.get_first_number(...)` with invalid patterns failing safe.
 - 🆔 `vid.random_uuid(...)`, `vid.nano_id(...)`, and `vid.object_id(...)` for identifiers backed by `secrets`.
 - 🪪 `vident.is_valid_id_card(...)`, `vident.parse_id_card(...)`, and `vident.is_valid_credit_code(...)` for China ID validation.
+- 📝 `vform.is_email(...)`, `vform.is_mobile(...)`, and `vform.is_url(...)` for form field validation.
 - 🕵️ `vmask.mobile_phone(...)`, `vmask.email(...)`, and `vmask.bank_card(...)` for log-safe redaction.
 - 🌐 `vnet.is_inner_ip(...)`, `vnet.is_in_range(...)`, and `vnet.hide_ip_part(...)` for IP checks and redaction.
 - 🔐 `vpass.analyze(...)`, `vpass.is_strong(...)`, and `vpass.is_weak(...)` for password strength gating.
