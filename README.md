@@ -68,6 +68,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 🌸 Bloom filter membership helpers | `kniferpy.vblf` |
 | 🚦 Weighted, fair counting semaphore | `kniferpy.vsem` |
 | 🗄️ In-memory FIFO/LRU/LFU caches | `kniferpy.vcache` |
+| 🚫 DFA sensitive-word matching and filtering | `kniferpy.vdfa` |
 
 ## 🧩 Examples
 
@@ -115,3 +116,4 @@ Common safe defaults are visible at the call site:
 - 🌸 `vblf.new_default_filter(...)`, `vblf.new_bit_set_bloom_filter(...)`, and `vblf.new_bitmap_bloom_filter(...)` for no-false-negative membership tests.
 - 🚦 `vsem.new(...)`, `Semaphore.guard(...)`, and `Semaphore.try_acquire(...)` for weighted, FIFO-fair concurrency limits.
 - 🗄️ `vcache.new_lru(...)`, `vcache.new_lfu(...)`, and `vcache.new_fifo(..., timeout=...)` for bounded in-memory caching with TTL and `get_or_load`.
+ for stop-char-tolerant sensitive-word matching and masking.

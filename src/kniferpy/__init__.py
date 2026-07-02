@@ -10,6 +10,7 @@ __all__ = [
     "vcrypto",
     "vcsv",
     "vdate",
+    "vdfa",
     "vdict",
     "vfile",
     "vform",
