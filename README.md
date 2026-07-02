@@ -106,3 +106,4 @@ Common safe defaults are visible at the call site:
 - 🗺️ `vgeo.wgs84_to_gcj02(...)`, `vgeo.convert(...)`, and `vgeo.distance(...)` for coordinate transforms.
 - 🧺 `vseq.group_by(...)`, `vdict.pick(...)`, and `vset.union(...)` for collection workflows.
 - 🧬 `vcodec.base64_encode_str(...)`, `vcodec.hex_decode_str(...)`, and `vcodec.rot13(...)` for encoding workflows.
+- #️⃣ `vhash.java_default_hash(...)`, `vhash.bkdr_hash(...)`, and `vhash.fnv_hash(...)` for non-crypto string hashing.

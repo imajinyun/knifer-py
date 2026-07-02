@@ -12,6 +12,7 @@ __all__ = [
     "vfile",
     "vform",
     "vgeo",
+    "vhash",
     "vhttp",
     "vid",
     "vident",
