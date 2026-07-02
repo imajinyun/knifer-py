@@ -64,6 +64,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 🏷️ Version comparison helpers | `kniferpy.vver` |
 | 🧺 Sequence, dict, and set helpers | `kniferpy.vseq`, `kniferpy.vdict`, `kniferpy.vset` |
 | 🧬 Encoding helpers | `kniferpy.vcodec` |
+| 📰 XML clean/escape/parse helpers | `kniferpy.vxml` |
 
 ## 🧩 Examples
 
@@ -107,3 +108,4 @@ Common safe defaults are visible at the call site:
 - 🧺 `vseq.group_by(...)`, `vdict.pick(...)`, and `vset.union(...)` for collection workflows.
 - 🧬 `vcodec.base64_encode_str(...)`, `vcodec.hex_decode_str(...)`, and `vcodec.rot13(...)` for encoding workflows.
 - #️⃣ `vhash.java_default_hash(...)`, `vhash.bkdr_hash(...)`, and `vhash.fnv_hash(...)` for non-crypto string hashing.
+- 📰 `vxml.to_map(...)`, `vxml.clean_invalid(...)`, and `vxml.escape(...)` for DTD-free XML parsing and cleanup.
