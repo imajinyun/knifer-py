@@ -65,6 +65,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 🧺 Sequence, dict, and set helpers | `kniferpy.vseq`, `kniferpy.vdict`, `kniferpy.vset` |
 | 🧬 Encoding helpers | `kniferpy.vcodec` |
 | 📰 XML clean/escape/parse helpers | `kniferpy.vxml` |
+| 🌸 Bloom filter membership helpers | `kniferpy.vblf` |
 
 ## 🧩 Examples
 
@@ -109,3 +110,4 @@ Common safe defaults are visible at the call site:
 - 🧬 `vcodec.base64_encode_str(...)`, `vcodec.hex_decode_str(...)`, and `vcodec.rot13(...)` for encoding workflows.
 - #️⃣ `vhash.java_default_hash(...)`, `vhash.bkdr_hash(...)`, and `vhash.fnv_hash(...)` for non-crypto string hashing.
 - 📰 `vxml.to_map(...)`, `vxml.clean_invalid(...)`, and `vxml.escape(...)` for DTD-free XML parsing and cleanup.
+- 🌸 `vblf.new_default_filter(...)`, `vblf.new_bit_set_bloom_filter(...)`, and `vblf.new_bitmap_bloom_filter(...)` for no-false-negative membership tests.

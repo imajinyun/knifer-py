@@ -2,6 +2,7 @@
 
 __all__ = [
     "verr",
+    "vblf",
     "vbool",
     "vcodec",
     "vconv",
