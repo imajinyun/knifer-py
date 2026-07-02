@@ -13,6 +13,7 @@ __all__ = [
     "vgeo",
     "vhttp",
     "vid",
+    "vident",
     "vjson",
     "vjwt",
     "vmask",
