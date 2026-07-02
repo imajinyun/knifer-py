@@ -28,9 +28,7 @@ class Semaphore:
 
     def __init__(self, cap: int) -> None:
         if cap <= 0:
-            raise ValidationError(
-                f"vsem: invalid capacity: {cap}", code="sem.invalid_capacity"
-            )
+            raise ValidationError(f"vsem: invalid capacity: {cap}", code="sem.invalid_capacity")
         self._cap = cap
         self._cur = 0
         self._mux = threading.Lock()

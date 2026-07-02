@@ -4,6 +4,7 @@ __all__ = [
     "verr",
     "vblf",
     "vbool",
+    "vcache",
     "vcodec",
     "vconv",
     "vcrypto",
