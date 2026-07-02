@@ -51,6 +51,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 📄 Daily JSON and file workflows | `kniferpy.vjson`, `kniferpy.vfile` |
 | 🔤 String helpers | `kniferpy.vstr` |
 | 🔢 Number and conversion helpers | `kniferpy.vnum`, `kniferpy.vconv`, `kniferpy.vbool` |
+| 🧰 Object nil/empty and default helpers | `kniferpy.vobj` |
 | 🧪 Regex helpers | `kniferpy.vregex` |
 | 🆔 ID generation | `kniferpy.vid` |
 | 🕵️ Data masking helpers | `kniferpy.vmask` |

@@ -18,6 +18,7 @@ __all__ = [
     "vmask",
     "vnet",
     "vnum",
+    "vobj",
     "vpass",
     "vrand",
     "vregex",
