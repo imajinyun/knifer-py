@@ -1,5 +1,8 @@
 from kniferpy import vhash
 
+import hashlib
+import pytest
+
 # Reference values generated from the knifer-go internal/hash implementation.
 _EXPECTED = {
     "knifer-go": {
@@ -66,3 +69,62 @@ def test_edge_cases() -> None:
     assert vhash.tianl_hash("abc") > 0
     assert vhash.additive_hash("abc", 0) == vhash.additive_hash("abc", 31)
     assert vhash.fnv_hash("abc") != 0
+
+
+# ── Hash32 ───────────────────────────────────────────────────────────────────
+
+
+def test_hash32_fnv1() -> None:
+    assert vhash.hash32("abc") == vhash.fnv_hash("abc")
+
+
+def test_hash32_custom() -> None:
+    assert vhash.hash32("abc", hashlib.md5) != 0
+
+
+# ── ConsistentHash ───────────────────────────────────────────────────────────
+
+
+class TestConsistentHash:
+    def test_basic(self) -> None:
+        ring = vhash.ConsistentHash(10)
+        ring.add("a")
+        ring.add("b")
+        ring.add("c")
+        node = ring.get("user:1")
+        assert node != ""
+        assert node in ("a", "b", "c")
+
+    def test_get_n(self) -> None:
+        ring = vhash.ConsistentHash(10)
+        ring.add("a")
+        ring.add("b")
+        ring.add("c")
+        nodes = ring.get_n("user:1", 2)
+        assert len(nodes) == 2
+        assert nodes[0] != nodes[1]
+
+    def test_remove(self) -> None:
+        ring = vhash.ConsistentHash(10)
+        ring.add("a")
+        ring.add("b")
+        node = ring.get("user:1")
+        ring.remove(node)
+        next_node = ring.get("user:1")
+        assert next_node != ""
+        assert next_node != node
+
+    def test_empty_ring_raises(self) -> None:
+        ring = vhash.ConsistentHash()
+        with pytest.raises(ValueError):
+            ring.get("key")
+
+    def test_get_n_empty_ring_raises(self) -> None:
+        ring = vhash.ConsistentHash()
+        with pytest.raises(ValueError):
+            ring.get_n("key", 1)
+
+    def test_get_n_zero(self) -> None:
+        ring = vhash.ConsistentHash(10)
+        ring.add("a")
+        assert ring.get_n("key", 0) == []

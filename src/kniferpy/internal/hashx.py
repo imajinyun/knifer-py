@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import bisect
+import hashlib
+import struct
+
 _MASK32 = 0xFFFFFFFF
 _MASK64 = 0xFFFFFFFFFFFFFFFF
 
@@ -190,3 +194,99 @@ def java_default_hash(s: str) -> int:
     for c in _chars(s):
         h = _i32(31 * h + c)
     return h
+
+
+# ── Hash32 with custom hash function ─────────────────────────────────────────
+
+
+def hash32(s: str, hash_func: object | None = None) -> int:
+    if hash_func is None:
+        return fnv_hash(s)
+    h = hash_func()
+    h.update(s.encode("utf-8"))
+    return struct.unpack(">I", h.digest()[:4])[0]
+
+
+# ── Consistent Hash Ring ─────────────────────────────────────────────────────
+
+
+_DEFAULT_VIRTUAL_NODES = 100
+
+
+def _fnv64a(data: bytes) -> int:
+    h = hashlib.sha256(data).digest()[:8]
+    return struct.unpack(">Q", h)[0]
+
+
+def _avalanche64(x: int) -> int:
+    x ^= x >> 33
+    x = (x * 0xFF51AFD7ED558CCD) & _MASK64
+    x ^= x >> 33
+    x = (x * 0xC4CEB9FE1A85EC53) & _MASK64
+    x ^= x >> 33
+    return x
+
+
+class ConsistentHash:
+    def __init__(self, virtual_nodes: int = _DEFAULT_VIRTUAL_NODES) -> None:
+        self._virtual_nodes = virtual_nodes if virtual_nodes > 0 else _DEFAULT_VIRTUAL_NODES
+        self._ring: dict[int, str] = {}
+        self._hashes: list[int] = []
+        self._nodes: set[str] = set()
+
+    def add(self, node: str) -> None:
+        if not node or node in self._nodes:
+            return
+        self._nodes.add(node)
+        for i in range(self._virtual_nodes):
+            key = f"{node}#{i}"
+            h = _avalanche64(_fnv64a(key.encode("utf-8")))
+            # Collision resolution: re-hash until we find a free slot
+            attempt = 0
+            while h in self._ring and attempt < 1024:
+                attempt += 1
+                h = _avalanche64(_fnv64a(f"{key}#{attempt}".encode("utf-8")))
+            if h in self._ring:
+                continue
+            self._ring[h] = node
+            self._hashes.append(h)
+        self._hashes.sort()
+
+    def remove(self, node: str) -> None:
+        if node not in self._nodes:
+            return
+        self._nodes.discard(node)
+        self._hashes = [h for h in self._hashes if self._ring.get(h) != node]
+        for h in list(self._ring):
+            if self._ring[h] == node:
+                del self._ring[h]
+
+    def get(self, key: str) -> str:
+        if not self._hashes:
+            raise ValueError("consistent hash ring is empty")
+        h = _avalanche64(_fnv64a(key.encode("utf-8")))
+        idx = bisect.bisect_left(self._hashes, h)
+        if idx == len(self._hashes):
+            idx = 0
+        return self._ring[self._hashes[idx]]
+
+    def get_n(self, key: str, n: int) -> list[str]:
+        if not self._hashes:
+            raise ValueError("consistent hash ring is empty")
+        if n <= 0:
+            return []
+        n = min(n, len(self._nodes))
+        h = _avalanche64(_fnv64a(key.encode("utf-8")))
+        idx = bisect.bisect_left(self._hashes, h)
+        if idx == len(self._hashes):
+            idx = 0
+        result: list[str] = []
+        seen: set[str] = set()
+        for i in range(len(self._hashes)):
+            if len(result) >= n:
+                break
+            node = self._ring[self._hashes[(idx + i) % len(self._hashes)]]
+            if node not in seen:
+                seen.add(node)
+                result.append(node)
+        return result

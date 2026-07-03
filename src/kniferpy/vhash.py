@@ -6,6 +6,7 @@ __all__ = [
     "additive_hash",
     "fnv_hash",
     "fnv_hash_string",
+    "hash32",
     "rs_hash",
     "js_hash",
     "pjw_hash",
@@ -18,6 +19,7 @@ __all__ = [
     "hf_ip_hash",
     "tianl_hash",
     "java_default_hash",
+    "ConsistentHash",
 ]
 
 
@@ -79,3 +81,10 @@ def tianl_hash(s: str) -> int:
 
 def java_default_hash(s: str) -> int:
     return hashx.java_default_hash(s)
+
+
+def hash32(s: str, hash_func: object | None = None) -> int:
+    return hashx.hash32(s, hash_func)
+
+
+ConsistentHash = hashx.ConsistentHash
