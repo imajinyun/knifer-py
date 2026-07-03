@@ -36,3 +36,7 @@ def validate_http_url(
     resolver: urlx.Resolver | None = None,
 ) -> bool:
     return urlx.validate_http_url(raw_url, allowed_hosts=allowed_hosts, resolver=resolver)
+
+
+def is_private_host(host: str, *, resolver: urlx.Resolver | None = None) -> bool:
+    return urlx.is_private_host(host, resolver=resolver)
