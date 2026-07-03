@@ -18,6 +18,7 @@ __all__ = [
     "vdict",
     "vfile",
     "vform",
+    "vftp",
     "vgeo",
     "vhash",
     "vhttp",

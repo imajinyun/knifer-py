@@ -70,6 +70,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 🚦 Weighted, fair counting semaphore | `kniferpy.vsem` |
 | 🧺 Functional slice/collection helpers | `kniferpy.vslice` |
 | 🔌 Provider-neutral SSH/SFTP command and transfer client | `kniferpy.vssh` |
+| 📁 Provider-neutral FTP list, download, and upload client | `kniferpy.vftp` |
 | 🗄️ In-memory FIFO/LRU/LFU caches | `kniferpy.vcache` |
 | 🚫 DFA sensitive-word matching and filtering | `kniferpy.vdfa` |
 | 🗜️ ZIP archive and gzip/zlib compression | `kniferpy.vzip` |
@@ -143,3 +144,4 @@ Common safe defaults are visible at the call site:
 - 🔌 `vssh.Client(...)`, `vssh.CommandRequest(...)`, and `vssh.DownloadRequest(...)` for provider-neutral SSH command execution and SFTP file transfers with byte limit enforcement.
 - 🧺 `vslice.group_by(...)`, `vslice.chunk(...)`, and `vslice.filter_map(...)` for functional collection operations like map, filter, reduce, chunk, and zip.
 - 🗺️ `vmap.merge(...)`, `vmap.pick(...)`, and `vmap.filter_items(...)` for functional dict operations like merge, partition, pick/omit, and map/transform.
+- 📁 `vftp.Client(...)`, `vftp.DownloadRequest(...)`, and `vftp.UploadRequest(...)` for provider-neutral FTP directory listing and file transfers with byte limit enforcement.
