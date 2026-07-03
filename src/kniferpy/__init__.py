@@ -38,6 +38,7 @@ __all__ = [
     "vseq",
     "vsem",
     "vset",
+    "vslice",
     "vssh",
     "vstr",
     "vtok",
