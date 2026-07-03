@@ -9,8 +9,20 @@ from kniferpy.vskt import (
     OpConnect,
     OpRead,
     OpWrite,
-    SocketConfig,
+    SimpleIoAction,
     SocketRuntimeError,
+    channel_dial,
+    get_remote_address,
+    is_connected,
+    new_aio_client,
+    new_aio_server,
+    new_aio_server_addr,
+    new_aio_session,
+    new_nio_client,
+    new_nio_client_addr,
+    new_nio_client_addr_with_options,
+    new_nio_server,
+    new_nio_server_with_options,
     new_socket_config,
     new_socket_config_with_options,
     new_socket_error,
@@ -18,31 +30,17 @@ from kniferpy.vskt import (
     new_socket_errorf,
     socket_connect,
     socket_connect_with_options,
-    is_connected,
-    get_remote_address,
-    with_connect_timeout,
-    with_connect_network,
-    with_connect_dialer,
-    with_thread_pool_size,
-    with_read_timeout,
-    with_write_timeout,
-    with_read_buffer_size,
-    with_write_buffer_size,
     with_clock,
-    new_nio_server,
-    new_nio_client,
-    new_aio_server,
-    new_aio_client,
-    new_aio_session,
-    SimpleIoAction,
+    with_connect_dialer,
+    with_connect_network,
+    with_connect_timeout,
+    with_read_buffer_size,
+    with_read_timeout,
+    with_thread_pool_size,
+    with_write_buffer_size,
+    with_write_timeout,
     wrap_socket_error,
-    channel_dial,
-    new_nio_server_with_options,
-    new_nio_client_addr,
-    new_nio_client_addr_with_options,
-    new_aio_server_addr,
 )
-
 
 # --- constants ------------------------------------------------------------
 
@@ -293,6 +291,7 @@ def test_connect_network_option():
 
 def test_connect_dialer_option():
     cfg = type("_cfg", (), {"dialer": None})()
-    fn = lambda h, p: None
+    def fn(h, p):
+        return None
     with_connect_dialer(fn)(cfg)
     assert cfg.dialer is fn

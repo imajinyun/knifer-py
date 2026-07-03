@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import re
+from typing import Callable
 from urllib.parse import urlparse
-from typing import Callable, Optional
 
 from kniferpy.internal import identx, netx
 

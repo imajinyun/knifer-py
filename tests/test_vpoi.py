@@ -1,17 +1,13 @@
 import os
-import tempfile
 
 import pytest
 
+import zipfile
+from kniferpy.internal.poix import ErrNoSheet
 from kniferpy.vpoi import (
     DEFAULT_SHEET_NAME,
-    Cell,
-    CellTypeNumber,
-    CellTypeString,
-    CellTypeBool,
     ErrEmptySheetName,
     ErrInvalidSheetName,
-    ErrNoSheet,
     is_valid_sheet_name,
     read_cells,
     read_rows,
@@ -21,14 +17,12 @@ from kniferpy.vpoi import (
     sheet_names,
     validate_sheet_name,
     with_read_limit,
-    with_read_sheet,
     with_read_start_cell,
     write_rows,
     write_rows_to_buffer,
     write_sheet_rows,
     write_sheets,
 )
-
 
 # --- sheet name validation ----------------------------------------------------
 
@@ -68,7 +62,7 @@ def test_sheet_names(tmp_path):
     with open(wb_path, "wb") as f:
         f.write(b"")
     # openpyxl can read empty files? no, will error
-    with pytest.raises(Exception):
+    with pytest.raises(zipfile.BadZipFile):
         sheet_names(wb_path)
 
 

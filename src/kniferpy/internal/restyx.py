@@ -1,20 +1,19 @@
 from __future__ import annotations
 
+import io
+import ipaddress
+import json as json_lib
 import os
 import re
-import ipaddress
 import socket
-import sys
-from typing import Any, Callable, Dict, List, Optional, Tuple, Union, Generator, TypeVar
-from dataclasses import dataclass, field
-from urllib.parse import urlparse, urlencode, quote_plus
-import io
-import json as json_lib
 import ssl
+from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any, Callable, Dict, List, TypeVar
+from urllib.parse import urlencode, urlparse
 
 import requests
-from requests.adapters import HTTPAdapter, Retry
+from requests.adapters import HTTPAdapter
 from requests.cookies import RequestsCookieJar
 
 T = TypeVar('T')
@@ -81,10 +80,10 @@ HeaderValues = Dict[str, List[str]]
 @dataclass
 class URLPolicy:
     """URLPolicy controls SSRF-oriented request validation for untrusted URLs."""
-    allowed_schemes: List[str] = field(default_factory=lambda: ["http", "https"])
-    allowed_hosts: List[str] = field(default_factory=list)
+    allowed_schemes: list[str] = field(default_factory=lambda: ["http", "https"])
+    allowed_hosts: list[str] = field(default_factory=list)
     reject_private: bool = True
-    lookup_ip: Optional[Callable[[str], List[str]]] = None
+    lookup_ip: Callable[[str], list[str]] | None = None
 
 
 @dataclass
@@ -106,7 +105,7 @@ class Cookie:
     value: str
     domain: str = ""
     path: str = "/"
-    expires: Optional[float] = None
+    expires: float | None = None
     secure: bool = False
     http_only: bool = False
 
@@ -116,17 +115,17 @@ class FormFile:
     """FormFile represents a file to be uploaded in a multipart form."""
     field: str
     file_name: str
-    data: Optional[bytes] = None
-    reader: Optional[io.IOBase] = None
+    data: bytes | None = None
+    reader: io.IOBase | None = None
 
 
 @dataclass
 class HTTPError(Exception):
     """HTTPError is the HTTP module error type."""
     message: str
-    cause: Optional[Exception] = None
+    cause: Exception | None = None
 
-    def __init__(self, message: str, cause: Optional[Exception] = None):
+    def __init__(self, message: str, cause: Exception | None = None):
         super().__init__(message)
         self.message = message
         self.cause = cause
@@ -137,7 +136,7 @@ class HTTPError(Exception):
         return self.message
 
 
-def new_http_error(msg: str, cause: Optional[Exception] = None) -> HTTPError:
+def new_http_error(msg: str, cause: Exception | None = None) -> HTTPError:
     """Create a new HTTP error."""
     return HTTPError(msg, cause)
 
@@ -151,13 +150,13 @@ def http_errorf(format_str: str, *args: Any) -> HTTPError:
 class HTTPResponse:
     """HTTPResponse wraps an HTTP response."""
     status_code: int = 0
-    headers: Dict[str, str] = field(default_factory=dict)
-    cookies: List[Cookie] = field(default_factory=list)
+    headers: dict[str, str] = field(default_factory=dict)
+    cookies: list[Cookie] = field(default_factory=list)
     body: bytes = field(default_factory=bytes)
     text: str = ""
-    json_result: Optional[Any] = None
-    err: Optional[HTTPError] = None
-    raw_response: Optional[requests.Response] = None
+    json_result: Any | None = None
+    err: HTTPError | None = None
+    raw_response: requests.Response | None = None
 
     def is_ok(self) -> bool:
         """Returns True if status code is 2xx."""
@@ -171,11 +170,11 @@ class HTTPResponse:
         """Returns the response body as string."""
         return self.text
 
-    def json(self) -> Optional[Any]:
+    def json(self) -> Any | None:
         """Returns the parsed JSON response."""
         return self.json_result
 
-    def error(self) -> Optional[HTTPError]:
+    def error(self) -> HTTPError | None:
         """Returns any error that occurred during the request."""
         return self.err
 
@@ -198,9 +197,9 @@ class SaveOptions:
     overwrite: bool = True
     create_parents: bool = True
     default_filename: str = ""
-    stat: Optional[Callable[[str], os.stat_result]] = None
-    mkdir_all: Optional[Callable[[str, int], None]] = None
-    open_file: Optional[Callable[[str, int, int], io.IOBase]] = None
+    stat: Callable[[str], os.stat_result] | None = None
+    mkdir_all: Callable[[str, int], None] | None = None
+    open_file: Callable[[str, int, int], io.IOBase] | None = None
 
 
 RequestOption = Callable[['HTTPRequest'], None]
@@ -223,112 +222,112 @@ class HTTPRequest:
     def __init__(self):
         self.method: str = Method.GET
         self.raw_url: str = ""
-        self.query_params: Dict[str, List[str]] = {}
+        self.query_params: dict[str, list[str]] = {}
         self._headers: HeaderValues = {}
         self._body: Any = None
-        self._form: Dict[str, Any] = {}
-        self.files: List[FormFile] = []
+        self._form: dict[str, Any] = {}
+        self.files: list[FormFile] = []
         self._content_type: str = ""
         self._charset: str = "UTF-8"
         self._timeout: float = 0.0
-        self._follow_redirects: Optional[bool] = None
+        self._follow_redirects: bool | None = None
         self._max_redirects: int = 10
-        self._tls_config: Optional[ssl.SSLContext] = None
+        self._tls_config: ssl.SSLContext | None = None
         self._user_agent: str = ""
         self.cookie_off: bool = False
         self.basic_user: str = ""
         self.basic_pass: str = ""
         self.has_basic: bool = False
-        self._session: Optional[requests.Session] = None
-        self._session_factory: Optional[Callable[[], requests.Session]] = None
-        self.json_marshal: Optional[Callable[[Any], bytes]] = None
-        self.json_unmarshal: Optional[Callable[[bytes], Any]] = None
+        self._session: requests.Session | None = None
+        self._session_factory: Callable[[], requests.Session] | None = None
+        self.json_marshal: Callable[[Any], bytes] | None = None
+        self.json_unmarshal: Callable[[bytes], Any] | None = None
         self.max_decode: int = 0
         self.max_response: int = 0
-        self._url_policy: Optional[URLPolicy] = None
+        self._url_policy: URLPolicy | None = None
         self._result: Any = None
         self._error_result: Any = None
 
-    def method(self, m: str) -> 'HTTPRequest':
+    def method(self, m: str) -> HTTPRequest:
         """Set the HTTP method."""
         self.method = m
         return self
 
-    def url(self, u: str) -> 'HTTPRequest':
+    def url(self, u: str) -> HTTPRequest:
         """Set the request URL."""
         self.raw_url = u
         return self
 
-    def header(self, name: str, value: str) -> 'HTTPRequest':
+    def header(self, name: str, value: str) -> HTTPRequest:
         """Set a single request header, replacing existing values."""
         self._headers[name] = [value]
         return self
 
-    def add_header(self, name: str, value: str) -> 'HTTPRequest':
+    def add_header(self, name: str, value: str) -> HTTPRequest:
         """Append a single request header value."""
         if name not in self._headers:
             self._headers[name] = []
         self._headers[name].append(value)
         return self
 
-    def headers(self, h: Dict[str, str]) -> 'HTTPRequest':
+    def headers(self, h: dict[str, str]) -> HTTPRequest:
         """Set request headers in batch."""
         for k, v in h.items():
             self._headers[k] = [v]
         return self
 
-    def cookie(self, name: str, value: str) -> 'HTTPRequest':
+    def cookie(self, name: str, value: str) -> HTTPRequest:
         """Add a cookie by name and value."""
         if name:
             self.add_header(Header.COOKIE, f"{name}={value}")
         return self
 
-    def cookie_string(self, s: str) -> 'HTTPRequest':
+    def cookie_string(self, s: str) -> HTTPRequest:
         """Add a Cookie header from a raw string."""
         self.header(Header.COOKIE, s)
         return self
 
-    def content_type(self, ct: str) -> 'HTTPRequest':
+    def content_type(self, ct: str) -> HTTPRequest:
         """Set Content-Type."""
         self._content_type = ct
         return self
 
-    def charset(self, c: str) -> 'HTTPRequest':
+    def charset(self, c: str) -> HTTPRequest:
         """Set the request charset."""
         self._charset = c
         return self
 
-    def timeout(self, d: float) -> 'HTTPRequest':
+    def timeout(self, d: float) -> HTTPRequest:
         """Set the request timeout in seconds."""
         self._timeout = d
         return self
 
-    def follow_redirects(self, b: bool) -> 'HTTPRequest':
+    def follow_redirects(self, b: bool) -> HTTPRequest:
         """Set whether redirects are followed."""
         self._follow_redirects = b
         return self
 
-    def max_redirects(self, n: int) -> 'HTTPRequest':
+    def max_redirects(self, n: int) -> HTTPRequest:
         """Set the maximum redirect count."""
         self._max_redirects = n
         return self
 
-    def tls_config(self, cfg: ssl.SSLContext) -> 'HTTPRequest':
+    def tls_config(self, cfg: ssl.SSLContext) -> HTTPRequest:
         """Set a custom TLS config."""
         self._tls_config = cfg
         return self
 
-    def session_client(self, session: requests.Session) -> 'HTTPRequest':
+    def session_client(self, session: requests.Session) -> HTTPRequest:
         """Set a custom requests session."""
         self._session = session
         return self
 
-    def session_factory(self, factory: Callable[[], requests.Session]) -> 'HTTPRequest':
+    def session_factory(self, factory: Callable[[], requests.Session]) -> HTTPRequest:
         """Set a per-request session factory."""
         self._session_factory = factory
         return self
 
-    def set_url_policy(self, policy: URLPolicy) -> 'HTTPRequest':
+    def set_url_policy(self, policy: URLPolicy) -> HTTPRequest:
         """Set SSRF-oriented validation for this request."""
         self._url_policy = URLPolicy(
             allowed_schemes=list(policy.allowed_schemes),
@@ -338,26 +337,26 @@ class HTTPRequest:
         )
         return self
 
-    def basic_auth(self, user: str, password: str) -> 'HTTPRequest':
+    def basic_auth(self, user: str, password: str) -> HTTPRequest:
         """Set Basic Auth."""
         self.basic_user = user
         self.basic_pass = password
         self.has_basic = True
         return self
 
-    def bearer_auth(self, token: str) -> 'HTTPRequest':
+    def bearer_auth(self, token: str) -> HTTPRequest:
         """Set the Bearer Token."""
         self.header(Header.AUTHORIZATION, f"Bearer {token}")
         return self
 
-    def query(self, key: str, value: Any) -> 'HTTPRequest':
+    def query(self, key: str, value: Any) -> HTTPRequest:
         """Add a single URL query parameter."""
         if key not in self.query_params:
             self.query_params[key] = []
         self.query_params[key].append(str(value))
         return self
 
-    def query_map(self, params: Dict[str, Any]) -> 'HTTPRequest':
+    def query_map(self, params: dict[str, Any]) -> HTTPRequest:
         """Add URL query parameters in batch."""
         for k, v in params.items():
             if k not in self.query_params:
@@ -365,7 +364,7 @@ class HTTPRequest:
             self.query_params[k].append(str(v))
         return self
 
-    def body(self, body: bytes) -> 'HTTPRequest':
+    def body(self, body: bytes) -> HTTPRequest:
         """Set the raw request body."""
         self._body = body
         if not self._content_type:
@@ -374,48 +373,48 @@ class HTTPRequest:
                 self._content_type = build_content_type(ct, self._charset)
         return self
 
-    def body_string(self, s: str) -> 'HTTPRequest':
+    def body_string(self, s: str) -> HTTPRequest:
         """Set a string request body."""
         return self.body(s.encode(self._charset or 'utf-8'))
 
-    def body_json(self, json_str: str) -> 'HTTPRequest':
+    def body_json(self, json_str: str) -> HTTPRequest:
         """Set a JSON request body from string."""
         self._content_type = build_content_type(ContentType.JSON, self._charset)
         return self.body(json_str.encode(self._charset or 'utf-8'))
 
-    def body_json_value(self, value: Any) -> 'HTTPRequest':
+    def body_json_value(self, value: Any) -> HTTPRequest:
         """Set a JSON request body value to be encoded."""
         self._content_type = build_content_type(ContentType.JSON, self._charset)
         self._body = value
         return self
 
-    def result(self, v: Any) -> 'HTTPRequest':
+    def result(self, v: Any) -> HTTPRequest:
         """Register a value for automatic response decoding."""
         self._result = v
         return self
 
-    def error_result(self, v: Any) -> 'HTTPRequest':
+    def error_result(self, v: Any) -> HTTPRequest:
         """Register a value for automatic error response decoding."""
         self._error_result = v
         return self
 
-    def body_reader(self, reader: io.IOBase) -> 'HTTPRequest':
+    def body_reader(self, reader: io.IOBase) -> HTTPRequest:
         """Set the request body from an io.Reader."""
         self._body = reader
         return self
 
-    def form(self, data: Dict[str, Any]) -> 'HTTPRequest':
+    def form(self, data: dict[str, Any]) -> HTTPRequest:
         """Set form parameters."""
         for k, v in data.items():
             self._form[k] = v
         return self
 
-    def form_file(self, field: str, file_name: str, data: bytes) -> 'HTTPRequest':
+    def form_file(self, field: str, file_name: str, data: bytes) -> HTTPRequest:
         """Add a file upload field and enables multipart automatically."""
         self.files.append(FormFile(field=field, file_name=file_name, data=data))
         return self
 
-    def form_file_reader(self, field: str, file_name: str, reader: io.IOBase) -> 'HTTPRequest':
+    def form_file_reader(self, field: str, file_name: str, reader: io.IOBase) -> HTTPRequest:
         """Add a file upload field from a reader."""
         self.files.append(FormFile(field=field, file_name=file_name, reader=reader))
         return self
@@ -456,10 +455,9 @@ class HTTPRequest:
             return
 
         scheme = parsed.scheme.lower().strip() if parsed.scheme else ""
-        if scheme:
-            if (self._url_policy.allowed_schemes and
-                scheme not in [s.lower() for s in self._url_policy.allowed_schemes]):
-                raise http_errorf(f"url scheme {repr(scheme)} is not allowed")
+        if scheme and (self._url_policy.allowed_schemes and
+            scheme not in [s.lower() for s in self._url_policy.allowed_schemes]):
+            raise http_errorf(f"url scheme {repr(scheme)} is not allowed")
 
         if scheme not in ('http', 'https'):
             return
@@ -468,9 +466,10 @@ class HTTPRequest:
         if not host:
             raise http_errorf("http url host is blank")
 
-        if self._url_policy.allowed_hosts:
-            if not any(h.lower().strip() == host for h in self._url_policy.allowed_hosts):
-                raise http_errorf(f"url host {repr(host)} is not allowed")
+        if self._url_policy.allowed_hosts and not any(
+            h.lower().strip() == host for h in self._url_policy.allowed_hosts
+        ):
+            raise http_errorf(f"url host {repr(host)} is not allowed")
 
         if self._url_policy.reject_private:
             private = self._is_private_host(host)
@@ -561,10 +560,7 @@ class HTTPRequest:
                 for v in values:
                     query_parts.append((k, v))
             query_string = urlencode(query_parts)
-            if parsed.query:
-                url = url + '&' + query_string
-            else:
-                url = url + '?' + query_string
+            url = url + '&' + query_string if parsed.query else url + '?' + query_string
 
         req = requests.Request(method=self.method, url=url)
 
@@ -581,7 +577,7 @@ class HTTPRequest:
         if self.has_basic:
             req.auth = (self.basic_user, self.basic_pass)
 
-        files: Dict[str, Tuple[str, Any]] = {}
+        files: dict[str, tuple[str, Any]] = {}
         for f in self.files:
             if f.reader:
                 files[f.field] = (f.file_name, f.reader)
@@ -600,11 +596,9 @@ class HTTPRequest:
                 for k, v in self._form.items():
                     req.params[k] = str(v)
         elif self._body is not None:
-            if isinstance(self._body, bytes):
+            if isinstance(self._body, (bytes, io.IOBase)):
                 req.data = self._body
-            elif isinstance(self._body, io.IOBase):
-                req.data = self._body
-            elif isinstance(self._body, dict) or isinstance(self._body, list):
+            elif isinstance(self._body, (dict, list)):
                 if self.json_marshal:
                     data = self.json_marshal(self._body)
                     req.data = data
@@ -626,7 +620,7 @@ class HTTPRequest:
         try:
             response.body = resp.content
         except Exception as e:
-            raise new_http_error("failed to read response body", e)
+            raise new_http_error("failed to read response body", e) from e
 
         if self.charset:
             encoding = resp.apparent_encoding or self._charset
@@ -668,7 +662,7 @@ class SafeHTTPAdapter(HTTPAdapter):
         self.policy = policy
         super().__init__(**kwargs)
 
-    def get_connection(self, url: str, proxies: Optional[Dict[str, str]] = None):
+    def get_connection(self, url: str, proxies: dict[str, str] | None = None):
         """Override to validate URL before connecting."""
         parsed = urlparse(url)
         self._validate_url(parsed)
@@ -778,18 +772,18 @@ class Client:
     Use it when code should not read package-level global defaults on every request.
     """
 
-    def __init__(self, cfg: GlobalConfig, opts: List[RequestOption]):
+    def __init__(self, cfg: GlobalConfig, opts: list[RequestOption]):
         self.cfg = cfg
         self.opts = list(opts)
 
-    def new_request(self, method: str, raw_url: str, opts: List[RequestOption]) -> HTTPRequest:
+    def new_request(self, method: str, raw_url: str, opts: list[RequestOption]) -> HTTPRequest:
         """Create a new request from the Client's captured configuration."""
         all_opts = list(self.opts) + list(opts)
         return new_request_with_config(method, raw_url, self.cfg, *all_opts)
 
-    def new_safe_request(self, method: str, raw_url: str, opts: List[RequestOption]) -> HTTPRequest:
+    def new_safe_request(self, method: str, raw_url: str, opts: list[RequestOption]) -> HTTPRequest:
         """Create a safe request from the Client's captured configuration."""
-        safe_opts: List[RequestOption] = [
+        safe_opts: list[RequestOption] = [
             lambda r: with_url_policy(URLPolicy(
                 allowed_schemes=["http", "https"],
                 reject_private=True
@@ -836,7 +830,7 @@ def new_isolated_client(*opts: ClientOption) -> Client:
     return c
 
 
-def new_client_with_config(cfg: GlobalConfig, opts: List[RequestOption]) -> Client:
+def new_client_with_config(cfg: GlobalConfig, opts: list[RequestOption]) -> Client:
     """NewClientWithConfig creates a request factory from an explicit configuration snapshot."""
     return Client(cfg=cfg, opts=list(opts))
 
@@ -848,7 +842,7 @@ def with_client_global_config(cfg: GlobalConfig) -> ClientOption:
     return _opt
 
 
-def with_client_request_options(opts: List[RequestOption]) -> ClientOption:
+def with_client_request_options(opts: list[RequestOption]) -> ClientOption:
     """WithClientRequestOptions sets request options applied to every request created by a Client."""
     def _opt(c: Client) -> None:
         c.opts = list(opts)
@@ -879,7 +873,7 @@ def with_header(name: str, value: str) -> RequestOption:
     return lambda r: r.header(name, value)
 
 
-def with_headers(headers: Dict[str, str]) -> RequestOption:
+def with_headers(headers: dict[str, str]) -> RequestOption:
     """WithHeaders sets per-request headers in batch."""
     return lambda r: r.headers(headers)
 
@@ -913,9 +907,8 @@ def with_user_agent(ua: str) -> RequestOption:
     """WithUserAgent sets a per-request User-Agent."""
     def _opt(r: HTTPRequest) -> None:
         r._user_agent = ua
-        if r._user_agent:
-            if Header.USER_AGENT not in r._headers:
-                r.header(Header.USER_AGENT, ua)
+        if r._user_agent and Header.USER_AGENT not in r._headers:
+            r.header(Header.USER_AGENT, ua)
     return _opt
 
 
@@ -1079,7 +1072,7 @@ def new_request(method: str, raw_url: str, *opts: RequestOption) -> HTTPRequest:
 
 def new_safe_request(method: str, raw_url: str, *opts: RequestOption) -> HTTPRequest:
     """NewSafeRequest creates a request with SSRF-oriented safety checks enabled."""
-    safe_opts: List[RequestOption] = [
+    safe_opts: list[RequestOption] = [
         with_url_policy(URLPolicy(
             allowed_schemes=["http", "https"],
             reject_private=True
@@ -1124,12 +1117,12 @@ def new_request_with_config(method: str, raw_url: str, cfg: GlobalConfig, *opts:
     return r
 
 
-def get_string_e(raw_url: str) -> Tuple[str, Optional[HTTPError]]:
+def get_string_e(raw_url: str) -> tuple[str, HTTPError | None]:
     """GetStringE sends a GET request and returns response body as string or an error."""
     return get_string_e_with_options(raw_url)
 
 
-def get_string_e_with_options(raw_url: str, *opts: RequestOption) -> Tuple[str, Optional[HTTPError]]:
+def get_string_e_with_options(raw_url: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
     """GetStringEWithOptions sends a GET request with options and returns response body as string or an error."""
     req = get(raw_url, *opts)
     resp = req.execute()
@@ -1138,7 +1131,7 @@ def get_string_e_with_options(raw_url: str, *opts: RequestOption) -> Tuple[str, 
     return resp.body_text(), None
 
 
-def get_string_safe_e(raw_url: str, *opts: RequestOption) -> Tuple[str, Optional[HTTPError]]:
+def get_string_safe_e(raw_url: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
     """GetStringSafeE sends a safe GET request and returns response body as string or an error."""
     req = get_safe(raw_url, *opts)
     resp = req.execute()
@@ -1147,37 +1140,37 @@ def get_string_safe_e(raw_url: str, *opts: RequestOption) -> Tuple[str, Optional
     return resp.body_text(), None
 
 
-def get_with_timeout_e(raw_url: str, timeout: float) -> Tuple[str, Optional[HTTPError]]:
+def get_with_timeout_e(raw_url: str, timeout: float) -> tuple[str, HTTPError | None]:
     """GetWithTimeoutE sends a GET request with a timeout and returns response body or an error."""
     return get_with_timeout_e_with_options(raw_url, timeout)
 
 
-def get_with_timeout_e_with_options(raw_url: str, timeout: float, *opts: RequestOption) -> Tuple[str, Optional[HTTPError]]:
+def get_with_timeout_e_with_options(raw_url: str, timeout: float, *opts: RequestOption) -> tuple[str, HTTPError | None]:
     """GetWithTimeoutEWithOptions sends a GET request with a timeout and custom options."""
     all_opts = list(opts) + [with_timeout(timeout)]
     return get_string_e_with_options(raw_url, *all_opts)
 
 
-def get_with_params_e(raw_url: str, params: Dict[str, Any]) -> Tuple[str, Optional[HTTPError]]:
+def get_with_params_e(raw_url: str, params: dict[str, Any]) -> tuple[str, HTTPError | None]:
     """GetWithParamsE sends a GET request with form parameters and returns response body or an error."""
     return get_with_params_e_with_options(raw_url, params)
 
 
-def get_with_params_e_with_options(raw_url: str, params: Dict[str, Any], *opts: RequestOption) -> Tuple[str, Optional[HTTPError]]:
+def get_with_params_e_with_options(raw_url: str, params: dict[str, Any], *opts: RequestOption) -> tuple[str, HTTPError | None]:
     """GetWithParamsEWithOptions sends a GET request with form parameters and custom options."""
-    all_opts: List[RequestOption] = []
+    all_opts: list[RequestOption] = []
     for k, v in params.items():
         all_opts.append(lambda r, k=k, v=v: r.query(k, v))
     all_opts.extend(opts)
     return get_string_e_with_options(raw_url, *all_opts)
 
 
-def post_string_e(raw_url: str, body: str) -> Tuple[str, Optional[HTTPError]]:
+def post_string_e(raw_url: str, body: str) -> tuple[str, HTTPError | None]:
     """PostStringE posts a string body and returns response body or an error."""
     return post_string_e_with_options(raw_url, body)
 
 
-def post_string_e_with_options(raw_url: str, body: str, *opts: RequestOption) -> Tuple[str, Optional[HTTPError]]:
+def post_string_e_with_options(raw_url: str, body: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
     """PostStringEWithOptions posts a string body with options and returns response body or an error."""
     req = post(raw_url, *opts)
     req.body_string(body)
@@ -1187,7 +1180,7 @@ def post_string_e_with_options(raw_url: str, body: str, *opts: RequestOption) ->
     return resp.body_text(), None
 
 
-def post_string_safe_e(raw_url: str, body: str, *opts: RequestOption) -> Tuple[str, Optional[HTTPError]]:
+def post_string_safe_e(raw_url: str, body: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
     """PostStringSafeE posts a string body with SSRF-oriented safety checks enabled."""
     req = post_safe(raw_url, *opts)
     req.body_string(body)
@@ -1197,12 +1190,12 @@ def post_string_safe_e(raw_url: str, body: str, *opts: RequestOption) -> Tuple[s
     return resp.body_text(), None
 
 
-def post_form_e(raw_url: str, params: Dict[str, Any]) -> Tuple[str, Optional[HTTPError]]:
+def post_form_e(raw_url: str, params: dict[str, Any]) -> tuple[str, HTTPError | None]:
     """PostFormE posts form parameters and returns response body or an error."""
     return post_form_e_with_options(raw_url, params)
 
 
-def post_form_e_with_options(raw_url: str, params: Dict[str, Any], *opts: RequestOption) -> Tuple[str, Optional[HTTPError]]:
+def post_form_e_with_options(raw_url: str, params: dict[str, Any], *opts: RequestOption) -> tuple[str, HTTPError | None]:
     """PostFormEWithOptions posts form parameters with options and returns response body or an error."""
     req = post(raw_url, *opts)
     req.form(params)
@@ -1212,7 +1205,7 @@ def post_form_e_with_options(raw_url: str, params: Dict[str, Any], *opts: Reques
     return resp.body_text(), None
 
 
-def post_form_safe_e(raw_url: str, params: Dict[str, Any], *opts: RequestOption) -> Tuple[str, Optional[HTTPError]]:
+def post_form_safe_e(raw_url: str, params: dict[str, Any], *opts: RequestOption) -> tuple[str, HTTPError | None]:
     """PostFormSafeE posts form parameters with SSRF-oriented safety checks enabled."""
     req = post_safe(raw_url, *opts)
     req.form(params)
@@ -1222,12 +1215,12 @@ def post_form_safe_e(raw_url: str, params: Dict[str, Any], *opts: RequestOption)
     return resp.body_text(), None
 
 
-def post_json_e(raw_url: str, json_str: str) -> Tuple[str, Optional[HTTPError]]:
+def post_json_e(raw_url: str, json_str: str) -> tuple[str, HTTPError | None]:
     """PostJSONE posts JSON body and returns response body or an error."""
     return post_json_e_with_options(raw_url, json_str)
 
 
-def post_json_e_with_options(raw_url: str, json_str: str, *opts: RequestOption) -> Tuple[str, Optional[HTTPError]]:
+def post_json_e_with_options(raw_url: str, json_str: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
     """PostJSONEWithOptions posts JSON body with options and returns response body or an error."""
     req = post(raw_url, *opts)
     req.body_json(json_str)
@@ -1237,7 +1230,7 @@ def post_json_e_with_options(raw_url: str, json_str: str, *opts: RequestOption) 
     return resp.body_text(), None
 
 
-def post_json_safe_e(raw_url: str, json_str: str, *opts: RequestOption) -> Tuple[str, Optional[HTTPError]]:
+def post_json_safe_e(raw_url: str, json_str: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
     """PostJSONSafeE posts JSON body with SSRF-oriented safety checks enabled."""
     req = post_safe(raw_url, *opts)
     req.body_json(json_str)
@@ -1247,12 +1240,12 @@ def post_json_safe_e(raw_url: str, json_str: str, *opts: RequestOption) -> Tuple
     return resp.body_text(), None
 
 
-def download(raw_url: str, writer: io.IOBase) -> Tuple[int, Optional[HTTPError]]:
+def download(raw_url: str, writer: io.IOBase) -> tuple[int, HTTPError | None]:
     """Download downloads rawURL into writer."""
     return download_with_options(raw_url, writer)
 
 
-def download_with_options(raw_url: str, writer: io.IOBase, *opts: RequestOption) -> Tuple[int, Optional[HTTPError]]:
+def download_with_options(raw_url: str, writer: io.IOBase, *opts: RequestOption) -> tuple[int, HTTPError | None]:
     """DownloadWithOptions downloads rawURL into writer with per-request options."""
     req = get(raw_url, *opts)
     resp = req.execute()
@@ -1262,7 +1255,7 @@ def download_with_options(raw_url: str, writer: io.IOBase, *opts: RequestOption)
     return len(resp.body_bytes()), None
 
 
-def download_safe(raw_url: str, writer: io.IOBase, *opts: RequestOption) -> Tuple[int, Optional[HTTPError]]:
+def download_safe(raw_url: str, writer: io.IOBase, *opts: RequestOption) -> tuple[int, HTTPError | None]:
     """DownloadSafe downloads rawURL into writer with SSRF-oriented safety checks enabled."""
     req = get_safe(raw_url, *opts)
     resp = req.execute()
@@ -1272,7 +1265,7 @@ def download_safe(raw_url: str, writer: io.IOBase, *opts: RequestOption) -> Tupl
     return len(resp.body_bytes()), None
 
 
-def download_file(raw_url: str, dest: str, *save_opts: SaveOptions) -> Tuple[int, Optional[HTTPError]]:
+def download_file(raw_url: str, dest: str, *save_opts: SaveOptions) -> tuple[int, HTTPError | None]:
     """DownloadFile downloads rawURL to dest."""
     return download_file_with_options(raw_url, dest, [], *save_opts)
 
@@ -1280,9 +1273,9 @@ def download_file(raw_url: str, dest: str, *save_opts: SaveOptions) -> Tuple[int
 def download_file_with_options(
     raw_url: str,
     dest: str,
-    request_opts: List[RequestOption],
+    request_opts: list[RequestOption],
     *save_opts: SaveOptions
-) -> Tuple[int, Optional[HTTPError]]:
+) -> tuple[int, HTTPError | None]:
     """DownloadFileWithOptions downloads rawURL to dest with per-request and per-save options."""
     opts = SaveOptions()
     opts.file_perm = 0o644
@@ -1327,7 +1320,7 @@ def download_file_with_options(
     return len(resp.body_bytes()), None
 
 
-def download_file_safe(raw_url: str, dest: str, *save_opts: SaveOptions) -> Tuple[int, Optional[HTTPError]]:
+def download_file_safe(raw_url: str, dest: str, *save_opts: SaveOptions) -> tuple[int, HTTPError | None]:
     """DownloadFileSafe downloads rawURL to dest with SSRF-oriented safety checks enabled."""
     return download_file_safe_with_options(raw_url, dest, [], *save_opts)
 
@@ -1335,9 +1328,9 @@ def download_file_safe(raw_url: str, dest: str, *save_opts: SaveOptions) -> Tupl
 def download_file_safe_with_options(
     raw_url: str,
     dest: str,
-    request_opts: List[RequestOption],
+    request_opts: list[RequestOption],
     *save_opts: SaveOptions
-) -> Tuple[int, Optional[HTTPError]]:
+) -> tuple[int, HTTPError | None]:
     """DownloadFileSafeWithOptions downloads rawURL to dest with SSRF-oriented safety checks enabled."""
     safe_opts = list(request_opts)
     safe_opts.insert(0, lambda r: with_url_policy(URLPolicy(
@@ -1347,12 +1340,12 @@ def download_file_safe_with_options(
     return download_file_with_options(raw_url, dest, safe_opts, *save_opts)
 
 
-def download_bytes_e(raw_url: str, *opts: RequestOption) -> Tuple[bytes, Optional[HTTPError]]:
+def download_bytes_e(raw_url: str, *opts: RequestOption) -> tuple[bytes, HTTPError | None]:
     """DownloadBytesE downloads and returns bytes or an error."""
     return download_bytes_e_with_options(raw_url, *opts)
 
 
-def download_bytes_e_with_options(raw_url: str, *opts: RequestOption) -> Tuple[bytes, Optional[HTTPError]]:
+def download_bytes_e_with_options(raw_url: str, *opts: RequestOption) -> tuple[bytes, HTTPError | None]:
     """DownloadBytesEWithOptions downloads and returns bytes with per-request options or an error."""
     req = get(raw_url, *opts)
     resp = req.execute()
@@ -1361,7 +1354,7 @@ def download_bytes_e_with_options(raw_url: str, *opts: RequestOption) -> Tuple[b
     return resp.body_bytes(), None
 
 
-def download_bytes_safe_e(raw_url: str, *opts: RequestOption) -> Tuple[bytes, Optional[HTTPError]]:
+def download_bytes_safe_e(raw_url: str, *opts: RequestOption) -> tuple[bytes, HTTPError | None]:
     """DownloadBytesSafeE downloads and returns bytes with SSRF-oriented safety checks enabled."""
     req = get_safe(raw_url, *opts)
     resp = req.execute()
@@ -1370,12 +1363,12 @@ def download_bytes_safe_e(raw_url: str, *opts: RequestOption) -> Tuple[bytes, Op
     return resp.body_bytes(), None
 
 
-def download_string_e(raw_url: str, custom_charset: str = "") -> Tuple[str, Optional[HTTPError]]:
+def download_string_e(raw_url: str, custom_charset: str = "") -> tuple[str, HTTPError | None]:
     """DownloadStringE downloads remote text and returns an error on request failure."""
     return download_string_e_with_options(raw_url, custom_charset)
 
 
-def download_string_e_with_options(raw_url: str, custom_charset: str, *opts: RequestOption) -> Tuple[str, Optional[HTTPError]]:
+def download_string_e_with_options(raw_url: str, custom_charset: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
     """DownloadStringEWithOptions downloads remote text with per-request options and returns an error on failure."""
     req = get(raw_url, *opts)
     if custom_charset:
@@ -1386,7 +1379,7 @@ def download_string_e_with_options(raw_url: str, custom_charset: str, *opts: Req
     return resp.body_text(), None
 
 
-def download_string_safe_e(raw_url: str, custom_charset: str, *opts: RequestOption) -> Tuple[str, Optional[HTTPError]]:
+def download_string_safe_e(raw_url: str, custom_charset: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
     """DownloadStringSafeE downloads remote text with SSRF-oriented safety checks enabled."""
     req = get_safe(raw_url, *opts)
     if custom_charset:
@@ -1559,15 +1552,15 @@ def is_http(raw_url: str) -> bool:
     return parsed.scheme.lower() == 'http'
 
 
-def to_params(m: Dict[str, Any]) -> str:
+def to_params(m: dict[str, Any]) -> str:
     """ToParams converts a map to a URL query string."""
-    params: List[Tuple[str, str]] = []
+    params: list[tuple[str, str]] = []
     for k, v in m.items():
         params.append((k, str(v)))
     return urlencode(params)
 
 
-def url_with_form(raw_url: str, form: Dict[str, Any]) -> str:
+def url_with_form(raw_url: str, form: dict[str, Any]) -> str:
     """URLWithForm appends form values to a URL."""
     query = to_params(form)
     if '?' in raw_url:
@@ -1649,7 +1642,7 @@ def get_charset_from_html_with_options(html: str, *opts: CharsetOption) -> str:
 
 
 # MIME type mapping by extension
-_mime_types: Dict[str, str] = {
+_mime_types: dict[str, str] = {
     '.html': ContentType.TEXT_HTML,
     '.htm': ContentType.TEXT_HTML,
     '.json': ContentType.JSON,

@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-import pytest
 from fractions import Fraction
+
+import pytest
 
 from kniferpy import vnum
 from kniferpy.internal.numx import RoundingMode
 from kniferpy.verr import ValidationError
-
 
 # ---------------------------------------------------------------------------
 # arithmetic

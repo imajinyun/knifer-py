@@ -7,9 +7,9 @@ from __future__ import annotations
 
 from kniferpy.internal.dbx import (
     DB,
-    DBError,
     Column,
     Condition,
+    DBError,
     Dialect,
     Direction,
     Entity,
@@ -19,8 +19,8 @@ from kniferpy.internal.dbx import (
     Order,
     Page,
     PageResult,
-    SQLBuilder,
     Session,
+    SQLBuilder,
     Table,
     Wrapper,
     add_condition,

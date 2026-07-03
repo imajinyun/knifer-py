@@ -12,18 +12,16 @@ Errors use kniferpy.verr types with codes knifer.imgx.<reason>.
 from __future__ import annotations
 
 import base64
-import copy
 import io
 import math
 import os
 import random
 import secrets
-import string
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Any, Callable, Optional, Sequence
+from typing import Any, Callable, Sequence
 
-from PIL import Image, ImageDraw, ImageFont, ImageFilter, ImageOps
+from PIL import Image
 
 from kniferpy.verr import KniferError
 
@@ -1227,8 +1225,8 @@ def _apply_barcode_options(opts: Sequence[BarcodeOption]) -> list[Any]:
 def qr_code_image(content: str, opts: Sequence[QRCodeOption] | None = None) -> Image.Image:
     try:
         import qrcode  # type: ignore[import-untyped]
-    except ImportError:
-        raise ErrImageUnsupported("image: qrcode package not installed")
+    except ImportError as err:
+        raise ErrImageUnsupported("image: qrcode package not installed") from err
 
     cfg = _apply_barcode_options(opts or [])
     width, height, margin, fg, bg, ec_level, version = cfg

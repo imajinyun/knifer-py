@@ -4,7 +4,6 @@ import pytest
 
 from kniferpy import vstr
 
-
 # ── BOM ──────────────────────────────────────────────────────────────────────
 
 
@@ -406,18 +405,18 @@ class TestCharPredicates:
 class TestCharset:
     def test_to_utf8_gbk(self) -> None:
         result = vstr.to_utf8("你好".encode("gbk"), "gbk")
-        assert result == "你好".encode("utf-8")
+        assert result == "你好".encode()
 
     def test_from_utf8_gbk(self) -> None:
-        result = vstr.from_utf8("你好".encode("utf-8"), "gbk")
+        result = vstr.from_utf8("你好".encode(), "gbk")
         assert result == "你好".encode("gbk")
 
     def test_to_utf8_utf8_is_noop(self) -> None:
-        data = "hello".encode("utf-8")
+        data = b"hello"
         assert vstr.to_utf8(data, "utf-8") == data
 
     def test_from_utf8_utf8_is_noop(self) -> None:
-        data = "hello".encode("utf-8")
+        data = b"hello"
         assert vstr.from_utf8(data, "utf-8") == data
 
     def test_to_utf8_unsupported_raises(self) -> None:

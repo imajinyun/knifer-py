@@ -1,7 +1,8 @@
-from kniferpy import vhash
-
 import hashlib
+
 import pytest
+
+from kniferpy import vhash
 
 # Reference values generated from the knifer-go internal/hash implementation.
 _EXPECTED = {

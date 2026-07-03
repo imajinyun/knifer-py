@@ -13,13 +13,10 @@ from __future__ import annotations
 
 import io
 import os
-import stat
-import tempfile
-from dataclasses import dataclass, field
-from typing import Any, Callable, Optional
+from dataclasses import dataclass
+from typing import Any, Callable
 
 import openpyxl  # type: ignore[import-untyped]
-from openpyxl.cell.cell import TYPE_STRING, TYPE_NUMERIC, TYPE_BOOL, TYPE_FORMULA, TYPE_ERROR
 from openpyxl.utils import get_column_letter  # type: ignore[import-untyped]
 
 from kniferpy.verr import KniferError
@@ -74,7 +71,7 @@ def is_valid_sheet_name(sheet: str) -> bool:
     return validate_sheet_name(sheet) is None
 
 
-def validate_sheet_name(sheet: str) -> Optional[Exception]:
+def validate_sheet_name(sheet: str) -> Exception | None:
     if not sheet:
         return ErrEmptySheetName("sheet name is empty")
     if len(sheet) > MAX_SHEET_NAME_RUNES:
@@ -93,8 +90,8 @@ class _ReadConfig:
     start_col: int = 1
     max_rows: int = 0
     max_cols: int = 0
-    open_file: Optional[Callable[..., Any]] = None
-    open_reader: Optional[Callable[..., Any]] = None
+    open_file: Callable[..., Any] | None = None
+    open_reader: Callable[..., Any] | None = None
 
 
 ReadOption = Callable[[_ReadConfig], None]
@@ -162,11 +159,11 @@ class _WriteConfig:
     file_perm: int = 0o644
     overwrite: bool = True
     create_parents: bool = True
-    new_file: Optional[Callable[[], Any]] = None
-    save_as: Optional[Callable[..., Any]] = None
-    mkdir_all: Optional[Callable[..., Any]] = None
-    stat: Optional[Callable[..., Any]] = None
-    chmod: Optional[Callable[..., Any]] = None
+    new_file: Callable[[], Any] | None = None
+    save_as: Callable[..., Any] | None = None
+    mkdir_all: Callable[..., Any] | None = None
+    stat: Callable[..., Any] | None = None
+    chmod: Callable[..., Any] | None = None
 
 
 WriteOption = Callable[[_WriteConfig], None]

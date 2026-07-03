@@ -141,7 +141,7 @@ class SQLBuilder:
 
         if self._is_insert:
             if self._insert_entity is not None and hasattr(self._insert_entity, "__table__"):
-                table_name = getattr(self._insert_entity, "__table__")
+                table_name = self._insert_entity.__table__
                 parts.append(f"INSERT INTO {table_name}")
             else:
                 parts.append("INSERT")

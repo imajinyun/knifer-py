@@ -7,21 +7,14 @@ import os
 import tempfile
 
 import pytest
-
 from PIL import Image
 
+from kniferpy.internal.imgx import ErrImageInvalidInput, ErrImageUnsupported
 from kniferpy.vimg import (
     BarcodeFormat,
-    BarcodeOutputFormat,
-    CircleCaptcha,
-    DecodeResult,
-    GifCaptcha,
-    LineCaptcha,
     MathGenerator,
-    QRCodeOption,
     QRErrorCorrectionLevel,
     RandomGenerator,
-    ShearCaptcha,
     add_text_watermark,
     add_watermark,
     can_decode_barcode_format,
@@ -46,9 +39,9 @@ from kniferpy.vimg import (
     qr_code_svg,
     resize,
     rotate,
+    rotate_90,
     rotate_180,
     rotate_270,
-    rotate_90,
     supported_decode_barcode_formats,
     supported_encode_barcode_formats,
     thumbnail,
@@ -56,8 +49,6 @@ from kniferpy.vimg import (
     with_background,
     with_barcode_background,
     with_barcode_foreground,
-    with_barcode_margin,
-    with_barcode_size,
     with_generator,
     with_gif_delay,
     with_gif_repeat,
@@ -123,12 +114,12 @@ class TestThumbnail:
 
     def test_thumbnail_invalid_max_edge(self) -> None:
         data = _make_png(32, 32)
-        with pytest.raises(Exception):
+        with pytest.raises(ErrImageInvalidInput):
             thumbnail(data, 0, "png")
 
     def test_thumbnail_unsupported_format(self) -> None:
         data = _make_png(32, 32)
-        with pytest.raises(Exception):
+        with pytest.raises(ErrImageUnsupported):
             thumbnail(data, 32, "bmp")
 
 
@@ -157,7 +148,7 @@ class TestResize:
 
     def test_resize_invalid(self) -> None:
         img = Image.new("RGB", (10, 10))
-        with pytest.raises(Exception):
+        with pytest.raises(ErrImageInvalidInput):
             resize(img, 0, 10)
 
 
@@ -170,7 +161,7 @@ class TestCrop:
 
     def test_crop_out_of_bounds(self) -> None:
         img = Image.new("RGB", (10, 10))
-        with pytest.raises(Exception):
+        with pytest.raises(ErrImageInvalidInput):
             crop(img, 5, 5, 10, 10)
 
     def test_crop_center(self) -> None:
@@ -238,9 +229,9 @@ class TestCompressJPEG:
 
     def test_compress_jpeg_invalid_quality(self) -> None:
         img = Image.new("RGB", (10, 10))
-        with pytest.raises(Exception):
+        with pytest.raises(ErrImageInvalidInput):
             compress_jpeg(img, 0)
-        with pytest.raises(Exception):
+        with pytest.raises(ErrImageInvalidInput):
             compress_jpeg(img, 101)
 
 
@@ -254,7 +245,7 @@ class TestWatermark:
     def test_add_watermark_invalid_opacity(self) -> None:
         img = Image.new("RGBA", (10, 10))
         wm = Image.new("RGBA", (5, 5))
-        with pytest.raises(Exception):
+        with pytest.raises(ErrImageInvalidInput):
             add_watermark(img, wm, 0, 0, 1.5)
 
     def test_add_text_watermark(self) -> None:
@@ -264,7 +255,7 @@ class TestWatermark:
 
     def test_add_text_watermark_empty(self) -> None:
         img = Image.new("RGBA", (10, 10))
-        with pytest.raises(Exception):
+        with pytest.raises(ErrImageInvalidInput):
             add_text_watermark(img, "", 0, 0, (0, 0, 0, 255), 1, 0.5)
 
 

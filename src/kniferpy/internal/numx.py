@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import math
 import os
-import re
 import struct
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, field
-from decimal import ROUND_CEILING, ROUND_DOWN, ROUND_FLOOR, ROUND_HALF_EVEN, ROUND_HALF_UP, Decimal, InvalidOperation
+from decimal import (
+    Decimal,
+    InvalidOperation,
+)
 from enum import IntEnum
 from fractions import Fraction
 from typing import Any, TypeVar
@@ -187,7 +189,8 @@ def _secure_intn(max_val: int, reader: Callable[[int], int] | None = None) -> in
     if max_val <= 0:
         return 0
     if reader is None:
-        reader = lambda n: int.from_bytes(os.urandom(8), "big") % n
+        def reader(n):
+            return int.from_bytes(os.urandom(8), "big") % n
     return reader(max_val)
 
 
@@ -304,10 +307,7 @@ def _round_mode(value: float, scale: int, mode: RoundingMode) -> float:
     elif mode == RoundingMode.HALF_EVEN:
         rounded = round(scaled)
     else:
-        if scaled >= 0:
-            rounded = math.floor(scaled + 0.5)
-        else:
-            rounded = math.ceil(scaled - 0.5)
+        rounded = math.floor(scaled + 0.5) if scaled >= 0 else math.ceil(scaled - 0.5)
     return rounded / pow10
 
 
@@ -334,7 +334,7 @@ def _round_down_float(value: float, scale: int) -> float:
 def _decimal_format(format_str: str, value: float, opts: Sequence[FormatOption] | None = None) -> str:
     if opts is None:
         opts = []
-    cfg = _apply_format_options(opts)
+    _apply_format_options(opts)
     if not format_str:
         return f"{_round(value, 0):.0f}"
     percent = "%" in format_str
@@ -711,10 +711,7 @@ def _range_closed(start: int, stop: int, step: int = 1) -> list[int]:
         return [start]
     if step == 0:
         step = 1
-    if start < stop:
-        step = _abs_int(step)
-    else:
-        step = -_abs_int(step)
+    step = _abs_int(step) if start < stop else -_abs_int(step)
     out = []
     i = start
     while True:
@@ -1125,7 +1122,7 @@ def _part_value_with_mode(total: int, part_count: int, plus_one_when_has_rem: bo
 def _to_double(value: Any, opts: Sequence[DoubleOption] | None = None) -> float:
     if opts is None:
         opts = []
-    cfg = _apply_double_options(opts)
+    _apply_double_options(opts)
     if isinstance(value, float):
         return float(value)
     if isinstance(value, int):

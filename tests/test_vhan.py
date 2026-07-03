@@ -1,7 +1,6 @@
 import pytest
 
 from kniferpy.vhan import (
-    Client,
     ConvertRequest,
     ConvertResponse,
     ErrInputLimitExceeded,

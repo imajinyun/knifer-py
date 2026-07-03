@@ -14,7 +14,7 @@ Errors use kniferpy.verr types with codes knifer.job.<reason>.
 from __future__ import annotations
 
 import concurrent.futures
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Any, Callable, Protocol, TypeVar
 
 from kniferpy.verr import KniferError
@@ -73,7 +73,7 @@ def chunks(length: int, batch_size: int) -> int:
 # --- run -----------------------------------------------------------------------
 
 def _replay_merges(job: Sliceable, merges: list[Merge | None]) -> None:
-    for idx, merge in enumerate(merges):
+    for _idx, merge in enumerate(merges):
         if merge is None:
             continue
         try:

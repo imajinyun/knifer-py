@@ -4,7 +4,6 @@ import pytest
 
 from kniferpy import vcodec
 
-
 # ── Base64 ───────────────────────────────────────────────────────────────────
 
 

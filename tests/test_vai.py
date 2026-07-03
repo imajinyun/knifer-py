@@ -10,7 +10,6 @@ from kniferpy.vai import (
     ErrMissingChatProvider,
     ErrMissingEmbeddingProvider,
     Message,
-    Role,
     RoleAssistant,
     RoleSystem,
     RoleUser,

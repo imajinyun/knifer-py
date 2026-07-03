@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
-
 
 def negate(b: bool) -> bool:
     return not b

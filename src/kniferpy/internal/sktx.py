@@ -10,7 +10,7 @@ from __future__ import annotations
 import concurrent.futures
 import socket
 from dataclasses import dataclass
-from typing import Any, Callable, Optional
+from typing import Any, Callable
 
 from kniferpy.verr import KniferError
 
@@ -44,7 +44,7 @@ def new_socket_errorf(fmt: str, *args: Any) -> SocketRuntimeError:
 
 
 def wrap_socket_error(err: Exception, msg: str) -> SocketRuntimeError:
-    return SocketRuntimeError("%s: %s" % (msg, err))
+    return SocketRuntimeError(f"{msg}: {err}")
 
 
 # --- config -------------------------------------------------------------------
@@ -55,16 +55,16 @@ ConfigOption = Callable[["SocketConfig"], None]
 @dataclass
 class SocketConfig:
     thread_pool_size: int = 32
-    thread_pool_size_func: Optional[Callable[[], int]] = None
+    thread_pool_size_func: Callable[[], int] | None = None
     read_timeout_ms: int = 30000
     write_timeout_ms: int = 30000
     read_buffer_size: int = DEFAULT_BUFFER_SIZE
     write_buffer_size: int = DEFAULT_BUFFER_SIZE
-    clock: Optional[Callable[[], float]] = None
-    runner: Optional[Callable[..., None]] = None
-    listener_factory: Optional[Callable[..., Any]] = None
-    conn_factory: Optional[Callable[..., Any]] = None
-    ip_parser: Optional[Callable[..., Any]] = None
+    clock: Callable[[], float] | None = None
+    runner: Callable[..., None] | None = None
+    listener_factory: Callable[..., Any] | None = None
+    conn_factory: Callable[..., Any] | None = None
+    ip_parser: Callable[..., Any] | None = None
 
 
 def new_socket_config() -> SocketConfig:
@@ -136,7 +136,7 @@ ConnectOption = Callable[["_ConnectConfig"], None]
 class _ConnectConfig:
     timeout: float = 5.0
     network: str = "tcp"
-    dialer: Optional[Callable[..., Any]] = None
+    dialer: Callable[..., Any] | None = None
 
 
 def with_connect_timeout(timeout: float) -> ConnectOption:
@@ -187,13 +187,13 @@ def socket_connect_addr_with_options(addr: tuple[str, int], opts: list[ConnectOp
     return socket_connect_with_options(addr[0], addr[1], opts)
 
 
-def get_remote_address(conn: Optional[socket.socket]) -> Any:
+def get_remote_address(conn: socket.socket | None) -> Any:
     if conn is None:
         return None
     return conn.getpeername()
 
 
-def is_connected(conn: Optional[socket.socket]) -> bool:
+def is_connected(conn: socket.socket | None) -> bool:
     return conn is not None
 
 
@@ -208,10 +208,10 @@ def channel_dial_with_options(addr: tuple[str, int], opts: list[ConnectOption]) 
 # --- nio server --------------------------------------------------------------
 
 class NioServer:
-    def __init__(self, port: int, config: Optional[SocketConfig] = None):
+    def __init__(self, port: int, config: SocketConfig | None = None):
         self._port = port
         self._config = config or new_socket_config()
-        self._server_socket: Optional[socket.socket] = None
+        self._server_socket: socket.socket | None = None
         self._pool: concurrent.futures.ThreadPoolExecutor | None = None
 
     def start(self) -> None:
@@ -261,11 +261,11 @@ def new_nio_server_addr_with_config(addr: tuple[str, int], cfg: SocketConfig) ->
 # --- nio client --------------------------------------------------------------
 
 class NioClient:
-    def __init__(self, host: str, port: int, config: Optional[SocketConfig] = None):
+    def __init__(self, host: str, port: int, config: SocketConfig | None = None):
         self._host = host
         self._port = port
         self._config = config or new_socket_config()
-        self._conn: Optional[socket.socket] = None
+        self._conn: socket.socket | None = None
 
     def connect(self, timeout: float = 5.0) -> None:
         self._conn = socket_connect(self._host, self._port, timeout)
@@ -325,10 +325,10 @@ class SimpleIoAction:
 
 
 class AioServer:
-    def __init__(self, port: int, config: Optional[SocketConfig] = None):
+    def __init__(self, port: int, config: SocketConfig | None = None):
         self._port = port
         self._config = config or new_socket_config()
-        self._server_socket: Optional[socket.socket] = None
+        self._server_socket: socket.socket | None = None
         self._pool: concurrent.futures.ThreadPoolExecutor | None = None
 
     def _get_thread_pool_size(self) -> int:
@@ -377,12 +377,12 @@ def new_aio_server_addr_with_options(
 
 
 class AioClient:
-    def __init__(self, addr: tuple[str, int], action: Any, config: Optional[SocketConfig] = None):
+    def __init__(self, addr: tuple[str, int], action: Any, config: SocketConfig | None = None):
         self._addr = addr
         self._action = action
         self._config = config or new_socket_config()
-        self._conn: Optional[socket.socket] = None
-        self._session: Optional[AioSession] = None
+        self._conn: socket.socket | None = None
+        self._session: AioSession | None = None
 
     def connect(self, timeout: float = 5.0) -> None:
         self._conn = socket_connect_addr(self._addr, timeout)
@@ -431,7 +431,7 @@ class IoAction:
 
 
 class MsgDecoder:
-    def decode(self, session: AioSession, buf: bytes) -> tuple[Optional[Any], bool]:
+    def decode(self, session: AioSession, buf: bytes) -> tuple[Any | None, bool]:
         return (None, False)
 
 

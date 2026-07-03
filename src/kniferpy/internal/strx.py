@@ -4,7 +4,6 @@ import codecs
 import hashlib
 import html
 import re
-import unicodedata
 from collections.abc import Callable
 
 _EMOJI_PATTERN = re.compile(

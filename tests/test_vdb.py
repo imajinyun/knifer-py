@@ -8,12 +8,7 @@ from kniferpy.vdb import (
     DB,
     DBError,
     Dialect,
-    NamedSQL,
-    Order,
-    Page,
-    PageResult,
     Session,
-    Wrapper,
     add_condition,
     and_group,
     asc,
@@ -36,7 +31,6 @@ from kniferpy.vdb import (
     lt,
     lte,
     ne,
-    new_builder,
     new_options,
     new_page,
     new_page_result,
@@ -57,7 +51,6 @@ from kniferpy.vdb import (
     with_wrapper,
     wrapper_for_dialect,
 )
-
 
 # --- builder tests ------------------------------------------------------------
 
@@ -288,7 +281,7 @@ class TestNamedParams:
     def test_parse_named_missing(self) -> None:
         try:
             parse_named("SELECT * FROM users WHERE name = :name", {}, Dialect.SQLITE)
-            assert False, "should raise"
+            raise AssertionError("should raise")
         except DBError:
             pass
 

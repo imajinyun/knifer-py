@@ -4,7 +4,6 @@ from kniferpy.vtpl import (
     EngineFunc,
     ErrInvalidRenderRequest,
     ErrMissingEngine,
-    RenderRequest,
     new_html_engine,
     new_text_engine,
     render,
@@ -21,7 +20,6 @@ from kniferpy.vtpl import (
     with_template_name,
     with_template_parser,
 )
-
 
 # --- render_template ------------------------------------------------------
 

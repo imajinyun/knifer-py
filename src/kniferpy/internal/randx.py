@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import os
 import random
-import string
 import sys
 import threading
-from typing import Any, Callable, List, Optional, Sequence, TypeVar
+from typing import Any, Callable, Sequence, TypeVar
 
 T = TypeVar('T')
 
@@ -23,8 +22,8 @@ class _RandomOptions:
     """Per-call random configuration."""
 
     def __init__(self) -> None:
-        self.source: Optional[random.Random] = None
-        self.reader: Optional[Callable[[int], bytes]] = None
+        self.source: random.Random | None = None
+        self.reader: Callable[[int], bytes] | None = None
         self.strict_crypto: bool = False
 
 
@@ -61,8 +60,9 @@ def with_strict_crypto_random() -> Callable[[_RandomOptions], None]:
 
 
 _default_rand_lock = threading.Lock()
-_default_rand: Optional[random.Random] = None
-_default_rand_provider: Callable[[], random.Random] = lambda: random.Random()
+_default_rand: random.Random | None = None
+def _default_rand_provider() -> random.Random:
+    return random.Random()
 
 
 def set_seed(seed: int) -> None:
@@ -72,15 +72,12 @@ def set_seed(seed: int) -> None:
         _default_rand = random.Random(seed)
 
 
-def configure_default_random_source_provider(provider: Optional[Callable[[], random.Random]]) -> None:
+def configure_default_random_source_provider(provider: Callable[[], random.Random] | None) -> None:
     """Set the provider used to lazily create the package-level pseudo-random source."""
     global _default_rand, _default_rand_provider
     with _default_rand_lock:
         _default_rand = None
-        if provider is None:
-            _default_rand_provider = lambda: random.Random()
-        else:
-            _default_rand_provider = provider
+        _default_rand_provider = (lambda: random.Random()) if provider is None else provider
 
 
 def reset_default_random_source() -> None:
@@ -274,7 +271,7 @@ class WeightedOption:
 
 class _WeightedConfig:
     def __init__(self) -> None:
-        self.source: Optional[random.Random] = None
+        self.source: random.Random | None = None
         self.precision: float = 1e-12
 
 
@@ -345,14 +342,14 @@ class _AliasPicker:
         self._alias = [0] * n
         while small and large:
             s = small.pop()
-            l = large.pop()
+            large_item = large.pop()
             self._prob[s] = scaled[s]
-            self._alias[s] = l
-            scaled[l] = scaled[l] + scaled[s] - 1
-            if scaled[l] < 1:
-                small.append(l)
+            self._alias[s] = large_item
+            scaled[large_item] = scaled[large_item] + scaled[s] - 1
+            if scaled[large_item] < 1:
+                small.append(large_item)
             else:
-                large.append(l)
+                large.append(large_item)
         for i in small + large:
             self._prob[i] = 1.0
             self._alias[i] = i

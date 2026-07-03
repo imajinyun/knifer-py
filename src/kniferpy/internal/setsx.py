@@ -65,14 +65,14 @@ class Set(Generic[T]):
     def contains(self, item: T) -> bool:
         return item in self._data
 
-    def sub(self, other: "Set[T]") -> "Set[T]":
+    def sub(self, other: Set[T]) -> Set[T]:
         out: Set[T] = Set()
         for item in self._data:
             if not other.contains(item):
                 out._data[item] = None
         return out
 
-    def union(self, other: "Set[T]") -> "Set[T]":
+    def union(self, other: Set[T]) -> Set[T]:
         out: Set[T] = Set()
         for item in self._data:
             out._data[item] = None
@@ -80,7 +80,7 @@ class Set(Generic[T]):
             out._data[item] = None
         return out
 
-    def intersect(self, other: "Set[T]") -> "Set[T]":
+    def intersect(self, other: Set[T]) -> Set[T]:
         if len(other._data) < len(self._data):
             return other.intersect(self)
         out: Set[T] = Set()
@@ -92,7 +92,7 @@ class Set(Generic[T]):
     def members(self) -> list[T]:
         return list(self._data.keys())
 
-    def equal(self, other: "Set[T]") -> bool:
+    def equal(self, other: Set[T]) -> bool:
         return self._data == other._data
 
     def __str__(self) -> str:
@@ -115,13 +115,13 @@ class Set(Generic[T]):
             return False
         return self.equal(other)
 
-    def __or__(self, other: "Set[T]") -> "Set[T]":
+    def __or__(self, other: Set[T]) -> Set[T]:
         return self.union(other)
 
-    def __and__(self, other: "Set[T]") -> "Set[T]":
+    def __and__(self, other: Set[T]) -> Set[T]:
         return self.intersect(other)
 
-    def __sub__(self, other: "Set[T]") -> "Set[T]":
+    def __sub__(self, other: Set[T]) -> Set[T]:
         return self.sub(other)
 
     def to_json(self, opts: list[JSONOption] | None = None) -> str:
@@ -131,7 +131,7 @@ class Set(Generic[T]):
         return cfg.marshal(self.members()).decode()
 
     @classmethod
-    def from_json(cls, data: str, opts: list[JSONOption] | None = None) -> "Set[T]":
+    def from_json(cls, data: str, opts: list[JSONOption] | None = None) -> Set[T]:
         if opts is None:
             opts = []
         cfg = _apply_json_options(opts)

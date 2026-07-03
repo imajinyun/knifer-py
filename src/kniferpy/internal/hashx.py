@@ -245,7 +245,7 @@ class ConsistentHash:
             attempt = 0
             while h in self._ring and attempt < 1024:
                 attempt += 1
-                h = _avalanche64(_fnv64a(f"{key}#{attempt}".encode("utf-8")))
+                h = _avalanche64(_fnv64a(f"{key}#{attempt}".encode()))
             if h in self._ring:
                 continue
             self._ring[h] = node

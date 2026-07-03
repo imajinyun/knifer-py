@@ -12,12 +12,10 @@ Errors use kniferpy.verr types with codes knifer.pinyin.<reason>.
 
 from __future__ import annotations
 
-import copy
 from dataclasses import dataclass, field
 from typing import Protocol
 
 from kniferpy.verr import KniferError
-
 
 # --- errors --------------------------------------------------------------------
 

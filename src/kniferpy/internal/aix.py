@@ -14,10 +14,9 @@ from __future__ import annotations
 
 import copy
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Protocol
 
 from kniferpy.verr import KniferError
-
 
 # --- errors --------------------------------------------------------------------
 
@@ -210,8 +209,8 @@ _SECRET_WORDS = frozenset({"secret", "password"})
 
 def redact(text: str) -> str:
     fields = text.split()
-    for i, field in enumerate(fields):
-        lower = field.strip("'\"`.,;:()[]{}<>").lower()
+    for i, fld in enumerate(fields):
+        lower = fld.strip("'\"`.,;:()[]{}<>").lower()
         if lower in _SECRET_WORDS or lower.startswith("sk-"):
             fields[i] = "[REDACTED]"
     return " ".join(fields)
