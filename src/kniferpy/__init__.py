@@ -39,6 +39,7 @@ __all__ = [
     "vsem",
     "vset",
     "vstr",
+    "vtok",
     "vsys",
     "vurl",
     "vver",

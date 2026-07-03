@@ -78,6 +78,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 📧 SMTP mail composition and delivery | `kniferpy.vmail` |
 | 🖥️ Shell-free process exec, ANSI color, and command tree | `kniferpy.vcli` |
 | 🔍 Reflection and introspection helpers | `kniferpy.vref` |
+| 🔤 Provider-neutral text tokenization and keyword extraction | `kniferpy.vtok` |
 
 ## 🧩 Examples
 
@@ -135,3 +136,4 @@ Common safe defaults are visible at the call site:
 - 📧 `vmail.new_message(...)`, `vmail.send_text(...)`, and `vmail.quick_send(...)` for CR/LF-safe MIME composition with mandatory STARTTLS and plaintext-auth refusal by default.
 - 🖥️ `vcli.run(...)`, `vcli.output(...)`, and `vcli.colorize(...)` for shell-free process execution with bounded output plus ANSI coloring and a small command tree.
 - 🔍 `vref.is_function(...)`, `vref.get_field_value(...)`, and `vref.invoke(...)` for type introspection, field access, and dynamic method invocation.
+- 🔤 `vtok.Client(...)`, `vtok.TokenizeRequest(...)`, and `vtok.KeywordsRequest(...)` for provider-neutral text segmentation with input/token limit enforcement.
