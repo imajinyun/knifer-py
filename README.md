@@ -70,6 +70,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 🗄️ In-memory FIFO/LRU/LFU caches | `kniferpy.vcache` |
 | 🚫 DFA sensitive-word matching and filtering | `kniferpy.vdfa` |
 | 🗜️ ZIP archive and gzip/zlib compression | `kniferpy.vzip` |
+| 🖥️ System, host, and user info with env helpers | `kniferpy.vsys` |
 
 ## 🧩 Examples
 
@@ -119,3 +120,4 @@ Common safe defaults are visible at the call site:
 - 🗄️ `vcache.new_lru(...)`, `vcache.new_lfu(...)`, and `vcache.new_fifo(..., timeout=...)` for bounded in-memory caching with TTL and `get_or_load`.
 - 🚫 `vdfa.init(...)`, `vdfa.contains(...)`, and `vdfa.filter(...)` for stop-char-tolerant sensitive-word matching and masking.
 - 🗜️ `vzip.zip_files(...)`, `vzip.unzip_to(..., limit=...)`, and `vzip.gzip_bytes(...)` for zip-slip-safe archiving and bounded (de)compression.
+- 🖥️ `vsys.get_os_info(...)`, `vsys.get_int(...)`, and `vsys.get_bool(...)` for system information and fail-safe environment reads.
