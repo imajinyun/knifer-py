@@ -149,9 +149,7 @@ def test_keys_and_values_order() -> None:
 
 def test_removal_listener() -> None:
     removed: list[tuple[str, int]] = []
-    c: vcache.FIFOCache[str, int] = vcache.new_fifo(
-        2, listener=lambda k, v: removed.append((k, v))
-    )
+    c: vcache.FIFOCache[str, int] = vcache.new_fifo(2, listener=lambda k, v: removed.append((k, v)))
     c.put("a", 1)
     c.put("b", 2)
     c.put("c", 3)  # evicts "a"

@@ -69,6 +69,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 🚦 Weighted, fair counting semaphore | `kniferpy.vsem` |
 | 🗄️ In-memory FIFO/LRU/LFU caches | `kniferpy.vcache` |
 | 🚫 DFA sensitive-word matching and filtering | `kniferpy.vdfa` |
+| 🗜️ ZIP archive and gzip/zlib compression | `kniferpy.vzip` |
 
 ## 🧩 Examples
 
@@ -116,4 +117,5 @@ Common safe defaults are visible at the call site:
 - 🌸 `vblf.new_default_filter(...)`, `vblf.new_bit_set_bloom_filter(...)`, and `vblf.new_bitmap_bloom_filter(...)` for no-false-negative membership tests.
 - 🚦 `vsem.new(...)`, `Semaphore.guard(...)`, and `Semaphore.try_acquire(...)` for weighted, FIFO-fair concurrency limits.
 - 🗄️ `vcache.new_lru(...)`, `vcache.new_lfu(...)`, and `vcache.new_fifo(..., timeout=...)` for bounded in-memory caching with TTL and `get_or_load`.
- for stop-char-tolerant sensitive-word matching and masking.
+- 🚫 `vdfa.init(...)`, `vdfa.contains(...)`, and `vdfa.filter(...)` for stop-char-tolerant sensitive-word matching and masking.
+- 🗜️ `vzip.zip_files(...)`, `vzip.unzip_to(..., limit=...)`, and `vzip.gzip_bytes(...)` for zip-slip-safe archiving and bounded (de)compression.

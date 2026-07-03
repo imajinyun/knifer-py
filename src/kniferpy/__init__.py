@@ -35,4 +35,5 @@ __all__ = [
     "vurl",
     "vver",
     "vxml",
+    "vzip",
 ]
