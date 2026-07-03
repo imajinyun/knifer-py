@@ -1,46 +1,52 @@
+"""Form validation utilities.
+
+Ports knifer-go's vform/validator surface with Python-idiomatic mappings.
+
+Supports:
+- Email, mobile, URL, IPv4, IPv6, ID card, Chinese, and number string validation
+- WithOptions variants for custom matchers
+- With*Matcher options for per-call customization
+"""
 from __future__ import annotations
 
-from kniferpy.internal import formx
+from kniferpy.internal.formx import (
+    is_email,
+    is_email_with_options,
+    is_mobile,
+    is_mobile_with_options,
+    is_url,
+    is_ipv4,
+    is_ipv6,
+    is_id_card,
+    is_id_card_with_options,
+    is_chinese,
+    is_chinese_with_options,
+    is_number_str,
+    is_number_str_with_options,
+    with_email_matcher,
+    with_mobile_matcher,
+    with_id_card_matcher,
+    with_chinese_matcher,
+    with_number_matcher,
+)
 
 __all__ = [
     "is_email",
+    "is_email_with_options",
     "is_mobile",
+    "is_mobile_with_options",
     "is_url",
     "is_ipv4",
     "is_ipv6",
     "is_id_card",
+    "is_id_card_with_options",
     "is_chinese",
+    "is_chinese_with_options",
     "is_number_str",
+    "is_number_str_with_options",
+    "with_email_matcher",
+    "with_mobile_matcher",
+    "with_id_card_matcher",
+    "with_chinese_matcher",
+    "with_number_matcher",
 ]
-
-
-def is_email(s: str) -> bool:
-    return formx.is_email(s)
-
-
-def is_mobile(s: str) -> bool:
-    return formx.is_mobile(s)
-
-
-def is_url(s: str) -> bool:
-    return formx.is_url(s)
-
-
-def is_ipv4(s: str) -> bool:
-    return formx.is_ipv4(s)
-
-
-def is_ipv6(s: str) -> bool:
-    return formx.is_ipv6(s)
-
-
-def is_id_card(s: str) -> bool:
-    return formx.is_id_card(s)
-
-
-def is_chinese(s: str) -> bool:
-    return formx.is_chinese(s)
-
-
-def is_number_str(s: str) -> bool:
-    return formx.is_number_str(s)
