@@ -23,6 +23,7 @@ __all__ = [
     "vident",
     "vjson",
     "vjwt",
+    "vlog",
     "vmask",
     "vnet",
     "vnum",

@@ -73,6 +73,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 🖥️ System, host, and user info with env helpers | `kniferpy.vsys` |
 | ⏰ Cron expression parsing and matching | `kniferpy.vcron` |
 | ⚙️ Grouped key-value config parsing | `kniferpy.vconf` |
+| 🪵 Leveled console logging with colors | `kniferpy.vlog` |
 
 ## 🧩 Examples
 
@@ -125,3 +126,4 @@ Common safe defaults are visible at the call site:
 - 🖥️ `vsys.get_os_info(...)`, `vsys.get_int(...)`, and `vsys.get_bool(...)` for system information and fail-safe environment reads.
 - ⏰ `vcron.new_pattern(...)`, `Pattern.match(...)`, and `vcron.next_time(...)` for cron expression matching and next-run computation.
 - ⚙️ `vconf.parse(...)`, `Conf.get_int(...)`, and `Conf.get_expanded(...)` for grouped properties config with fail-safe typed reads and `${var}` expansion.
+- 🪵 `vlog.new_console_log(...)`, `vlog.info(...)`, and `vlog.set_level(...)` for leveled console logging with `{}`/`%` templates and stderr routing for warnings.
