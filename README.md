@@ -72,6 +72,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 🗜️ ZIP archive and gzip/zlib compression | `kniferpy.vzip` |
 | 🖥️ System, host, and user info with env helpers | `kniferpy.vsys` |
 | ⏰ Cron expression parsing and matching | `kniferpy.vcron` |
+| ⚙️ Grouped key-value config parsing | `kniferpy.vconf` |
 
 ## 🧩 Examples
 
@@ -123,3 +124,4 @@ Common safe defaults are visible at the call site:
 - 🗜️ `vzip.zip_files(...)`, `vzip.unzip_to(..., limit=...)`, and `vzip.gzip_bytes(...)` for zip-slip-safe archiving and bounded (de)compression.
 - 🖥️ `vsys.get_os_info(...)`, `vsys.get_int(...)`, and `vsys.get_bool(...)` for system information and fail-safe environment reads.
 - ⏰ `vcron.new_pattern(...)`, `Pattern.match(...)`, and `vcron.next_time(...)` for cron expression matching and next-run computation.
+- ⚙️ `vconf.parse(...)`, `Conf.get_int(...)`, and `Conf.get_expanded(...)` for grouped properties config with fail-safe typed reads and `${var}` expansion.

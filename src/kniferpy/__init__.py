@@ -6,6 +6,7 @@ __all__ = [
     "vbool",
     "vcache",
     "vcodec",
+    "vconf",
     "vconv",
     "vcron",
     "vcrypto",
