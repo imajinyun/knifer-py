@@ -1,29 +1,182 @@
-import binascii
+from __future__ import annotations
 
 import pytest
 
 from kniferpy import vcodec
 
 
-def test_base64_helpers() -> None:
-    encoded = vcodec.base64_encode_str("kniferpy")
-
-    assert encoded == "a25pZmVycHk="
-    assert vcodec.base64_decode_str(encoded) == "kniferpy"
-    assert vcodec.base64_url_decode(vcodec.base64_url_encode(b"a?b")) == b"a?b"
+# ── Base64 ───────────────────────────────────────────────────────────────────
 
 
-def test_hex_helpers() -> None:
-    encoded = vcodec.hex_encode_str("kniferpy")
+class TestBase64:
+    def test_encode(self) -> None:
+        assert vcodec.base64_encode(b"knifer-go") == "a25pZmVyLWdv"
 
-    assert encoded == "6b6e696665727079"
-    assert vcodec.hex_decode_str(encoded) == "kniferpy"
+    def test_encode_str(self) -> None:
+        assert vcodec.base64_encode_str("go") == "Z28="
+
+    def test_decode(self) -> None:
+        assert vcodec.base64_decode("a25pZmVyLWdv") == b"knifer-go"
+
+    def test_decode_str(self) -> None:
+        assert vcodec.base64_decode_str("Z28=") == "go"
+
+    def test_decode_invalid(self) -> None:
+        with pytest.raises(ValueError):
+            vcodec.base64_decode("not base64")
+
+    def test_url_encode_decode(self) -> None:
+        encoded = vcodec.base64_url_encode(b"a/b?c=d")
+        assert encoded == "YS9iP2M9ZA=="
+        assert vcodec.base64_url_decode(encoded) == b"a/b?c=d"
+
+    def test_url_decode_invalid(self) -> None:
+        with pytest.raises(ValueError):
+            vcodec.base64_url_decode("invalid!")
+
+    def test_raw_url_encode_decode(self) -> None:
+        encoded = vcodec.base64_raw_url_encode(b"go?")
+        assert encoded == "Z28_"
+        assert vcodec.base64_raw_url_decode(encoded) == b"go?"
+
+    def test_raw_url_decode_invalid(self) -> None:
+        with pytest.raises(ValueError):
+            vcodec.base64_raw_url_decode("!!!")
 
 
-def test_rot13() -> None:
-    assert vcodec.rot13("uryyb") == "hello"
+# ── Hex ──────────────────────────────────────────────────────────────────────
 
 
-def test_base64_decode_rejects_invalid_input() -> None:
-    with pytest.raises(binascii.Error):
-        vcodec.base64_decode("not base64")
+class TestHex:
+    def test_encode(self) -> None:
+        assert vcodec.hex_encode(b"\x47\x6f") == "476f"
+
+    def test_encode_str(self) -> None:
+        assert vcodec.hex_encode_str("go") == "676f"
+
+    def test_decode(self) -> None:
+        assert vcodec.hex_decode("476f") == b"Go"
+
+    def test_decode_str(self) -> None:
+        assert vcodec.hex_decode_str("676f") == "go"
+
+    def test_decode_invalid(self) -> None:
+        with pytest.raises(ValueError):
+            vcodec.hex_decode("xyz")
+
+
+# ── Base32 ───────────────────────────────────────────────────────────────────
+
+
+class TestBase32:
+    def test_encode(self) -> None:
+        assert vcodec.base32_encode(b"go") == "M5XQ===="
+
+    def test_decode(self) -> None:
+        assert vcodec.base32_decode("M5XQ====") == b"go"
+
+    def test_encode_hex(self) -> None:
+        assert vcodec.base32_encode_with_encoding(b"go", vcodec.BASE32_HEX_ENCODING) == "CTNG===="
+
+    def test_decode_hex(self) -> None:
+        assert vcodec.base32_decode_with_encoding("CTNG====", vcodec.BASE32_HEX_ENCODING) == b"go"
+
+    def test_decode_invalid(self) -> None:
+        with pytest.raises(ValueError):
+            vcodec.base32_decode("!!!")
+
+
+# ── Base58 ───────────────────────────────────────────────────────────────────
+
+
+class TestBase58:
+    def test_encode(self) -> None:
+        assert vcodec.base58_encode(b"hello world") == "StV1DL6CwTryKyV"
+
+    def test_decode(self) -> None:
+        assert vcodec.base58_decode("StV1DL6CwTryKyV") == b"hello world"
+
+    def test_encode_flickr(self) -> None:
+        assert vcodec.base58_encode_with_alphabet(b"hello", vcodec.BASE58_FLICKR_ALPHABET) == "cM8DuyF"
+
+    def test_decode_flickr(self) -> None:
+        assert vcodec.base58_decode_with_alphabet("cM8DuyF", vcodec.BASE58_FLICKR_ALPHABET) == b"hello"
+
+    def test_decode_invalid(self) -> None:
+        with pytest.raises(ValueError):
+            vcodec.base58_decode("0")
+
+
+# ── Base62 ───────────────────────────────────────────────────────────────────
+
+
+class TestBase62:
+    def test_encode(self) -> None:
+        assert vcodec.base62_encode(b"hello") == "7tQLFHz"
+
+    def test_decode(self) -> None:
+        assert vcodec.base62_decode("7tQLFHz") == b"hello"
+
+    def test_decode_invalid(self) -> None:
+        with pytest.raises(ValueError):
+            vcodec.base62_decode("!!!")
+
+
+# ── Morse ────────────────────────────────────────────────────────────────────
+
+
+class TestMorse:
+    def test_encode(self) -> None:
+        assert vcodec.morse_encode("SOS 1") == "... --- ... / .----"
+
+    def test_decode(self) -> None:
+        assert vcodec.morse_decode("... --- ... / .----") == "SOS 1"
+
+    def test_encode_single(self) -> None:
+        assert vcodec.morse_encode("go") == "--. ---"
+
+    def test_decode_empty(self) -> None:
+        assert vcodec.morse_decode("") == ""
+
+    def test_encode_invalid(self) -> None:
+        with pytest.raises(ValueError):
+            vcodec.morse_encode("\u20ac")
+
+
+# ── ROT ──────────────────────────────────────────────────────────────────────
+
+
+class TestROT:
+    def test_rot13(self) -> None:
+        assert vcodec.rot13("hello") == "uryyb"
+        assert vcodec.rot13("uryyb") == "hello"
+
+    def test_rot47(self) -> None:
+        assert vcodec.rot47("Hello!") == "w6==@P"
+        assert vcodec.rot47("w6==@P") == "Hello!"
+
+    def test_rotn(self) -> None:
+        assert vcodec.rotn("abcXYZ", 2) == "cdeZAB"
+        assert vcodec.rotn("abcXYZ", -2) == "yzaVWX"
+
+    def test_rotn_large_shift(self) -> None:
+        assert vcodec.rotn("a", 28) == "c"  # 28 % 26 = 2
+
+
+# ── Legacy ───────────────────────────────────────────────────────────────────
+
+
+class TestLegacy:
+    def test_base64_helpers(self) -> None:
+        encoded = vcodec.base64_encode_str("kniferpy")
+        assert encoded == "a25pZmVycHk="
+        assert vcodec.base64_decode_str(encoded) == "kniferpy"
+        assert vcodec.base64_url_decode(vcodec.base64_url_encode(b"a?b")) == b"a?b"
+
+    def test_hex_helpers(self) -> None:
+        encoded = vcodec.hex_encode_str("kniferpy")
+        assert encoded == "6b6e696665727079"
+        assert vcodec.hex_decode_str(encoded) == "kniferpy"
+
+    def test_rot13(self) -> None:
+        assert vcodec.rot13("uryyb") == "hello"
