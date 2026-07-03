@@ -2,6 +2,7 @@
 
 __all__ = [
     "verr",
+    "vbean",
     "vblf",
     "vbool",
     "vcache",

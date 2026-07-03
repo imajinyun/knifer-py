@@ -74,6 +74,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | ⏰ Cron expression parsing and matching | `kniferpy.vcron` |
 | ⚙️ Grouped key-value config parsing | `kniferpy.vconf` |
 | 🪵 Leveled console logging with colors | `kniferpy.vlog` |
+| 🫘 Struct/map property mapping and copying | `kniferpy.vbean` |
 
 ## 🧩 Examples
 
@@ -127,3 +128,4 @@ Common safe defaults are visible at the call site:
 - ⏰ `vcron.new_pattern(...)`, `Pattern.match(...)`, and `vcron.next_time(...)` for cron expression matching and next-run computation.
 - ⚙️ `vconf.parse(...)`, `Conf.get_int(...)`, and `Conf.get_expanded(...)` for grouped properties config with fail-safe typed reads and `${var}` expansion.
 - 🪵 `vlog.new_console_log(...)`, `vlog.info(...)`, and `vlog.set_level(...)` for leveled console logging with `{}`/`%` templates and stderr routing for warnings.
+- 🫘 `vbean.to_map(...)`, `vbean.copy_properties(...)`, and `vbean.decode(...)` for dataclass/dict property mapping with alias matching and weak type conversion.
