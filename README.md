@@ -75,6 +75,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | ⚙️ Grouped key-value config parsing | `kniferpy.vconf` |
 | 🪵 Leveled console logging with colors | `kniferpy.vlog` |
 | 🫘 Struct/map property mapping and copying | `kniferpy.vbean` |
+| 📧 SMTP mail composition and delivery | `kniferpy.vmail` |
 
 ## 🧩 Examples
 
