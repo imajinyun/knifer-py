@@ -33,6 +33,7 @@ __all__ = [
     "vobj",
     "vpass",
     "vrand",
+    "vref",
     "vregex",
     "vseq",
     "vsem",

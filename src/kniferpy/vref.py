@@ -1,0 +1,107 @@
+"""Reflection and introspection helpers.
+
+Thin facade over kniferpy.internal.refx, porting knifer-go's vref surface.
+
+Python-idiomatic mappings:
+- Go reflect.Type/reflect.Value -> built-in type(), inspect.getmembers()
+- Go struct tags -> dataclass annotations
+- Go typed nil / IsNil -> Python's is None (not re-exported)
+- Go unsafe/unexported field access -> not applicable (omitted)
+
+Omitted (Go-specific):
+- TypeOf/ValueOf/IndirectType/IndirectValue (reflect.Value is not a Python concept)
+- IsNil/IsNilValue (typed nil does not exist in Python)
+- WithUnsafeAccess/WithAllowUnexported (unsafe field access is not needed)
+- GetConstructor/GetConstructors/GetConstructorsDirectly (Go func-as-constructor)
+- IsOuterClassField (Java compatibility stub)
+"""
+
+from __future__ import annotations
+
+from kniferpy.internal.refx import (
+    FieldFilter,
+    MethodFilter,
+    get_field_value,
+    get_fields,
+    get_fields_value,
+    get_method,
+    get_method_by_name,
+    get_method_by_name_ignore_case,
+    get_method_names,
+    get_methods,
+    get_public_field_names,
+    get_public_method_names,
+    get_public_methods,
+    has_field,
+    implements_context,
+    implements_error,
+    invoke,
+    invoke_func,
+    is_array,
+    is_array_type,
+    is_collection,
+    is_collection_type,
+    is_empty_param,
+    is_equals_method,
+    is_func_type,
+    is_function,
+    is_getter_or_setter,
+    is_getter_or_setter_ignore_case,
+    is_hash_code_method,
+    is_iterable,
+    is_map,
+    is_map_type,
+    is_rangeable_type,
+    is_slice,
+    is_slice_type,
+    is_to_string_method,
+    new_instance,
+    new_instance_if_possible,
+    remove_final_modify,
+    set_accessible,
+    set_field_value,
+)
+
+__all__ = [
+    "FieldFilter",
+    "MethodFilter",
+    "get_field_value",
+    "get_fields",
+    "get_fields_value",
+    "get_method",
+    "get_method_by_name",
+    "get_method_by_name_ignore_case",
+    "get_method_names",
+    "get_methods",
+    "get_public_field_names",
+    "get_public_method_names",
+    "get_public_methods",
+    "has_field",
+    "implements_context",
+    "implements_error",
+    "invoke",
+    "invoke_func",
+    "is_array",
+    "is_array_type",
+    "is_collection",
+    "is_collection_type",
+    "is_empty_param",
+    "is_equals_method",
+    "is_func_type",
+    "is_function",
+    "is_getter_or_setter",
+    "is_getter_or_setter_ignore_case",
+    "is_hash_code_method",
+    "is_iterable",
+    "is_map",
+    "is_map_type",
+    "is_rangeable_type",
+    "is_slice",
+    "is_slice_type",
+    "is_to_string_method",
+    "new_instance",
+    "new_instance_if_possible",
+    "remove_final_modify",
+    "set_accessible",
+    "set_field_value",
+]
