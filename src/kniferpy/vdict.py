@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any, TypeVar
 
 from kniferpy.internal import mapsx
@@ -33,7 +33,7 @@ def Of(*kvs: Any) -> dict[Any, Any]:
     return mapsx.of(*kvs)
 
 
-def OfE(*kvs: Any) -> tuple[dict[Any, Any], str | None]:
+def OfE(*kvs: Any) -> tuple[dict[Any, Any], Exception | None]:
     return mapsx.of_e(*kvs)
 
 
@@ -41,8 +41,8 @@ def FromPairs(*pairs: Pair[K, V]) -> dict[K, V]:
     return mapsx.from_pairs(*pairs)
 
 
-def FromEntries(entries: list[Pair[K, V]]) -> dict[K, V]:
-    return mapsx.from_entries(entries)
+def FromEntries(entries: Sequence[Pair[K, V]]) -> dict[K, V]:
+    return mapsx.from_entries(entries)  # type: ignore[arg-type]
 
 
 def OrEmpty(m: dict[K, V] | None) -> dict[K, V]:
@@ -55,7 +55,7 @@ def OrEmpty(m: dict[K, V] | None) -> dict[K, V]:
 
 
 def is_empty(value: Mapping[K, V]) -> bool:
-    return mapsx.is_empty(value)
+    return mapsx.is_empty(dict(value))
 
 
 def IsEmpty(m: dict[K, V]) -> bool:
@@ -67,7 +67,7 @@ def IsNotEmpty(m: dict[K, V]) -> bool:
 
 
 def contains_key(value: Mapping[K, V], key: K) -> bool:
-    return mapsx.contains_key(value, key)
+    return mapsx.contains_key(dict(value), key)
 
 
 def ContainsKey(m: dict[K, V], key: K) -> bool:
@@ -75,7 +75,7 @@ def ContainsKey(m: dict[K, V], key: K) -> bool:
 
 
 def contains_value(value: Mapping[K, V], item: V) -> bool:
-    return mapsx.contains_value(value, item)
+    return mapsx.contains_value(dict(value), item)
 
 
 def ContainsValue(m: dict[K, V], value: V) -> bool:
@@ -96,7 +96,7 @@ def Every(m: dict[K, V], pred: Callable[[K, V], bool]) -> bool:
 
 
 def get_or(value: Mapping[K, V], key: K, default: V) -> V:
-    return mapsx.get_or(value, key, default)
+    return mapsx.get_or(dict(value), key, default)
 
 
 def Get(m: dict[K, V], key: K) -> V | None:
@@ -111,11 +111,11 @@ def GetAny(m: dict[K, V], *keys: K) -> tuple[V | None, bool]:
     return mapsx.get_any(m, *keys)
 
 
-def Find(m: dict[K, V], pred: Callable[[K, V], bool]) -> tuple[K | None, V | None, bool]:
+def Find(m: dict[K, V], pred: Callable[[K, V], bool]) -> tuple[K, V] | None:
     return mapsx.find(m, pred)
 
 
-def FindKey(m: dict[K, V], pred: Callable[[V], bool]) -> tuple[K | None, bool]:
+def FindKey(m: dict[K, V], pred: Callable[[V], bool]) -> tuple[K, bool]:
     return mapsx.find_key(m, pred)
 
 
@@ -125,7 +125,7 @@ def FindKey(m: dict[K, V], pred: Callable[[V], bool]) -> tuple[K | None, bool]:
 
 
 def keys(value: Mapping[K, V]) -> list[K]:
-    return mapsx.keys(value)
+    return mapsx.keys(dict(value))
 
 
 def Keys(m: dict[K, V]) -> list[K]:
@@ -133,7 +133,7 @@ def Keys(m: dict[K, V]) -> list[K]:
 
 
 def values(value: Mapping[K, V]) -> list[V]:
-    return mapsx.values(value)
+    return mapsx.values(dict(value))
 
 
 def Values(m: dict[K, V]) -> list[V]:
@@ -141,7 +141,7 @@ def Values(m: dict[K, V]) -> list[V]:
 
 
 def sorted_keys(value: Mapping[Any, V]) -> list[Any]:
-    return mapsx.sorted_keys(value)
+    return mapsx.sorted_keys(dict(value))
 
 
 def SortedKeys(m: dict[K, V]) -> list[K]:
@@ -149,7 +149,7 @@ def SortedKeys(m: dict[K, V]) -> list[K]:
 
 
 def SortedKeysFunc(m: dict[K, V], less: Callable[[K, K], bool]) -> list[K]:
-    return mapsx.sorted_keys_func(m, less)
+    return mapsx.sorted_keys_by(m, less)  # type: ignore[arg-type]
 
 
 def SortedValues(m: dict[K, V]) -> list[V]:
@@ -170,31 +170,31 @@ def Entries(m: dict[K, V]) -> list[Pair[K, V]]:
 
 
 def map_values(value: Mapping[K, V], fn: Callable[[K, V], R]) -> dict[K, R]:
-    return mapsx.map_values(value, fn)
+    return mapsx.map_values(dict(value), fn)
 
 
 def Map(m: dict[K1, V1], transform: Callable[[K1, V1], tuple[K2, V2]]) -> dict[K2, V2]:
-    return mapsx.map_pairs(m, transform)
+    return mapsx.map_items(m, transform)
 
 
-def MapErr(m: dict[K1, V1], transform: Callable[[K1, V1], tuple[K2, V2, str | None]]) -> tuple[dict[K2, V2], str | None]:
-    return mapsx.map_pairs_err(m, transform)
+def MapErr(m: dict[K1, V1], transform: Callable[[K1, V1], tuple[K2, V2, Exception | None]]) -> tuple[dict[K2, V2], Exception | None]:
+    return mapsx.map_err(m, transform)  # type: ignore[arg-type,return-value]
 
 
 def MapKeys(m: dict[K1, V], transform: Callable[[K1, V], K2]) -> dict[K2, V]:
     return mapsx.map_keys(m, transform)
 
 
-def MapKeysErr(m: dict[K1, V], transform: Callable[[K1, V], tuple[K2, str | None]]) -> tuple[dict[K2, V], str | None]:
-    return mapsx.map_keys_err(m, transform)
+def MapKeysErr(m: dict[K1, V], transform: Callable[[K1, V], tuple[K2, Exception | None]]) -> tuple[dict[K2, V], Exception | None]:
+    return mapsx.map_keys_err(m, transform)  # type: ignore[arg-type,return-value]
 
 
 def MapValues(m: dict[K, V1], transform: Callable[[K, V1], V2]) -> dict[K, V2]:
     return mapsx.map_values(m, transform)
 
 
-def MapValuesErr(m: dict[K, V1], transform: Callable[[K, V1], tuple[V2, str | None]]) -> tuple[dict[K, V2], str | None]:
-    return mapsx.map_values_err(m, transform)
+def MapValuesErr(m: dict[K, V1], transform: Callable[[K, V1], tuple[V2, Exception | None]]) -> tuple[dict[K, V2], Exception | None]:
+    return mapsx.map_values_err(m, transform)  # type: ignore[arg-type,return-value]
 
 
 def ToSlice(m: dict[K, V], transform: Callable[[K, V], R]) -> list[R]:
@@ -207,15 +207,15 @@ def ToSlice(m: dict[K, V], transform: Callable[[K, V], R]) -> list[R]:
 
 
 def filter_items(value: Mapping[K, V], pred: Callable[[K, V], bool]) -> dict[K, V]:
-    return mapsx.filter_items(value, pred)
+    return mapsx.filter_items(dict(value), pred)
 
 
 def Filter(m: dict[K, V], pred: Callable[[K, V], bool]) -> dict[K, V]:
     return mapsx.filter_items(m, pred)
 
 
-def FilterErr(m: dict[K, V], pred: Callable[[K, V], tuple[bool, str | None]]) -> tuple[dict[K, V], str | None]:
-    return mapsx.filter_err(m, pred)
+def FilterErr(m: dict[K, V], pred: Callable[[K, V], tuple[bool, Exception | None]]) -> tuple[dict[K, V], Exception | None]:
+    return mapsx.filter_err(m, pred)  # type: ignore[arg-type,return-value]
 
 
 def Reject(m: dict[K, V], pred: Callable[[K, V], bool]) -> dict[K, V]:
@@ -255,8 +255,8 @@ def Reduce(m: dict[K, V], initial: R, fn: Callable[[R, K, V], R]) -> R:
     return mapsx.reduce(m, initial, fn)
 
 
-def ReduceErr(m: dict[K, V], initial: R, fn: Callable[[R, K, V], tuple[R, str | None]]) -> tuple[R, str | None]:
-    return mapsx.reduce_err(m, initial, fn)
+def ReduceErr(m: dict[K, V], initial: R, fn: Callable[[R, K, V], tuple[R, Exception | None]]) -> tuple[R, Exception | None]:
+    return mapsx.reduce_err(m, initial, fn)  # type: ignore[arg-type,return-value]
 
 
 def GroupBy(items: list[T], key_fn: Callable[[T], K]) -> dict[K, list[T]]:
@@ -273,7 +273,7 @@ def CountBy(items: list[T], key_fn: Callable[[T], K]) -> dict[K, int]:
 
 
 def invert(value: Mapping[K, V]) -> dict[V, K]:
-    return mapsx.invert(value)
+    return mapsx.invert(dict(value))
 
 
 def Inverse(m: dict[K, V]) -> dict[V, K]:
@@ -284,7 +284,7 @@ def Invert(m: dict[K, V]) -> dict[V, K]:
     return mapsx.invert(m)
 
 
-def merge(*values: Mapping[K, V]) -> dict[K, V]:
+def merge(*values: dict[K, V]) -> dict[K, V]:
     return mapsx.merge(*values)
 
 
@@ -326,7 +326,7 @@ def SymmetricDiff(a: dict[K, V], b: dict[K, V]) -> dict[K, V]:
 
 
 def pick(value: Mapping[K, V], selected: set[K]) -> dict[K, V]:
-    return mapsx.pick(value, *selected)
+    return mapsx.pick(dict(value), *selected)
 
 
 def Pick(m: dict[K, V], *keys: K) -> dict[K, V]:
@@ -334,7 +334,7 @@ def Pick(m: dict[K, V], *keys: K) -> dict[K, V]:
 
 
 def omit(value: Mapping[K, V], excluded: set[K]) -> dict[K, V]:
-    return mapsx.omit(value, *excluded)
+    return mapsx.omit(dict(value), *excluded)
 
 
 def Omit(m: dict[K, V], *keys: K) -> dict[K, V]:
@@ -355,7 +355,7 @@ def Update(dst: dict[K, V], src: dict[K, V]) -> dict[K, V]:
 
 
 def clone(value: Mapping[K, V]) -> dict[K, V]:
-    return mapsx.clone(value)
+    return mapsx.clone(dict(value))
 
 
 def Clone(m: dict[K, V]) -> dict[K, V]:

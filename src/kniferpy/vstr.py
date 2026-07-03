@@ -187,7 +187,7 @@ def reverse(value: str) -> str:
     return strx.reverse(value)
 
 
-def format(template: str, *args: object) -> str:
+def format(template: str, *args: object) -> str:  # noqa: A001
     return strx.format(template, *args)
 
 
