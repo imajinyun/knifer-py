@@ -67,6 +67,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 📰 XML clean/escape/parse helpers | `kniferpy.vxml` |
 | 🌸 Bloom filter membership helpers | `kniferpy.vblf` |
 | 🚦 Weighted, fair counting semaphore | `kniferpy.vsem` |
+| 🔌 Provider-neutral SSH/SFTP command and transfer client | `kniferpy.vssh` |
 | 🗄️ In-memory FIFO/LRU/LFU caches | `kniferpy.vcache` |
 | 🚫 DFA sensitive-word matching and filtering | `kniferpy.vdfa` |
 | 🗜️ ZIP archive and gzip/zlib compression | `kniferpy.vzip` |
@@ -137,3 +138,4 @@ Common safe defaults are visible at the call site:
 - 🖥️ `vcli.run(...)`, `vcli.output(...)`, and `vcli.colorize(...)` for shell-free process execution with bounded output plus ANSI coloring and a small command tree.
 - 🔍 `vref.is_function(...)`, `vref.get_field_value(...)`, and `vref.invoke(...)` for type introspection, field access, and dynamic method invocation.
 - 🔤 `vtok.Client(...)`, `vtok.TokenizeRequest(...)`, and `vtok.KeywordsRequest(...)` for provider-neutral text segmentation with input/token limit enforcement.
+- 🔌 `vssh.Client(...)`, `vssh.CommandRequest(...)`, and `vssh.DownloadRequest(...)` for provider-neutral SSH command execution and SFTP file transfers with byte limit enforcement.
