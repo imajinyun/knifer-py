@@ -8,7 +8,7 @@ import sys
 import tempfile
 from dataclasses import dataclass
 
-from kniferpy import vconv
+from kniferpy.internal import convx
 
 
 @dataclass(frozen=True, slots=True)
@@ -199,7 +199,7 @@ def get_int(key: str, default: int = 0) -> int:
     value = os.environ.get(key)
     if value is None:
         return default
-    return vconv.to_int(value, default)
+    return convx.to_int(value, default)
 
 
 def get_bool(key: str, default: bool = False) -> bool:
@@ -207,4 +207,4 @@ def get_bool(key: str, default: bool = False) -> bool:
     value = os.environ.get(key)
     if value is None:
         return default
-    return vconv.to_bool(value, default)
+    return convx.to_bool(value, default)

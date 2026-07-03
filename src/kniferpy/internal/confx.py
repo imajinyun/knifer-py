@@ -4,7 +4,7 @@ import os
 import re
 from pathlib import Path
 
-from kniferpy import vconv
+from kniferpy.internal import convx
 from kniferpy.verr import ValidationError
 
 # The default (ungrouped) section, matching knifer-go's empty group name.
@@ -75,21 +75,21 @@ class Conf:
         value, ok = self.lookup(group, key)
         if not ok:
             return default
-        return vconv.to_int(value, default)
+        return convx.to_int(value, default)
 
     def get_float(self, key: str, default: float = 0.0, group: str = _DEFAULT_GROUP) -> float:
         """Return a float value, or ``default`` when absent or unparseable."""
         value, ok = self.lookup(group, key)
         if not ok:
             return default
-        return vconv.to_float(value, default)
+        return convx.to_float(value, default)
 
     def get_bool(self, key: str, default: bool = False, group: str = _DEFAULT_GROUP) -> bool:
         """Return a bool value, or ``default`` when absent or unparseable."""
         value, ok = self.lookup(group, key)
         if not ok:
             return default
-        return vconv.to_bool(value, default)
+        return convx.to_bool(value, default)
 
     def get_list(self, key: str, group: str = _DEFAULT_GROUP) -> list[str]:
         """Return a comma-separated value as a list of trimmed parts."""
