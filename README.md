@@ -63,6 +63,7 @@ PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
 | 🧾 CSV read/write helpers | `kniferpy.vcsv` |
 | 🏷️ Version comparison helpers | `kniferpy.vver` |
 | 🧺 Sequence, dict, and set helpers | `kniferpy.vseq`, `kniferpy.vdict`, `kniferpy.vset` |
+| 🗺️ Functional map/dict helpers | `kniferpy.vmap` |
 | 🧬 Encoding helpers | `kniferpy.vcodec` |
 | 📰 XML clean/escape/parse helpers | `kniferpy.vxml` |
 | 🌸 Bloom filter membership helpers | `kniferpy.vblf` |
@@ -141,3 +142,4 @@ Common safe defaults are visible at the call site:
 - 🔤 `vtok.Client(...)`, `vtok.TokenizeRequest(...)`, and `vtok.KeywordsRequest(...)` for provider-neutral text segmentation with input/token limit enforcement.
 - 🔌 `vssh.Client(...)`, `vssh.CommandRequest(...)`, and `vssh.DownloadRequest(...)` for provider-neutral SSH command execution and SFTP file transfers with byte limit enforcement.
 - 🧺 `vslice.group_by(...)`, `vslice.chunk(...)`, and `vslice.filter_map(...)` for functional collection operations like map, filter, reduce, chunk, and zip.
+- 🗺️ `vmap.merge(...)`, `vmap.pick(...)`, and `vmap.filter_items(...)` for functional dict operations like merge, partition, pick/omit, and map/transform.

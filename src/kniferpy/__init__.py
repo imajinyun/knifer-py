@@ -27,6 +27,7 @@ __all__ = [
     "vjwt",
     "vlog",
     "vmail",
+    "vmap",
     "vmask",
     "vnet",
     "vnum",
