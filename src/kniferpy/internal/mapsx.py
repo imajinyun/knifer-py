@@ -13,7 +13,7 @@ Errors use kniferpy.verr types with codes knifer.map.<reason>.
 from __future__ import annotations
 
 from collections.abc import Callable, Iterable
-from typing import Any, TypeVar
+from typing import Any, Generic, TypeVar
 
 from kniferpy.verr import KniferError
 
@@ -25,6 +25,15 @@ K1 = TypeVar("K1")
 K2 = TypeVar("K2")
 T = TypeVar("T")
 R = TypeVar("R")
+
+
+class Pair(Generic[K, V]):
+    def __init__(self, key: K, value: V) -> None:
+        self.key = key
+        self.value = value
+
+    def __repr__(self) -> str:
+        return f"Pair({self.key!r}, {self.value!r})"
 
 
 def new() -> dict[K, V]:
@@ -59,12 +68,24 @@ def of_e(*kvs: Any) -> tuple[dict[Any, Any], Exception | None]:
     return out, None
 
 
-def from_pairs(*pairs: tuple[K, V]) -> dict[K, V]:
-    return dict(pairs)
+def from_pairs(*pairs: Pair[K, V] | tuple[K, V]) -> dict[K, V]:
+    out: dict[K, V] = {}
+    for p in pairs:
+        if isinstance(p, Pair):
+            out[p.key] = p.value
+        else:
+            out[p[0]] = p[1]
+    return out
 
 
-def from_entries(entries: list[tuple[K, V]]) -> dict[K, V]:
-    return dict(entries)
+def from_entries(entries: list[Pair[K, V] | tuple[K, V]]) -> dict[K, V]:
+    out: dict[K, V] = {}
+    for e in entries:
+        if isinstance(e, Pair):
+            out[e.key] = e.value
+        else:
+            out[e[0]] = e[1]
+    return out
 
 
 def or_empty(m: dict[K, V] | None) -> dict[K, V]:
@@ -150,6 +171,10 @@ def keys_of(m: dict[K, V], target: V) -> list[K]:
 
 def entries(m: dict[K, V]) -> list[tuple[K, V]]:
     return list(m.items())
+
+
+def entries_pairs(m: dict[K, V]) -> list[Pair[K, V]]:
+    return [Pair(k, v) for k, v in m.items()]
 
 
 def iter_items(m: dict[K, V]) -> Iterable[tuple[K, V]]:
