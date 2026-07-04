@@ -16,16 +16,66 @@ from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from kniferpy.internal import jwtx
 from kniferpy.internal.jwtx import JWTBuilder
 
+# ── Algorithm Constants ───────────────────────────────────────────────────────
+
+JWTAlgHS256 = "HS256"
+JWTAlgHS384 = "HS384"
+JWTAlgHS512 = "HS512"
+JWTAlgPS256 = "PS256"
+JWTAlgPS384 = "PS384"
+JWTAlgPS512 = "PS512"
+JWTAlgES256 = "ES256"
+JWTAlgES384 = "ES384"
+JWTAlgES512 = "ES512"
+
+# ── Header Key Constants ──────────────────────────────────────────────────────
+
+JWTHeaderAlgorithm = "alg"
+JWTHeaderType = "typ"
+JWTHeaderContentType = "cty"
+JWTHeaderKeyID = "kid"
+
+# ── Payload Key Constants ─────────────────────────────────────────────────────
+
+JWTPayloadIssuer = "iss"
+JWTPayloadSubject = "sub"
+JWTPayloadAudience = "aud"
+JWTPayloadExpiresAt = "exp"
+JWTPayloadNotBefore = "nbf"
+JWTPayloadIssuedAt = "iat"
+JWTPayloadJWTID = "jti"
+
+# ── Min HMAC Key Byte Constants ────────────────────────────────────────────────
+
+MinHMACKeyBytesHS256 = 32
+MinHMACKeyBytesHS384 = 48
+MinHMACKeyBytesHS512 = 64
+
+# ── Error ─────────────────────────────────────────────────────────────────────
+
+from kniferpy.verr import CryptoError as JWTError
+
+
+def new_jwt_error(msg: str) -> JWTError:
+    return JWTError(msg)
+
+
+def jwt_errorf(format_str: str, *args: Any) -> JWTError:
+    return JWTError(format_str % args)
+
 __all__ = [
     "JWTBuilder",
+    "JWTError",
     "algorithm_name",
     "create_signer",
     "generate_ec_key",
     "generate_rsa_key",
     "jwt_of",
+    "jwt_errorf",
     "min_hmac_key_bytes",
     "new_jwt",
     "new_jwt_builder",
+    "new_jwt_error",
     "parse_jwt",
     "sign_es256",
     "sign_es384",
@@ -49,6 +99,33 @@ __all__ = [
     "verify_ps384",
     "verify_ps512",
     "verify_strict",
+    # Algorithm constants
+    "JWTAlgHS256",
+    "JWTAlgHS384",
+    "JWTAlgHS512",
+    "JWTAlgPS256",
+    "JWTAlgPS384",
+    "JWTAlgPS512",
+    "JWTAlgES256",
+    "JWTAlgES384",
+    "JWTAlgES512",
+    # Header key constants
+    "JWTHeaderAlgorithm",
+    "JWTHeaderType",
+    "JWTHeaderContentType",
+    "JWTHeaderKeyID",
+    # Payload key constants
+    "JWTPayloadIssuer",
+    "JWTPayloadSubject",
+    "JWTPayloadAudience",
+    "JWTPayloadExpiresAt",
+    "JWTPayloadNotBefore",
+    "JWTPayloadIssuedAt",
+    "JWTPayloadJWTID",
+    # Min key bytes
+    "MinHMACKeyBytesHS256",
+    "MinHMACKeyBytesHS384",
+    "MinHMACKeyBytesHS512",
 ]
 
 # ── HMAC ──────────────────────────────────────────────────────────────────────
