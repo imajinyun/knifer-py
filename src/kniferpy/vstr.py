@@ -4,7 +4,11 @@ from collections.abc import Callable
 
 from kniferpy.internal import strx
 
-# ── BOM ──────────────────────────────────────────────────────────────────────
+# ── Types (Go compat) ─────────────────────────────────────────────────────────
+
+EmojiOption = Callable[..., None]
+
+# ── BOM constants ─────────────────────────────────────────────────────────────
 
 BOM_NONE = ""
 BOM_UTF8 = "UTF-8"
@@ -12,6 +16,100 @@ BOM_UTF16_LE = "UTF-16LE"
 BOM_UTF16_BE = "UTF-16BE"
 BOM_UTF32_LE = "UTF-32LE"
 BOM_UTF32_BE = "UTF-32BE"
+
+__all__ = [
+    # Types
+    "EmojiOption",
+    # BOM constants
+    "BOM_NONE",
+    "BOM_UTF8",
+    "BOM_UTF16_LE",
+    "BOM_UTF16_BE",
+    "BOM_UTF32_LE",
+    "BOM_UTF32_BE",
+    # BOM
+    "has_bom",
+    "strip_bom",
+    # Charset
+    "from_utf8",
+    "to_utf8",
+    # Emptiness
+    "default_if_blank",
+    "default_if_empty",
+    "has_blank",
+    "has_empty",
+    "is_all_blank",
+    "is_all_empty",
+    "is_blank",
+    "is_empty",
+    "is_not_blank",
+    "is_not_empty",
+    # Trimming
+    "trim",
+    "trim_end",
+    "trim_start",
+    "trim_to_empty",
+    # Substring / splitting
+    "split",
+    "split_trim",
+    "sub",
+    "sub_after",
+    "sub_before",
+    # Repeat / padding
+    "pad_left",
+    "pad_right",
+    "repeat",
+    # Contains / starts / ends
+    "contains",
+    "contains_all",
+    "contains_any",
+    "contains_emoji",
+    "contains_emoji_with_options",
+    "contains_ignore_case",
+    "ends_with",
+    "equals_ignore_case",
+    "starts_with",
+    # Reverse
+    "reverse",
+    # Format
+    "format",
+    # Prefix / suffix
+    "add_prefix_if_not",
+    "add_suffix_if_not",
+    "remove_prefix",
+    "remove_suffix",
+    # Length
+    "length",
+    "rune_len",
+    # HTML / Unicode
+    "escape_html",
+    "escape_unicode",
+    "unescape_html",
+    "unescape_unicode",
+    "remove_emoji",
+    "remove_emoji_with_options",
+    # Naming
+    "to_camel_case",
+    "to_kebab_case",
+    "to_pascal_case",
+    "to_snake_case",
+    # Ant path
+    "ant_path_match",
+    "ant_path_match_with_separator",
+    # Similarity
+    "hamming_distance64",
+    "jaccard_similarity",
+    "levenshtein_distance",
+    "levenshtein_similarity",
+    "ngram_similarity",
+    "sim_hash",
+    # Character predicates
+    "is_ascii",
+    "is_blank_char",
+    "is_digit",
+    "is_letter",
+    "is_letter_or_digit",
+]
 
 
 def has_bom(data: bytes) -> str:
