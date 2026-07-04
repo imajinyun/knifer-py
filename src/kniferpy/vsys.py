@@ -16,26 +16,30 @@ __all__ = [
     "OsInfo",
     "RuntimeInfo",
     "UserInfo",
+    "dump_system_info",
+    "dump_system_info_to",
     "get",
     "get_bool",
+    "get_cpu_cores",
     "get_current_pid",
+    "get_env_all",
+    "get_free_memory",
+    "get_goroutine_count",
     "get_host_info",
     "get_int",
+    "get_ip_by_host",
+    "get_max_memory",
+    "get_multistage_reverse_proxy_ip",
     "get_or_default",
     "get_os_info",
-    "get_user_info",
     "get_runtime_info",
     "get_total_memory",
-    "get_free_memory",
-    "get_max_memory",
     "get_total_thread_count",
-    "get_goroutine_count",
-    "get_ip_by_host",
-    "get_multistage_reverse_proxy_ip",
+    "get_user_info",
+    "idn_to_ascii",
     "is_unknown",
     "parse_cookies",
-    "idn_to_ascii",
-    "dump_system_info",
+    "reset_info_cache",
 ]
 
 
@@ -137,3 +141,23 @@ def idn_to_ascii(domain: str) -> str:
 def dump_system_info() -> str:
     """Return a human-readable system information string."""
     return sysx.dump_system_info()
+
+
+def dump_system_info_to(writer) -> None:
+    """Write system information to ``writer``."""
+    return sysx.dump_system_info_to(writer)
+
+
+def get_env_all() -> dict[str, str]:
+    """Return all environment variables as a dict."""
+    return sysx.get_env_all()
+
+
+def get_cpu_cores() -> int:
+    """Return the number of logical CPU cores."""
+    return sysx.get_cpu_cores()
+
+
+def reset_info_cache() -> None:
+    """Clear cached system info snapshots."""
+    return sysx.reset_info_cache()

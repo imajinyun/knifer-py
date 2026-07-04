@@ -372,3 +372,62 @@ def dump_system_info() -> str:
         pass
 
     return "\n".join(lines)
+
+
+def dump_system_info_to(writer) -> None:
+    """Write system information to ``writer`` (any object with a ``write`` method)."""
+    writer.write(dump_system_info())
+
+
+def get_env_all() -> dict[str, str]:
+    """Return all environment variables as a dict."""
+    return dict(os.environ)
+
+
+def get_cpu_cores() -> int:
+    """Return the number of logical CPU cores."""
+    return os.cpu_count() or 0
+
+
+# ── Info cache ──────────────────────────────────────────────────────────────
+
+_cached_os_info: OsInfo | None = None
+_cached_host_info: HostInfo | None = None
+_cached_user_info: UserInfo | None = None
+_cached_runtime_info: RuntimeInfo | None = None
+
+
+def reset_info_cache() -> None:
+    global _cached_os_info, _cached_host_info, _cached_user_info, _cached_runtime_info
+    _cached_os_info = None
+    _cached_host_info = None
+    _cached_user_info = None
+    _cached_runtime_info = None
+
+
+def _cached_get_os_info() -> OsInfo:
+    global _cached_os_info
+    if _cached_os_info is None:
+        _cached_os_info = get_os_info()
+    return _cached_os_info
+
+
+def _cached_get_host_info() -> HostInfo:
+    global _cached_host_info
+    if _cached_host_info is None:
+        _cached_host_info = get_host_info()
+    return _cached_host_info
+
+
+def _cached_get_user_info() -> UserInfo:
+    global _cached_user_info
+    if _cached_user_info is None:
+        _cached_user_info = get_user_info()
+    return _cached_user_info
+
+
+def _cached_get_runtime_info() -> RuntimeInfo:
+    global _cached_runtime_info
+    if _cached_runtime_info is None:
+        _cached_runtime_info = get_runtime_info()
+    return _cached_runtime_info

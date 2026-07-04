@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import io
 import os
 import shutil
 import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import IO
 
 from kniferpy.verr import SecurityError
 
@@ -283,3 +285,132 @@ def _ensure_size(path: Path, *, max_bytes: int) -> None:
             code="file.too_large",
             context={"size": size, "max_bytes": max_bytes},
         )
+
+
+# ── Reader/Writer helpers ──────────────────────────────────────────────────
+
+
+def read_all(r: IO[bytes] | io.RawIOBase, *, max_bytes: int = DEFAULT_MAX_BYTES) -> bytes:
+    data = b""
+    while True:
+        chunk = r.read(8192)
+        if not chunk:
+            return data
+        data += chunk
+        if len(data) > max_bytes:
+            raise SecurityError(
+                "reader exceeds max_bytes",
+                code="file.too_large",
+                context={"size": len(data), "max_bytes": max_bytes},
+            )
+
+
+def reader_read_string(r: IO[bytes] | io.RawIOBase, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES) -> str:
+    return read_all(r, max_bytes=max_bytes).decode(encoding)
+
+
+def reader_read_lines(
+    r: IO[bytes] | io.RawIOBase,
+    *,
+    encoding: str = "utf-8",
+    max_bytes: int = DEFAULT_MAX_BYTES,
+    keepends: bool = False,
+) -> list[str]:
+    content = reader_read_string(r, encoding=encoding, max_bytes=max_bytes)
+    if keepends:
+        return content.splitlines(keepends=True)
+    return content.splitlines()
+
+
+def read_chunks(
+    r: IO[bytes] | io.RawIOBase,
+    handler: Callable[[bytes], None],
+    *,
+    buffer_size: int = 8192,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+) -> None:
+    total = 0
+    while True:
+        chunk = r.read(buffer_size)
+        if not chunk:
+            return
+        handler(chunk)
+        total += len(chunk)
+        if total > max_bytes:
+            raise SecurityError(
+                "reader exceeds max_bytes",
+                code="file.too_large",
+                context={"size": total, "max_bytes": max_bytes},
+            )
+
+
+def copy_stream(dst: IO[bytes], src: IO[bytes] | io.RawIOBase, *, buffer_size: int = 32768) -> int:
+    total = 0
+    while True:
+        chunk = src.read(buffer_size)
+        if not chunk:
+            return total
+        dst.write(chunk)
+        total += len(chunk)
+
+
+def close_quietly(c: IO[bytes] | None) -> None:
+    if c is not None:
+        try:
+            c.close()
+        except Exception:
+            pass
+
+
+def reader_from_string(s: str) -> io.StringIO:
+    return io.StringIO(s)
+
+
+def reader_from_bytes(data: bytes) -> io.BytesIO:
+    return io.BytesIO(data)
+
+
+def read_file_bytes(path: str | Path, *, max_bytes: int = DEFAULT_MAX_BYTES) -> bytes:
+    return read_bytes(path, max_bytes=max_bytes)
+
+
+def read_file_string(path: str | Path, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES) -> str:
+    return read_text(path, encoding=encoding, max_bytes=max_bytes)
+
+
+def read_file_lines(
+    path: str | Path,
+    *,
+    encoding: str = "utf-8",
+    max_bytes: int = DEFAULT_MAX_BYTES,
+    keepends: bool = False,
+) -> list[str]:
+    with Path(path).open("rb") as f:
+        return reader_read_lines(f, encoding=encoding, max_bytes=max_bytes, keepends=keepends)
+
+
+def read_file_chunks(
+    path: str | Path,
+    handler: Callable[[bytes], None],
+    *,
+    buffer_size: int = 8192,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+) -> None:
+    with Path(path).open("rb") as f:
+        read_chunks(f, handler, buffer_size=buffer_size, max_bytes=max_bytes)
+
+
+def write_file_string(path: str | Path, content: str, *, encoding: str = "utf-8") -> None:
+    write_text(path, content, encoding=encoding)
+
+
+def write_file_bytes(path: str | Path, data: bytes) -> None:
+    write_bytes(path, data)
+
+
+def append_file_string(path: str | Path, content: str, *, encoding: str = "utf-8") -> None:
+    append_text(path, content, encoding=encoding)
+
+
+def size(path: str | Path) -> int:
+    return file_size(path)

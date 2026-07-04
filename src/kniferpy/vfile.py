@@ -15,20 +15,36 @@ __all__ = [
     "is_file",
     "is_dir",
     "file_size",
+    "size",
     "read_text",
     "read_lines",
     "read_bytes",
+    "read_file_string",
+    "read_file_bytes",
+    "read_file_lines",
+    "read_file_chunks",
+    "read_all",
+    "reader_read_string",
+    "reader_read_lines",
+    "read_chunks",
     "write_text",
     "write_lines",
     "write_text_atomic",
     "write_bytes",
     "write_bytes_atomic",
+    "write_file_string",
+    "write_file_bytes",
     "append_text",
     "append_bytes",
+    "append_file_string",
     "mkdir",
     "touch",
     "delete",
     "copy_file",
+    "copy_stream",
+    "close_quietly",
+    "reader_from_string",
+    "reader_from_bytes",
     "main_name",
     "extension",
     "detect_file_type",
@@ -169,3 +185,94 @@ def is_archive(ft: FileType) -> bool:
 
 def is_document(ft: FileType) -> bool:
     return filex.is_document(ft)
+
+
+# ── Reader/Writer helpers ──────────────────────────────────────────────────
+
+
+def read_all(r, *, max_bytes: int = DEFAULT_MAX_BYTES) -> bytes:
+    return filex.read_all(r, max_bytes=max_bytes)
+
+
+def reader_read_string(r, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES) -> str:
+    return filex.reader_read_string(r, encoding=encoding, max_bytes=max_bytes)
+
+
+def reader_read_lines(
+    r,
+    *,
+    encoding: str = "utf-8",
+    max_bytes: int = DEFAULT_MAX_BYTES,
+    keepends: bool = False,
+) -> list[str]:
+    return filex.reader_read_lines(r, encoding=encoding, max_bytes=max_bytes, keepends=keepends)
+
+
+def read_chunks(
+    r,
+    handler,
+    *,
+    buffer_size: int = 8192,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+) -> None:
+    return filex.read_chunks(r, handler, buffer_size=buffer_size, max_bytes=max_bytes)
+
+
+def copy_stream(dst, src, *, buffer_size: int = 32768) -> int:
+    return filex.copy_stream(dst, src, buffer_size=buffer_size)
+
+
+def close_quietly(c) -> None:
+    return filex.close_quietly(c)
+
+
+def reader_from_string(s: str):
+    return filex.reader_from_string(s)
+
+
+def reader_from_bytes(data: bytes):
+    return filex.reader_from_bytes(data)
+
+
+def read_file_string(path: str | Path, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES) -> str:
+    return filex.read_file_string(path, encoding=encoding, max_bytes=max_bytes)
+
+
+def read_file_bytes(path: str | Path, *, max_bytes: int = DEFAULT_MAX_BYTES) -> bytes:
+    return filex.read_file_bytes(path, max_bytes=max_bytes)
+
+
+def read_file_lines(
+    path: str | Path,
+    *,
+    encoding: str = "utf-8",
+    max_bytes: int = DEFAULT_MAX_BYTES,
+    keepends: bool = False,
+) -> list[str]:
+    return filex.read_file_lines(path, encoding=encoding, max_bytes=max_bytes, keepends=keepends)
+
+
+def read_file_chunks(
+    path: str | Path,
+    handler,
+    *,
+    buffer_size: int = 8192,
+    max_bytes: int = DEFAULT_MAX_BYTES,
+) -> None:
+    return filex.read_file_chunks(path, handler, buffer_size=buffer_size, max_bytes=max_bytes)
+
+
+def write_file_string(path: str | Path, content: str, *, encoding: str = "utf-8") -> None:
+    return filex.write_file_string(path, content, encoding=encoding)
+
+
+def write_file_bytes(path: str | Path, data: bytes) -> None:
+    return filex.write_file_bytes(path, data)
+
+
+def append_file_string(path: str | Path, content: str, *, encoding: str = "utf-8") -> None:
+    return filex.append_file_string(path, content, encoding=encoding)
+
+
+def size(path: str | Path) -> int:
+    return filex.size(path)
