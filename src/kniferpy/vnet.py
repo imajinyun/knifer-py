@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import socket
 import ssl
+from typing import Any, Callable
 
 from kniferpy.internal import netx
 from kniferpy.internal.netx import (
@@ -10,6 +11,23 @@ from kniferpy.internal.netx import (
     TLSConfigBuilder,
     UploadSetting,
 )
+
+# ── Go-compat type aliases ─────────────────────────────────────────────────────
+
+from typing import Any, Callable
+
+Dialer = Any
+ConnectOption = Callable[[Any], None]
+PingOption = Callable[[Any], None]
+ResolveOption = Callable[[Any], None]
+AddressOption = Callable[[Any], None]
+PortOption = Callable[[Any], None]
+InterfaceOption = Callable[[Any], None]
+TLSFileOption = Callable[[Any], None]
+UploadSaveOption = Callable[[Any], None]
+IPOption = Callable[[Any], None]
+WildcardOption = Callable[[Any], None]
+OpenUploadedFileFunc = Callable[[str], Any]
 
 __all__ = [
     # Constants
@@ -169,6 +187,19 @@ __all__ = [
     "upload_file_name",
     "upload_file_size",
     "upload_file_content_type",
+    # Go-compat type aliases
+    "Dialer",
+    "ConnectOption",
+    "PingOption",
+    "ResolveOption",
+    "AddressOption",
+    "PortOption",
+    "InterfaceOption",
+    "TLSFileOption",
+    "UploadSaveOption",
+    "IPOption",
+    "WildcardOption",
+    "OpenUploadedFileFunc",
 ]
 
 LOCAL_IP = netx.LOCAL_IP

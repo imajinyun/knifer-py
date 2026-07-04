@@ -44,6 +44,22 @@ from kniferpy.internal.mailx import (
     TLSPolicy,
 )
 
+# ── Go-compat type aliases ─────────────────────────────────────────────────────
+
+from typing import Any, Callable, Protocol, runtime_checkable
+
+BoundaryGenerator = Callable[[], str]
+Charset = str
+ContentType = str
+MessageOption = Callable[[Any], None]
+QuickOption = Callable[[Any], None]
+Sender = Callable[..., None]
+SenderFunc = Callable[..., None]
+SenderProvider = Callable[..., Any]
+DialContextFunc = Callable[..., Any]
+ClientOption = Callable[[Any], None]
+SendCloser = Any
+
 __all__ = [
     "CHARSET_ASCII",
     "CHARSET_UTF8",
@@ -78,6 +94,18 @@ __all__ = [
     "send_account_text",
     "send_html",
     "send_text",
+    # Go-compat type aliases
+    "BoundaryGenerator",
+    "Charset",
+    "ContentType",
+    "MessageOption",
+    "QuickOption",
+    "Sender",
+    "SenderFunc",
+    "SenderProvider",
+    "DialContextFunc",
+    "ClientOption",
+    "SendCloser",
 ]
 
 detect_content_type = mailx.detect_content_type

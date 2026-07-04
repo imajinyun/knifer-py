@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, Callable
 
 from kniferpy.internal import xmlx
 from kniferpy.internal.xmlx import (
@@ -15,6 +15,16 @@ from kniferpy.internal.xmlx import (
     LT,
     GT,
 )
+
+# ── Go-compat type aliases ─────────────────────────────────────────────────────
+
+XMLName = str  # Go: xml.Name.Local
+ReadOption = Callable[[Any], None]
+WriteOption = Callable[[Any], None]
+TransformOption = Callable[[Any], None]
+FormatOption = Callable[[Any], None]
+SAXOption = Callable[[Any], None]
+CleanOption = Callable[[Any], None]
 
 # Constants
 CONTENT_KEY = CONTENT_KEY
@@ -166,6 +176,14 @@ __all__ = [
     "xml_node_to_map",
     "xml_node_to_map_into",
     "xml_to_map_into",
+    # Go-compat type aliases
+    "XMLName",
+    "ReadOption",
+    "WriteOption",
+    "TransformOption",
+    "FormatOption",
+    "SAXOption",
+    "CleanOption",
 ]
 
 # SAX parsing

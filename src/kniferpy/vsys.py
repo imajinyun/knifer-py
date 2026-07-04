@@ -11,6 +11,19 @@ from __future__ import annotations
 from kniferpy.internal import sysx
 from kniferpy.internal.sysx import HostInfo, OsInfo, PythonInfo, RuntimeInfo, UserInfo
 
+# ── Go-compat type aliases ─────────────────────────────────────────────────────
+
+from typing import Any, Callable
+
+GoInfo = PythonInfo  # Go: system.GoInfo
+HostInfoOption = Callable[[Any], None]
+GoInfoOption = Callable[[Any], None]
+OsInfoOption = Callable[[Any], None]
+RuntimeInfoOption = Callable[[Any], None]
+UserInfoOption = Callable[[Any], None]
+ProcessOption = Callable[[Any], None]
+DumpOption = Callable[[Any], None]
+
 __all__ = [
     "HostInfo",
     "OsInfo",
@@ -65,6 +78,15 @@ __all__ = [
     "system_user_info",
     "total_goroutine_count",
     "total_memory",
+    # Go-compat type aliases
+    "GoInfo",
+    "HostInfoOption",
+    "GoInfoOption",
+    "OsInfoOption",
+    "RuntimeInfoOption",
+    "UserInfoOption",
+    "ProcessOption",
+    "DumpOption",
 ]
 
 

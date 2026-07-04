@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import Any, Callable
 
 from kniferpy.internal import filex
 from kniferpy.internal.filex import FileType, UNKNOWN_FILE_TYPE
@@ -9,6 +10,11 @@ __all__ = [
     "DEFAULT_MAX_BYTES",
     "UNKNOWN_FILE_TYPE",
     "FileType",
+    "WriteOption",
+    "DirOption",
+    "ReadOption",
+    "StatOption",
+    "DeleteOption",
     "safe_join",
     "is_local_path",
     "exists",
@@ -57,6 +63,13 @@ __all__ = [
 ]
 
 DEFAULT_MAX_BYTES = filex.DEFAULT_MAX_BYTES
+
+# Go-compat type aliases: functional option types
+WriteOption = Callable[[Any], None]
+DirOption = Callable[[Any], None]
+ReadOption = Callable[[Any], None]
+StatOption = Callable[[Any], None]
+DeleteOption = Callable[[Any], None]
 
 
 def safe_join(base: str | Path, *parts: str | Path) -> Path:

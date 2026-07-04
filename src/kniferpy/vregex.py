@@ -2,9 +2,14 @@ from __future__ import annotations
 
 import re
 from collections.abc import Callable
+from typing import Any
 
 from kniferpy.internal import regexx
 from kniferpy.internal.regexx import MatchResult, RE_CHINESE, RE_CHINESES
+
+# ── Go-compat type alias ───────────────────────────────────────────────────────
+
+Option = Callable[[Any], None]
 
 # Pattern-string matchers
 match = regexx.match
