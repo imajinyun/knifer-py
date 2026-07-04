@@ -29,6 +29,24 @@ from kniferpy.internal.sshx import (
     UploadRequest,
     UploadResponse,
 )
+from kniferpy.verr import KniferError, ValidationError
+
+# ── EntryType constants ────────────────────────────────────────────────────────
+
+EntryTypeUnknown = EntryType.UNKNOWN
+EntryTypeFile = EntryType.FILE
+EntryTypeDirectory = EntryType.DIRECTORY
+EntryTypeSymlink = EntryType.SYMLINK
+
+# ── Error sentinels ────────────────────────────────────────────────────────────
+
+ErrInvalidCommandRequest = ValidationError(message="malformed command request", code="knifer.ssh.invalid_command_request")
+ErrInvalidListRequest = ValidationError(message="malformed list request", code="knifer.ssh.invalid_list_request")
+ErrInvalidDownloadRequest = ValidationError(message="malformed download request", code="knifer.ssh.invalid_download_request")
+ErrInvalidUploadRequest = ValidationError(message="malformed upload request", code="knifer.ssh.invalid_upload_request")
+ErrOutputLimitExceeded = KniferError(message="output limit exceeded", code="knifer.ssh.output_limit_exceeded")
+ErrTransferLimitExceeded = KniferError(message="transfer limit exceeded", code="knifer.ssh.transfer_limit_exceeded")
+ErrMissingProvider = KniferError(message="missing provider", code="knifer.ssh.missing_provider")
 
 __all__ = [
     "Client",
@@ -43,4 +61,17 @@ __all__ = [
     "Provider",
     "UploadRequest",
     "UploadResponse",
+    # EntryType constants
+    "EntryTypeUnknown",
+    "EntryTypeFile",
+    "EntryTypeDirectory",
+    "EntryTypeSymlink",
+    # Error sentinels
+    "ErrInvalidCommandRequest",
+    "ErrInvalidListRequest",
+    "ErrInvalidDownloadRequest",
+    "ErrInvalidUploadRequest",
+    "ErrOutputLimitExceeded",
+    "ErrTransferLimitExceeded",
+    "ErrMissingProvider",
 ]
