@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import math
-from collections.abc import Callable, Iterable
+from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
 from typing import Protocol
 
@@ -259,3 +259,146 @@ def new_bitmap_bloom_filter(m: int) -> BitMapBloomFilter:
 
 def new_bitmap_bloom_filter_with_filters(m: int, *filters: BloomFilter) -> BitMapBloomFilter:
     return BitMapBloomFilter(m, filters)
+
+
+# --- Error-returning variants (E-style, always succeed for Python) -------------
+
+
+def new_bit_set_bloom_filter_e(c: int, n: int, k: int) -> tuple[BitSetBloomFilter, None]:
+    return BitSetBloomFilter(c, n, k), None
+
+
+def new_bitmap_bloom_filter_e(m: int) -> tuple[BitMapBloomFilter, None]:
+    return BitMapBloomFilter(m), None
+
+
+def new_bitmap_bloom_filter_with_filters_e(m: int, *filters: BloomFilter) -> tuple[BitMapBloomFilter, None]:
+    return BitMapBloomFilter(m, filters), None
+
+
+def new_func_filter_e(
+    max_value: int,
+    hash_func: HashFunc | None = None,
+    *,
+    machine_num: int = DEFAULT_MACHINE_NUM,
+) -> tuple[FuncFilter, None]:
+    return FuncFilter(max_value, hash_func, machine_num=machine_num), None
+
+
+def new_func_filter_with_machine_num(
+    max_value: int,
+    machine_num: int,
+    hash_func: HashFunc | None = None,
+) -> FuncFilter:
+    return FuncFilter(max_value, hash_func, machine_num=machine_num)
+
+
+def new_func_filter_with_machine_num_e(
+    max_value: int,
+    machine_num: int,
+    hash_func: HashFunc | None = None,
+) -> tuple[FuncFilter, None]:
+    return FuncFilter(max_value, hash_func, machine_num=machine_num), None
+
+
+# --- IntMap / LongMap ----------------------------------------------------------
+
+
+class IntMap:
+    __slots__ = ("_ints",)
+
+    def __init__(self, size: int) -> None:
+        if size <= 0:
+            raise ValidationError("vblf: IntMap size must be positive", code="blf.invalid_size")
+        self._ints = [0] * size
+
+    def add(self, i: int) -> None:
+        idx = i % len(self._ints)
+        self._ints[idx] |= 1 << (i & 31)
+
+    def contains(self, i: int) -> bool:
+        idx = i % len(self._ints)
+        return (self._ints[idx] >> (i & 31)) & 1 == 1
+
+    def remove(self, i: int) -> None:
+        idx = i % len(self._ints)
+        self._ints[idx] &= ~(1 << (i & 31))
+
+
+class LongMap:
+    __slots__ = ("_longs",)
+
+    def __init__(self, size: int) -> None:
+        if size <= 0:
+            raise ValidationError("vblf: LongMap size must be positive", code="blf.invalid_size")
+        self._longs = [0] * size
+
+    def add(self, i: int) -> None:
+        idx = i % len(self._longs)
+        self._longs[idx] |= 1 << (i & 63)
+
+    def contains(self, i: int) -> bool:
+        idx = i % len(self._longs)
+        return (self._longs[idx] >> (i & 63)) & 1 == 1
+
+    def remove(self, i: int) -> None:
+        idx = i % len(self._longs)
+        self._longs[idx] &= ~(1 << (i & 63))
+
+
+def new_int_map(size: int) -> IntMap:
+    return IntMap(size)
+
+
+def new_long_map(size: int) -> LongMap:
+    return LongMap(size)
+
+
+# --- File-based init -----------------------------------------------------------
+
+_FileOption = Callable[["_BloomFileConfig"], None]
+
+
+class _BloomFileConfig:
+    __slots__ = ("open_file",)
+
+    def __init__(self) -> None:
+        self.open_file: Callable[[str], Any] | None = None
+
+
+def _default_open_file(path: str) -> Any:
+    return open(path, "r", encoding="utf-8")
+
+
+def with_open_file(open_file: Callable[[str], Any]) -> _FileOption:
+    def _apply(cfg: _BloomFileConfig) -> None:
+        if open_file is not None:
+            cfg.open_file = open_file
+
+    return _apply
+
+
+def _apply_file_options(opts: Sequence[_FileOption]) -> _BloomFileConfig:
+    cfg = _BloomFileConfig()
+    for opt in opts or []:
+        if opt is not None:
+            opt(cfg)
+    return cfg
+
+
+def init_from_file_with_options(
+    bloom: BitSetBloomFilter,
+    path: str,
+    opts: Sequence[_FileOption] | None = None,
+) -> None:
+    cfg = _apply_file_options(opts or [])
+    opener = cfg.open_file or _default_open_file
+    with opener(path) as f:
+        bloom.init_from_lines(f)
+
+
+def init_from_reader(
+    bloom: BitSetBloomFilter,
+    reader: Iterable[str],
+) -> None:
+    bloom.init_from_lines(reader)

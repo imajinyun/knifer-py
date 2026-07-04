@@ -624,6 +624,76 @@ def remove_outer_order_by(sql: str) -> str:
 
 
 def is_in_clause(sql: str) -> bool:
-    """Check if this SQL is an IN clause for the purposes of MySQL query caching."""
     lower = sql.lower()
     return " in (" in lower or "in(" in lower
+
+
+# --- entity helpers ------------------------------------------------------------
+
+
+def new_entity(table: str) -> Entity:
+    return Entity(table=table)
+
+
+def entity_from_map(table: str, data: dict[str, Any]) -> Entity:
+    e = Entity(table=table)
+    e.fields = {k: v for k, v in data.items() if v is not None}
+    return e
+
+
+def assign_entity(target: Entity, source: Entity) -> None:
+    if not hasattr(target, "fields"):
+        target.fields = {}
+    target.fields.update(getattr(source, "fields", {}))
+
+
+def conditions_from_entity(entity: Entity, dialect: Dialect | None = None) -> list[Condition]:
+    fields = getattr(entity, "fields", {})
+    return [eq(field, value) for field, value in fields.items()]
+
+
+def build_conditions(conds: Sequence[Condition]) -> list[Condition]:
+    return list(conds)
+
+
+def build_like_value(pattern: str) -> str:
+    return f"%{pattern}%"
+
+
+def or_with(conds: Sequence[Condition]) -> Condition:
+    return or_group(conds)
+
+
+# --- query convenience ---------------------------------------------------------
+
+
+def new_query() -> SQLBuilder:
+    return new_builder()
+
+
+# --- builder join support ------------------------------------------------------
+
+
+SQLBuilder.join = lambda self, join_sql: _join(self, join_sql)
+
+
+def _join(builder: SQLBuilder, join_sql: str) -> SQLBuilder:
+    if not hasattr(builder, "_joins"):
+        builder._joins = []
+    builder._joins.append(join_sql)
+    return builder
+
+
+# --- DB open helper ------------------------------------------------------------
+
+
+def open_db(driver_name: str, data_source_name: str, opts: list[Callable[[Options], None]] | None = None) -> DB:
+    import sqlite3
+    options = new_options()
+    if opts:
+        for opt in opts:
+            opt(options)
+    dialect = normalize_dialect(driver_name) if options.dialect == Dialect.UNKNOWN else options.dialect
+    wrapper = options.wrapper or wrapper_for_dialect(dialect)
+    conn = sqlite3.connect(data_source_name)
+    return DB(_conn=conn, _dialect=dialect, _wrapper=wrapper)

@@ -368,9 +368,19 @@ class CodeGenerator:
 
 
 class RandomGenerator(CodeGenerator):
-    def __init__(self, base: str = BASE_CHAR_NUMBER_UC, length: int = 5) -> None:
-        self.base = base
+    def __init__(
+        self,
+        base: str = BASE_CHAR_NUMBER_UC,
+        length: int = 5,
+        *,
+        random_int: Callable[[int], int] | None = None,
+        int_parser: Callable[[str], int] | None = None,
+        charset: str | None = None,
+    ) -> None:
+        self.base = charset or base
         self.length = max(length, 4)
+        self._random_int = random_int
+        self._int_parser = int_parser
 
     def gen(self) -> str:
         return "".join(secrets.choice(self.base) for _ in range(self.length))
@@ -386,9 +396,18 @@ class MathGenerator(CodeGenerator):
         self,
         number_length: int = 2,
         result_has_negative: bool = True,
+        *,
+        num1_range: tuple[int, int] | None = None,
+        num2_range: tuple[int, int] | None = None,
+        int_parser: Callable[[str], int] | None = None,
+        random_int: Callable[[int], int] | None = None,
     ) -> None:
         self.number_length = max(number_length, 1)
         self.result_has_negative = result_has_negative
+        self._num1_range = num1_range
+        self._num2_range = num2_range
+        self._int_parser = int_parser
+        self._random_int = random_int
 
     def _limit(self) -> int:
         return int(10**self.number_length)
@@ -1325,3 +1344,281 @@ def supported_decode_barcode_formats() -> list[BarcodeFormat]:
 
 def can_decode_barcode_format(fmt: BarcodeFormat) -> bool:
     return fmt == BarcodeFormat.QR_CODE
+
+
+# --- barcode rendering wrappers (thin aliases over QR) -------------------------
+
+
+def barcode_image(content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> Image.Image:
+    if fmt != BarcodeFormat.QR_CODE:
+        raise ErrImageUnsupported(f"image: barcode format {fmt.name} not supported for encoding")
+    return qr_code_image(content, opts)
+
+
+def barcode_png(content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> bytes:
+    return qr_code_png(content, opts)
+
+
+def barcode_svg(content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> str:
+    return qr_code_svg(content, opts)
+
+
+def barcode_ascii(content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> str:
+    return qr_code_ascii(content, opts)
+
+
+def barcode_ascii_with_chars(
+    content: str,
+    fmt: BarcodeFormat,
+    set_string: str,
+    unset_string: str,
+    opts: Sequence[BarcodeOption] | None = None,
+) -> str:
+    return qr_code_ascii_with_chars(content, set_string, unset_string, opts)
+
+
+def barcode_base64_data(content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> str:
+    return qr_code_base64_data(content, opts)
+
+
+def barcode_bytes(content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> bytes:
+    return qr_code_png(content, opts)
+
+
+def write_barcode(w: io.BytesIO, content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> None:
+    write_qr_code(w, content, opts)
+
+
+# --- barcode/qr decode ---------------------------------------------------------
+
+
+def decode_qr_code(data: bytes) -> list[DecodeResult]:
+    try:
+        from PIL import Image as _PILImage
+    except ImportError:
+        return []
+    img = _PILImage.open(io.BytesIO(data))
+    return decode_qr_code_image(img)
+
+
+def decode_qr_code_image(img: Image.Image) -> list[DecodeResult]:
+    try:
+        from pyzbar.pyzbar import decode as _pyzbar_decode  # type: ignore[import-untyped]
+    except ImportError:
+        return []
+    results: list[DecodeResult] = []
+    for obj in _pyzbar_decode(img):
+        results.append(DecodeResult(
+            text=obj.data.decode("utf-8", errors="replace"),
+            format=BarcodeFormat.QR_CODE,
+            raw_bytes=obj.data,
+        ))
+    return results
+
+
+def decode_barcode(data: bytes) -> list[DecodeResult]:
+    return decode_qr_code(data)
+
+
+def decode_barcode_image(img: Image.Image) -> list[DecodeResult]:
+    return decode_qr_code_image(img)
+
+
+# --- generator convenience functions -------------------------------------------
+
+
+def new_math_generator() -> MathGenerator:
+    return MathGenerator()
+
+
+def new_math_generator_with(num1_range: tuple[int, int], num2_range: tuple[int, int]) -> MathGenerator:
+    return MathGenerator(num1_range=num1_range, num2_range=num2_range)
+
+
+def gen_math_generator_with_options(
+    num1_range: tuple[int, int],
+    num2_range: tuple[int, int],
+    *,
+    int_parser: Callable[[str], int] | None = None,
+    random_int: Callable[[int], int] | None = None,
+) -> MathGenerator:
+    return MathGenerator(
+        num1_range=num1_range,
+        num2_range=num2_range,
+        int_parser=int_parser,
+        random_int=random_int,
+    )
+
+
+def new_random_generator() -> RandomGenerator:
+    return RandomGenerator()
+
+
+def new_random_generator_with_base(base: str) -> RandomGenerator:
+    return RandomGenerator(base=base)
+
+
+def gen_random_generator_with_options(
+    *,
+    base: str | None = None,
+    random_int: Callable[[int], int] | None = None,
+    int_parser: Callable[[str], int] | None = None,
+) -> RandomGenerator:
+    return RandomGenerator(base=base or BASE_CHAR_NUMBER_UC, random_int=random_int, int_parser=int_parser)
+
+
+def verify_captcha_ignore_case(code: str, user_input: str) -> bool:
+    return verify_ignore_case(code, user_input)
+
+
+# --- additional barcode options ------------------------------------------------
+
+
+def with_barcode_character_set(charset: str) -> BarcodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 7:
+            cfg.append(None)
+        cfg[7] = charset
+
+    return _apply
+
+
+def with_barcode_colors(fg: tuple[int, int, int], bg: tuple[int, int, int]) -> BarcodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 8:
+            cfg.append(None)
+        cfg[3] = fg
+        cfg[4] = bg
+        cfg[8] = True
+
+    return _apply
+
+
+def with_barcode_force_code_set(force: bool) -> BarcodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 9:
+            cfg.append(None)
+        cfg[9] = force
+
+    return _apply
+
+
+def with_barcode_gs1_format(gs1: bool) -> BarcodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 10:
+            cfg.append(None)
+        cfg[10] = gs1
+
+    return _apply
+
+
+def with_barcode_logo(logo: Image.Image) -> BarcodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 11:
+            cfg.append(None)
+        cfg[11] = logo
+
+    return _apply
+
+
+def with_barcode_logo_size(ratio: float) -> BarcodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 12:
+            cfg.append(None)
+        cfg[12] = ratio
+
+    return _apply
+
+
+def with_barcode_transparent_background(transparent: bool) -> BarcodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 13:
+            cfg.append(None)
+        cfg[13] = transparent
+
+    return _apply
+
+
+# --- additional qr options -----------------------------------------------------
+
+
+def with_qr_code_colors(fg: tuple[int, int, int], bg: tuple[int, int, int]) -> QRCodeOption:
+    return with_barcode_colors(fg, bg)
+
+
+def with_qr_code_logo(logo: Image.Image) -> QRCodeOption:
+    return with_barcode_logo(logo)
+
+
+def with_qr_code_logo_ratio(ratio: float) -> QRCodeOption:
+    return with_barcode_logo_size(ratio)
+
+
+def with_qr_code_logo_size(size: int) -> QRCodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 14:
+            cfg.append(None)
+        cfg[14] = size
+
+    return _apply
+
+
+def with_qr_code_mask_pattern(pattern: int) -> QRCodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 15:
+            cfg.append(None)
+        cfg[15] = pattern
+
+    return _apply
+
+
+def with_qr_code_transparent_background(transparent: bool) -> QRCodeOption:
+    return with_barcode_transparent_background(transparent)
+
+
+# --- decode options ------------------------------------------------------------
+
+
+def with_decode_also_inverted(also_inverted: bool) -> BarcodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 16:
+            cfg.append(None)
+        cfg[16] = also_inverted
+
+    return _apply
+
+
+def with_decode_character_set(charset: str) -> BarcodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 17:
+            cfg.append(None)
+        cfg[17] = charset
+
+    return _apply
+
+
+def with_decode_formats(formats: list[BarcodeFormat]) -> BarcodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 18:
+            cfg.append(None)
+        cfg[18] = formats
+
+    return _apply
+
+
+def with_decode_pure_barcode(pure: bool) -> BarcodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 19:
+            cfg.append(None)
+        cfg[19] = pure
+
+    return _apply
+
+
+def with_decode_try_harder(try_harder: bool) -> BarcodeOption:
+    def _apply(cfg: list[Any]) -> None:
+        while len(cfg) <= 20:
+            cfg.append(None)
+        cfg[20] = try_harder
+
+    return _apply
