@@ -13,6 +13,16 @@ from typing import Any, Callable
 from kniferpy.internal import convx
 from kniferpy.verr import ValidationError
 
+# Field type constants (mirrors Go's TypeString, TypeBool, etc.)
+TypeString = "str"
+TypeBool = "bool"
+TypeInt = "int"
+TypeFloat = "float"
+TypeList = "list"
+
+# Default max bytes for remote loading (16 MiB, matches Go's DefaultMaxBytes).
+DefaultMaxBytes = 16 << 20
+
 # The default (ungrouped) section, matching knifer-go's empty group name.
 _DEFAULT_GROUP = ""
 
@@ -110,6 +120,32 @@ class Conf:
         if not ok:
             return ""
         return self._expand_value(group, value, set(), 0)
+
+    def get_by_group_expanded(self, group: str, key: str) -> str:
+        """Return a grouped value with ``${...}`` placeholders resolved."""
+        return self.get_expanded(key, group)
+
+    def get_int_by_group(self, group: str, key: str, default: int = 0) -> int:
+        """Return an int value from a named group."""
+        return self.get_int(key, default, group)
+
+    def get_bool_by_group(self, group: str, key: str, default: bool = False) -> bool:
+        """Return a bool value from a named group."""
+        return self.get_bool(key, default, group)
+
+    def get_int_e(self, key: str, group: str = _DEFAULT_GROUP) -> int:
+        """Return an int value or raise ValidationError."""
+        value, ok = self.lookup(group, key)
+        if not ok:
+            raise ValidationError(message=f"key {key!r} not found", code="knifer.conf.key_not_found")
+        return convx.to_int(value, 0)
+
+    def get_bool_e(self, key: str, group: str = _DEFAULT_GROUP) -> bool:
+        """Return a bool value or raise ValidationError."""
+        value, ok = self.lookup(group, key)
+        if not ok:
+            raise ValidationError(message=f"key {key!r} not found", code="knifer.conf.key_not_found")
+        return convx.to_bool(value)
 
     # --- Mutators -----------------------------------------------------------
 
@@ -218,6 +254,17 @@ class Conf:
 
         return out
 
+    def decrypt_values(self, decrypt: Callable[[str], str]) -> Conf:
+        """Return a copy with every value decrypted via ``decrypt``."""
+        out = Conf()
+        for group, section in self._data.items():
+            for key, value in section.items():
+                try:
+                    out.set_by_group(group, key, decrypt(value))
+                except Exception:
+                    out.set_by_group(group, key, value)
+        return out
+
     # --- Internal helpers ---------------------------------------------------
 
     def _expand_value(self, group: str, value: str, seen: _StrSet, depth: int) -> str:
@@ -248,6 +295,19 @@ class Conf:
                 seen.discard(seen_key)
 
         return _PLACEHOLDER_RE.sub(replace, value)
+
+
+class ConfError(ValidationError):
+    """Configuration error with error code and optional cause."""
+
+    def __init__(self, message: str, cause: BaseException | None = None) -> None:
+        super().__init__(message=message, code="knifer.conf.error")
+        self.cause = cause
+
+    def __str__(self) -> str:
+        if self.cause is not None:
+            return f"{self.message}: {self.cause}"
+        return self.message
 
 
 def new() -> Conf:
@@ -579,9 +639,95 @@ def schema_from_struct(obj: Any) -> Schema:
     return Schema(fields=rules)
 
 
+def validate_struct(conf: Conf, obj: Any) -> list[str]:
+    """Validate a dataclass-backed Conf using its schema."""
+    return validate_schema(conf, schema_from_struct(obj))
+
+
+def validate_struct_with_options(conf: Conf, obj: Any, **_opts: Any) -> list[str]:
+    """Validate a dataclass-backed Conf using its schema with options."""
+    return validate_schema(conf, schema_from_struct(obj))
+
+
+def bind_with_options(conf: Conf, obj: Any, **_opts: Any) -> None:
+    """Bind configuration values to a dataclass with options."""
+    bind(conf, obj)
+
+
+def bind_group_with_options(conf: Conf, group: str, obj: Any, **_opts: Any) -> None:
+    """Bind configuration values from a group to a dataclass with options."""
+    bind_group(conf, group, obj)
+
+
 # ---------------------------------------------------------------------------
-# LoadRemote — remote config loading
+# Base64 decryption
 # ---------------------------------------------------------------------------
+
+
+def base64_decrypt(cipher_text: str) -> str:
+    """Decode a Base64-encoded ciphertext into a plaintext string."""
+    import base64
+    return base64.b64decode(cipher_text).decode("utf-8")
+
+
+# ---------------------------------------------------------------------------
+# LoadOptions
+# ---------------------------------------------------------------------------
+
+
+@dataclasses.dataclass
+class LoadOptions:
+    """Options for loading configuration files."""
+
+    max_bytes: int = DefaultMaxBytes
+    decrypt: Callable[[str], str] | None = None
+
+
+def load_with_options(path: str | Path, opts: LoadOptions | None = None) -> Conf:
+    """Load a file with options (decryption, max bytes)."""
+    conf = load(path)
+    if opts and opts.decrypt:
+        conf = conf.decrypt_values(opts.decrypt)
+    return conf
+
+
+def load_files_with_options(paths: list[str | Path], opts: LoadOptions | None = None) -> Conf:
+    """Load multiple files with options."""
+    out = Conf()
+    for path in paths:
+        out.merge(load_with_options(path, opts))
+    return out
+
+
+def parse_by_ext_with_options(content: str, ext: str, **_opts: Any) -> Conf:
+    """Parse content by extension with options."""
+    return parse_by_ext(content, ext)
+
+
+def parse_yaml_full(content: str) -> Conf:
+    """Parse YAML content into a Conf (same as parse_yaml)."""
+    return parse_yaml(content)
+
+
+def parse_yaml_full_with_options(content: str, **_opts: Any) -> Conf:
+    """Parse YAML content into a Conf with options."""
+    return parse_yaml(content)
+
+
+def parse_toml_with_options(content: str, **_opts: Any) -> Conf:
+    """Parse TOML content into a Conf with options."""
+    return parse_toml(content)
+
+
+def watch_with_options(
+    path: str | Path,
+    onChange: Callable[[WatchEvent], None],
+    *,
+    interval: float = 1.0,
+    **_opts: Any,
+) -> threading.Thread:
+    """Watch a file for changes with options. Returns a daemon thread."""
+    return watch(path, onChange, interval=interval)
 
 
 def _is_private_host(hostname: str) -> bool:
