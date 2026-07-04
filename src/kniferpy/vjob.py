@@ -14,8 +14,10 @@ from kniferpy.internal.jobx import (
     ErrInvalidRange,
     ErrNilJob,
     Merge,
+    OptionCarrier,
     Options,
     Slice,
+    Sliceable,
     new_batch,
     new_batch_single,
     new_map,
@@ -26,17 +28,25 @@ from kniferpy.internal.jobx import (
     run_with,
 )
 
+# ── Go-compat NewMapE alias ───────────────────────────────────────────────────
+
+new_map_e = new_map
+"""Error-returning variant (Go compat). In Python, new_map raises exceptions."""
+
 __all__ = [
     "Batch",
     "ErrInvalidMapJob",
     "ErrInvalidRange",
     "ErrNilJob",
     "Merge",
+    "OptionCarrier",
     "Options",
     "Slice",
+    "Sliceable",
     "new_batch",
     "new_batch_single",
     "new_map",
+    "new_map_e",
     "new_map_keys",
     "new_slice",
     "new_slice_single",

@@ -5,6 +5,8 @@ Thin re-export veneer over internal/imgx.
 
 from __future__ import annotations
 
+from typing import Any, Callable
+
 from kniferpy.internal.imgx import (
     AbstractCaptcha,
     BarcodeFormat,
@@ -125,6 +127,11 @@ from kniferpy.internal.imgx import (
     write_qr_code,
 )
 
+# ── Go-compat DecodeOption type alias ─────────────────────────────────────────
+
+DecodeOption = Callable[[Any], None]
+"""Functional option for barcode/QR code decoding (Go compat)."""
+
 __all__ = [
     "AbstractCaptcha",
     "BarcodeFormat",
@@ -134,6 +141,7 @@ __all__ = [
     "CircleCaptcha",
     "CodeGenerator",
     "DecodeResult",
+    "DecodeOption",
     "GeneratorOption",
     "GifCaptcha",
     "LineCaptcha",

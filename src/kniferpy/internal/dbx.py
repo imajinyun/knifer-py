@@ -84,12 +84,26 @@ class Page:
             return 0
         return (self.number - 1) * self.size
 
+    def limit(self) -> int:
+        """Return the page size (Go compat)."""
+        return self.size
+
 
 @dataclass
 class PageResult(Generic[T]):
     page: Page
     total: int
     items: list[T]
+
+    def is_first(self) -> bool:
+        """Return whether this is the first page (Go compat)."""
+        return self.page.number <= 1
+
+    def is_last(self) -> bool:
+        """Return whether this is the last page (Go compat)."""
+        if self.page.size <= 0:
+            return True
+        return self.page.number * self.page.size >= self.total
 
 
 @dataclass
@@ -109,7 +123,24 @@ class Table:
 
 class Entity:
     """Base interface for database entity mapping."""
-    pass
+
+    def set(self, field: str, value: Any) -> Entity:
+        setattr(self, field, value)
+        return self
+
+    def set_if_not_nil(self, field: str, value: Any) -> Entity:
+        if value is not None:
+            setattr(self, field, value)
+        return self
+
+    def select(self, *fields: str) -> Entity:
+        return self
+
+    def filter(self, *fields: str) -> Entity:
+        return self
+
+    def remove(self, *fields: str) -> Entity:
+        return self
 
 
 Condition = Callable[[Dialect], tuple[str, list[Any]]]

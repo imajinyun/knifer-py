@@ -8,7 +8,7 @@ scheduler.
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Callable
+from typing import Any, Callable
 
 from kniferpy.internal import cronx
 from kniferpy.internal.cronx import (
@@ -56,12 +56,10 @@ from kniferpy.internal.cronx import (
 
 # ── Go-compat option type aliases ──────────────────────────────────────────────
 
-from typing import Any, Callable as _Callable
-
-SchedulerOption = _Callable[[Any], None]
-DefaultSchedulerOption = _Callable[[Any], None]
-ConfigOption = _Callable[[Any], None]
-PatternOption = _Callable[[Any], None]
+SchedulerOption = Callable[[Any], None]
+DefaultSchedulerOption = Callable[[Any], None]
+ConfigOption = Callable[[Any], None]
+PatternOption = Callable[[Any], None]
 
 __all__ = [
     # Types
@@ -124,6 +122,23 @@ __all__ = [
     "DefaultSchedulerOption",
     "ConfigOption",
     "PatternOption",
+    # WithOptions aliases (Go compat)
+    "new_scheduler_with_options",
+    "new_config_with_options",
+    "default_scheduler_with_options",
+    "cron_schedule_with_options",
+    "cron_schedule_func_with_options",
+    "cron_schedule_with_id_with_options",
+    "cron_remove_with_options",
+    "cron_update_pattern_with_options",
+    "cron_start_with_options",
+    "cron_stop_with_options",
+    "cron_shutdown_with_options",
+    "cron_restart_with_options",
+    "cron_set_match_second_with_options",
+    "cron_set_match_second_e_with_options",
+    "must_new_pattern_with_options",
+    "new_pattern_with_options",
 ]
 
 
@@ -167,3 +182,22 @@ PartMonth = cronx.PartMonth
 PartDayOfWeek = cronx.PartDayOfWeek
 PartYear = cronx.PartYear
 TaskExecutor = cronx.TaskExecutor
+
+# ── WithOptions aliases (Go compat) ──────────────────────────────────────────
+
+new_scheduler_with_options = new_scheduler
+new_config_with_options = new_config
+default_scheduler_with_options = default_scheduler
+cron_schedule_with_options = schedule
+cron_schedule_func_with_options = cron_schedule_func
+cron_schedule_with_id_with_options = schedule_with_id
+cron_remove_with_options = remove
+cron_update_pattern_with_options = update_pattern
+cron_start_with_options = start
+cron_stop_with_options = stop
+cron_shutdown_with_options = shutdown
+cron_restart_with_options = restart
+cron_set_match_second_with_options = cron_set_match_second
+cron_set_match_second_e_with_options = cron_set_match_second_e
+must_new_pattern_with_options = must_new_pattern
+new_pattern_with_options = new_pattern
