@@ -8,6 +8,8 @@ row/column limiting, and workbook factory injection.
 
 from __future__ import annotations
 
+from typing import Any, Callable
+
 from kniferpy.internal.poix import (
     DEFAULT_SHEET_NAME,
     Cell,
@@ -58,6 +60,13 @@ from kniferpy.internal.poix import (
     write_sheets,
 )
 
+# ── Go-compat factory function type aliases ─────────────────────────────────────
+
+OpenFileFunc = Callable[[str], Any]
+OpenReaderFunc = Callable[[bytes], Any]
+NewFileFunc = Callable[[], Any]
+SaveAsFunc = Callable[[Any, str], None]
+
 __all__ = [
     "DEFAULT_SHEET_NAME",
     "Cell",
@@ -106,4 +115,9 @@ __all__ = [
     "write_sheet_any_rows",
     "write_sheet_rows",
     "write_sheets",
+    # Go-compat factory function types
+    "OpenFileFunc",
+    "OpenReaderFunc",
+    "NewFileFunc",
+    "SaveAsFunc",
 ]
