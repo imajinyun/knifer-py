@@ -10,11 +10,16 @@ R = TypeVar("R")
 
 __all__ = [
     "equal",
+    "equals",
     "not_equal",
     "length",
     "contains",
     "is_none",
     "is_not_none",
+    "is_nil",
+    "is_not_nil",
+    "is_null",
+    "is_not_null",
     "is_empty",
     "is_not_empty",
     "default_if_none",
@@ -31,6 +36,7 @@ __all__ = [
     "to_string",
     "empty_count",
     "has_none",
+    "has_null",
     "has_empty",
     "is_all_empty",
     "is_all_not_empty",
@@ -135,3 +141,27 @@ def is_all_empty(*values: object) -> bool:
 
 def is_all_not_empty(*values: object) -> bool:
     return objx.is_all_not_empty(*values)
+
+
+def equals(a: object, b: object) -> bool:
+    return objx.equals(a, b)
+
+
+def is_null(v: object) -> bool:
+    return objx.is_null(v)
+
+
+def is_not_null(v: object) -> bool:
+    return objx.is_not_null(v)
+
+
+def is_nil(v: object) -> bool:
+    return objx.is_nil(v)
+
+
+def is_not_nil(v: object) -> bool:
+    return objx.is_not_nil(v)
+
+
+def has_null(*values: object) -> bool:
+    return objx.has_null(*values)

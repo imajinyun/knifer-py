@@ -149,3 +149,27 @@ def is_all_empty(*values: object) -> bool:
 
 def is_all_not_empty(*values: object) -> bool:
     return all(is_not_empty(value) for value in values)
+
+
+def is_null(v: object) -> bool:
+    return v is None
+
+
+def is_not_null(v: object) -> bool:
+    return v is not None
+
+
+def has_null(*values: object) -> bool:
+    return any(v is None for v in values)
+
+
+def equals(a: object, b: object) -> bool:
+    return equal(a, b)
+
+
+def is_nil(v: object) -> bool:
+    return v is None
+
+
+def is_not_nil(v: object) -> bool:
+    return v is not None
