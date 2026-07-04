@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Callable
+
 from kniferpy.internal import blfx
 from kniferpy.internal.blfx import (
     DEFAULT_MACHINE_NUM,
@@ -29,6 +31,11 @@ from kniferpy.internal.hashx import (
     tianl_hash,
 )
 
+# ── Go-compat type alias ───────────────────────────────────────────────────────
+
+FileOption = Callable[[Any], None]
+"""Functional option for bloom filter file loading (Go compat)."""
+
 __all__ = [
     "DEFAULT_MACHINE_NUM",
     "MACHINE_32",
@@ -37,6 +44,7 @@ __all__ = [
     "BitSetBloomFilter",
     "BloomFilter",
     "FuncFilter",
+    "FileOption",
     "HashFunc",
     "IntMap",
     "LongMap",

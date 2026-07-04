@@ -7,7 +7,7 @@ apply profile overrides, bind to dataclasses, and validate with schemas.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 from kniferpy.internal import confx
 from kniferpy.internal.confx import (
@@ -50,12 +50,18 @@ from kniferpy.internal.confx import (
     watch_with_options,
 )
 
+# ── Go-compat type alias ───────────────────────────────────────────────────────
+
+LoadOption = Callable[[Any], None]
+"""Functional option for configuration loading (Go compat)."""
+
 __all__ = [
     # Types
     "Conf",
     "ConfError",
     "FieldRule",
     "LoadOptions",
+    "LoadOption",
     "Schema",
     "WatchEvent",
     # Type constants

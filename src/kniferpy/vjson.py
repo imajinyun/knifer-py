@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from kniferpy.internal import jsonx
 from kniferpy.internal.jsonx import (
@@ -14,6 +14,11 @@ from kniferpy.internal.jsonx import (
     new_json_object,
 )
 from kniferpy.verr import JSONError
+
+# ── Go-compat type alias ───────────────────────────────────────────────────────
+
+JSONOption = Callable[[Any], None]
+"""Functional option for JSON parsing/serialization (Go compat)."""
 
 # Parse
 parse = jsonx.loads
@@ -127,6 +132,8 @@ __all__ = [
     "to_str",
     "to_pretty_str_with_config",
     "quote",
+    # Go-compat type alias
+    "JSONOption",
     # Path access
     "get_path",
     "put_by_path",

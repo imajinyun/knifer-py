@@ -7,10 +7,16 @@ type checking, and resource (file/HTTP) opening. All functions raise
 
 from __future__ import annotations
 
+from typing import Any, Callable
 from urllib.parse import ParseResult
 
 from kniferpy.internal import urlx
 from kniferpy.internal.urlx import URLBuilder
+
+# ── Go-compat type alias ───────────────────────────────────────────────────────
+
+NormalizeOption = Callable[[Any], None]
+"""Functional option for URL normalization (Go compat)."""
 
 __all__ = [
     "FileURLPrefix",
@@ -19,6 +25,7 @@ __all__ = [
     "URLProtocolFile",
     "URLProtocolJar",
     "URLProtocolZip",
+    "NormalizeOption",
     "add_query",
     "append_query",
     "build_query",
