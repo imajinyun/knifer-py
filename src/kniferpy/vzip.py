@@ -26,6 +26,7 @@ __all__ = [
     "gzip_bytes",
     "gzip_file",
     "gzip_reader",
+    "gzip_reader_from_stream",
     "gzip_string",
     "list_file_names",
     "new_zip_writer",
@@ -34,6 +35,7 @@ __all__ = [
     "read_file",
     "read_zip",
     "ungzip",
+    "ungzip_reader_from_stream",
     "ungzip_string",
     "unzip",
     "unzip_reader",
@@ -41,6 +43,7 @@ __all__ = [
     "unzip_to_limit",
     "unzlib",
     "unzlib_reader",
+    "unzlib_reader_from_stream",
     "unzlib_string",
     "zip_archive",
     "zip_bytes",
@@ -50,11 +53,13 @@ __all__ = [
     "zip_files",
     "zip_files_filter",
     "zip_streams",
+    "zip_streams_to_writer",
     "zip_to",
     "zip_to_writer",
     "zlib_bytes",
     "zlib_file",
     "zlib_reader",
+    "zlib_reader_from_stream",
     "zlib_string",
 ]
 
@@ -98,6 +103,8 @@ ungzip = zipx.ungzip
 ungzip_string = zipx.ungzip_string
 gzip_reader = zipx.gzip_reader
 gunzip_reader = zipx.gunzip_reader
+gzip_reader_from_stream = zipx.gzip_reader_from_stream
+ungzip_reader_from_stream = zipx.ungzip_reader_from_stream
 
 # ── zlib ──────────────────────────────────────────────────────────────────────
 
@@ -108,3 +115,6 @@ unzlib = zipx.unzlib
 unzlib_string = zipx.unzlib_string
 zlib_reader = zipx.zlib_reader
 unzlib_reader = zipx.unzlib_reader
+zlib_reader_from_stream = zipx.zlib_reader_from_stream
+unzlib_reader_from_stream = zipx.unzlib_reader_from_stream
+zip_streams_to_writer = zipx.zip_streams_to_writer

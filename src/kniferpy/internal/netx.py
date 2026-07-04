@@ -201,6 +201,16 @@ _SSL_VERSIONS: dict[str, int] = {
     "TLSv1.3": ssl.PROTOCOL_TLS_CLIENT,
 }
 
+# Exported TLS/SSL protocol label constants
+SSL = "SSL"
+SSLv2 = "SSLv2"
+SSLv3 = "SSLv3"
+TLS = "TLS"
+TLSv1 = "TLSv1"
+TLSv11 = "TLSv1.1"
+TLSv12 = "TLSv1.2"
+TLSv13 = "TLSv1.3"
+
 
 class TLSConfigBuilder:
     """Builds an :class:`ssl.SSLContext` with fluent methods."""
@@ -411,6 +421,29 @@ class MultipartFormData:
 
     def get_file_param_names(self) -> list[str]:
         return sorted(self._files)
+
+    def get_param_map(self) -> dict[str, str]:
+        return {k: v[0] for k, v in self._fields.items() if v}
+
+    def get_param_list_map(self) -> dict[str, list[str]]:
+        return dict(self._fields)
+
+    def get_file_map(self) -> dict[str, tuple[str, bytes, str]]:
+        return {k: v[0] for k, v in self._files.items() if v}
+
+    def get_file_list_value_map(self) -> dict[str, list[tuple[str, bytes, str]]]:
+        return dict(self._files)
+
+    def get_list_param(self, name: str) -> list[str]:
+        return self._fields.get(name, [])
+
+    def get_file_list(self, name: str) -> list[tuple[str, bytes, str]]:
+        return self._files.get(name, [])
+
+
+def new_upload_setting() -> UploadSetting:
+    """Create a new UploadSetting with default values."""
+    return UploadSetting()
 
 
 def _parse_header_params(header_value: str) -> tuple[str, dict[str, str]]:

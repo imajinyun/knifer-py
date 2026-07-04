@@ -483,6 +483,8 @@ class _WriteConfig:
         self.dir_perm: int = 0o750
         self.overwrite: bool = True
         self.create_parents: bool = True
+        self.mkdir_all: Callable[[str, int], None] | None = None
+        self.open_file: Callable[[str, int, int], Any] | None = None
 
 
 class _GeneratorConfig:
@@ -574,6 +576,20 @@ def with_overwrite(overwrite: bool) -> WriteOption:
 def with_create_parents(create: bool) -> WriteOption:
     def _apply(c: _WriteConfig) -> None:
         c.create_parents = create
+
+    return _apply
+
+
+def with_mkdir_all(mkdir_all: Callable[[str, int], None]) -> WriteOption:
+    def _apply(c: _WriteConfig) -> None:
+        c.mkdir_all = mkdir_all
+
+    return _apply
+
+
+def with_open_file(open_file: Callable[[str, int, int], Any]) -> WriteOption:
+    def _apply(c: _WriteConfig) -> None:
+        c.open_file = open_file
 
     return _apply
 
@@ -1067,6 +1083,15 @@ def new_line_captcha(width: int, height: int, opts: Sequence[CaptchaOption] | No
     return c
 
 
+def new_line_captcha_with(width: int, height: int, code_count: int, line_count: int) -> LineCaptcha:
+    c = LineCaptcha()
+    c.width = width
+    c.height = height
+    c._generator = RandomGenerator(length=code_count)
+    c._apply_options([with_interfere_count(line_count)])
+    return c
+
+
 def new_circle_captcha(width: int, height: int, opts: Sequence[CaptchaOption] | None = None) -> CircleCaptcha:
     c = CircleCaptcha()
     c.width = width
@@ -1076,12 +1101,30 @@ def new_circle_captcha(width: int, height: int, opts: Sequence[CaptchaOption] | 
     return c
 
 
+def new_circle_captcha_with(width: int, height: int, code_count: int, circle_count: int) -> CircleCaptcha:
+    c = CircleCaptcha()
+    c.width = width
+    c.height = height
+    c._generator = RandomGenerator(length=code_count)
+    c._apply_options([with_interfere_count(circle_count)])
+    return c
+
+
 def new_shear_captcha(width: int, height: int, opts: Sequence[CaptchaOption] | None = None) -> ShearCaptcha:
     c = ShearCaptcha()
     c.width = width
     c.height = height
     c._generator = RandomGenerator(length=5)
     c._apply_options(opts or [])
+    return c
+
+
+def new_shear_captcha_with(width: int, height: int, code_count: int, thickness: int) -> ShearCaptcha:
+    c = ShearCaptcha()
+    c.width = width
+    c.height = height
+    c._generator = RandomGenerator(length=code_count)
+    c._apply_options([with_interfere_count(thickness)])
     return c
 
 
@@ -1095,6 +1138,15 @@ def new_gif_captcha(width: int, height: int, opts: Sequence[CaptchaOption] | Non
         c.repeat = cfg.gif_repeat
     if cfg.set_gif_delay:
         c.delay = cfg.gif_delay
+    return c
+
+
+def new_gif_captcha_with(width: int, height: int, code_count: int) -> GifCaptcha:
+    c = GifCaptcha()
+    c.width = width
+    c.height = height
+    c._generator = RandomGenerator(length=code_count)
+    c._apply_options([])
     return c
 
 
@@ -1276,6 +1328,19 @@ def qr_code_png(content: str, opts: Sequence[QRCodeOption] | None = None) -> byt
     buf = io.BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
+
+
+def qr_code_bytes(content: str, output_format: BarcodeOutputFormat, opts: Sequence[QRCodeOption] | None = None) -> bytes:
+    """Render QR code content to bytes in the specified output format."""
+    if output_format == BarcodeOutputFormat.PNG:
+        return qr_code_png(content, opts)
+    elif output_format == BarcodeOutputFormat.SVG:
+        return qr_code_svg(content, opts).encode("utf-8")
+    elif output_format == BarcodeOutputFormat.ASCII:
+        return qr_code_ascii(content, opts).encode("utf-8")
+    elif output_format == BarcodeOutputFormat.BASE64_DATA:
+        return qr_code_base64_data(content, opts).encode("utf-8")
+    return qr_code_png(content, opts)
 
 
 def qr_code_base64_data(content: str, opts: Sequence[QRCodeOption] | None = None) -> str:

@@ -22,6 +22,24 @@ class OsInfo:
     line_separator: str
     path_separator: str
 
+    def is_linux(self) -> bool:
+        return self.name == "Linux"
+
+    def is_mac(self) -> bool:
+        return self.name == "Darwin"
+
+    def is_windows(self) -> bool:
+        return self.name == "Windows"
+
+    def is_aix(self) -> bool:
+        return self.name == "AIX"
+
+    def is_solaris(self) -> bool:
+        return self.name == "SunOS"
+
+    def is_freebsd(self) -> bool:
+        return self.name == "FreeBSD"
+
     def __str__(self) -> str:
         return (
             f"OS Arch:        {self.arch}\n"
@@ -76,6 +94,42 @@ class RuntimeInfo:
     python_path: list[str]
     prefix: str
     executable: str
+
+    def get_total_memory(self) -> int:
+        return _get_total_memory()
+
+    def get_free_memory(self) -> int:
+        return _get_free_memory()
+
+    def get_max_memory(self) -> int:
+        return _get_total_memory()
+
+    def get_usable_memory(self) -> int:
+        total = _get_total_memory()
+        free = _get_free_memory()
+        return total - free
+
+    def get_heap_inuse(self) -> int:
+        return self.get_usable_memory()
+
+    def get_thread_count(self) -> int:
+        return get_total_thread_count()
+
+    def get_goroutine_count(self) -> int:
+        return self.get_thread_count()
+
+    def get_mem_stats(self) -> dict[str, int]:
+        return {
+            "total": _get_total_memory(),
+            "free": _get_free_memory(),
+            "max": _get_total_memory(),
+            "usable": self.get_usable_memory(),
+            "heap_inuse": self.get_heap_inuse(),
+            "thread_count": self.get_thread_count(),
+        }
+
+    def refresh(self) -> RuntimeInfo:
+        return get_runtime_info()
 
     def __str__(self) -> str:
         return (
@@ -234,7 +288,7 @@ def get_bool(key: str, default: bool = False) -> bool:
 # --- Runtime / process info --------------------------------------------------
 
 
-def get_total_memory() -> int:
+def _get_total_memory() -> int:
     """Return total physical memory in bytes."""
     try:
         import psutil
@@ -243,7 +297,7 @@ def get_total_memory() -> int:
         return 0
 
 
-def get_free_memory() -> int:
+def _get_free_memory() -> int:
     """Return free physical memory in bytes."""
     try:
         import psutil
@@ -252,9 +306,21 @@ def get_free_memory() -> int:
         return 0
 
 
-def get_max_memory() -> int:
+def _get_max_memory() -> int:
     """Return max memory the process can use (system total)."""
-    return get_total_memory()
+    return _get_total_memory()
+
+
+def get_total_memory() -> int:
+    return _get_total_memory()
+
+
+def get_free_memory() -> int:
+    return _get_free_memory()
+
+
+def get_max_memory() -> int:
+    return _get_max_memory()
 
 
 def get_runtime_info() -> RuntimeInfo:
@@ -431,3 +497,47 @@ def _cached_get_runtime_info() -> RuntimeInfo:
     if _cached_runtime_info is None:
         _cached_runtime_info = get_runtime_info()
     return _cached_runtime_info
+
+
+# ── New* constructors (Go compat: always create fresh instances) ────────────
+
+def new_host_info() -> HostInfo:
+    """Create a fresh HostInfo instance (never cached)."""
+    return get_host_info()
+
+
+def new_os_info() -> OsInfo:
+    """Create a fresh OsInfo instance (never cached)."""
+    return get_os_info()
+
+
+def new_user_info() -> UserInfo:
+    """Create a fresh UserInfo instance (never cached)."""
+    return get_user_info()
+
+
+def new_runtime_info() -> RuntimeInfo:
+    """Create a fresh RuntimeInfo instance (never cached)."""
+    return get_runtime_info()
+
+
+# ── System* cached accessors (Go compat: singleton cache) ───────────────────
+
+def system_host_info() -> HostInfo:
+    """Return cached HostInfo (singleton, cleared by reset_info_cache)."""
+    return _cached_get_host_info()
+
+
+def system_os_info() -> OsInfo:
+    """Return cached OsInfo (singleton, cleared by reset_info_cache)."""
+    return _cached_get_os_info()
+
+
+def system_user_info() -> UserInfo:
+    """Return cached UserInfo (singleton, cleared by reset_info_cache)."""
+    return _cached_get_user_info()
+
+
+def system_runtime_info() -> RuntimeInfo:
+    """Return cached RuntimeInfo (singleton, cleared by reset_info_cache)."""
+    return _cached_get_runtime_info()

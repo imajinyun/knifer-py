@@ -503,3 +503,43 @@ def zlib_reader(data: bytes) -> IO[bytes]:
 def unzlib_reader(data: bytes) -> IO[bytes]:
     """Decompress zlib data and return a reader (alias for zlib_reader)."""
     return zlib_reader(data)
+
+
+# ── gzip/zlib streaming reader-to-bytes ─────────────────────────────────────
+
+
+def gzip_reader_from_stream(reader: IO[bytes], *, level: int = 6) -> bytes:
+    """Compress all bytes from ``reader`` using gzip."""
+    return gzip_bytes(reader.read(), level=level)
+
+
+def ungzip_reader_from_stream(reader: IO[bytes], *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES) -> bytes:
+    """Decompress all gzip bytes from ``reader``."""
+    return ungzip(reader.read(), max_bytes=max_bytes)
+
+
+def zlib_reader_from_stream(reader: IO[bytes], *, level: int = 6) -> bytes:
+    """Compress all bytes from ``reader`` using zlib."""
+    return zlib_bytes(reader.read(), level=level)
+
+
+def unzlib_reader_from_stream(reader: IO[bytes], *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES) -> bytes:
+    """Decompress all zlib bytes from ``reader``."""
+    return unzlib(reader.read(), max_bytes=max_bytes)
+
+
+# ── ZIP streaming entries to writer ─────────────────────────────────────────
+
+
+def zip_streams_to_writer(
+    out: IO[bytes],
+    streams: dict[str, IO[bytes]],
+) -> None:
+    """Write stream entries into ``out`` as a ZIP archive.
+
+    Each entry is read from its reader and written directly into the ZIP
+    stream without buffering the full payload in memory.
+    """
+    with zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, stream in streams.items():
+            zf.writestr(_clean_entry_name(name), stream.read())

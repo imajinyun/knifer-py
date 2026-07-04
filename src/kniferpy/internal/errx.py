@@ -12,6 +12,8 @@ Ports knifer-go's internal/errx with Python-idiomatic mappings:
 from __future__ import annotations
 
 import logging
+import os
+import sys
 import threading
 import traceback
 from dataclasses import dataclass, field
@@ -19,6 +21,55 @@ from datetime import timedelta
 from typing import Any, Callable
 
 _logger = logging.getLogger("kniferpy.errx")
+
+# ---------------------------------------------------------------------------
+# Error codes (mirrors knifer-go ErrCode constants)
+# ---------------------------------------------------------------------------
+
+ERR_CODE_INVALID_INPUT = "knifer.invalid_input"
+ERR_CODE_NOT_FOUND = "knifer.not_found"
+ERR_CODE_UNSUPPORTED = "knifer.unsupported"
+ERR_CODE_UNSAFE_RESOURCE = "knifer.unsafe_resource"
+ERR_CODE_TIMEOUT = "knifer.timeout"
+ERR_CODE_PROVIDER_FAILURE = "knifer.provider_failure"
+ERR_CODE_INTERNAL = "knifer.internal"
+
+_ERR_CODE_NAMES: dict[str, str] = {
+    ERR_CODE_INVALID_INPUT: "ERR_CODE_INVALID_INPUT",
+    ERR_CODE_NOT_FOUND: "ERR_CODE_NOT_FOUND",
+    ERR_CODE_UNSUPPORTED: "ERR_CODE_UNSUPPORTED",
+    ERR_CODE_UNSAFE_RESOURCE: "ERR_CODE_UNSAFE_RESOURCE",
+    ERR_CODE_TIMEOUT: "ERR_CODE_TIMEOUT",
+    ERR_CODE_PROVIDER_FAILURE: "ERR_CODE_PROVIDER_FAILURE",
+    ERR_CODE_INTERNAL: "ERR_CODE_INTERNAL",
+}
+
+
+def err_code_name(code: str) -> str:
+    return _ERR_CODE_NAMES.get(code, code)
+
+
+# Default log function (can be overridden globally)
+_default_log_func: LogFunc | None = None
+
+
+def _get_default_log_func() -> LogFunc:
+    if _default_log_func is not None:
+        return _default_log_func
+    return _builtin_log_func
+
+
+def configure_default_log_func(log_func: LogFunc) -> None:
+    """Replace the global default log function used by all errx helpers."""
+    global _default_log_func
+    _default_log_func = log_func
+
+
+def reset_default_log_func() -> None:
+    """Reset the global default log function to the built-in."""
+    global _default_log_func
+    _default_log_func = None
+
 
 # ---------------------------------------------------------------------------
 # Error types
@@ -33,6 +84,9 @@ class KniferError(Exception):
 
     def __str__(self) -> str:
         return self.message
+
+    def error_code(self) -> str:
+        return self.code
 
 
 class ValidationError(KniferError):
@@ -53,6 +107,38 @@ class CryptoError(KniferError):
 
 class JSONError(KniferError):
     pass
+
+
+# ---------------------------------------------------------------------------
+# Error construction helpers (mirrors knifer-go errors.go)
+# ---------------------------------------------------------------------------
+
+
+def new_error(code: str, message: str, **context: Any) -> KniferError:
+    """Create a new KniferError with the given code and message."""
+    return KniferError(message=message, code=code, context=dict(context))
+
+
+def wrap_error(code: str, message: str, cause: BaseException, **context: Any) -> KniferError:
+    """Create a KniferError wrapping an existing cause."""
+    err = KniferError(message=message, code=code, context=dict(context))
+    err.__cause__ = cause
+    return err
+
+
+def errorf(code: str, message: str, *args: Any, **context: Any) -> KniferError:
+    """Create a KniferError with a formatted message."""
+    formatted = message % args if args else message
+    return KniferError(message=formatted, code=code, context=dict(context))
+
+
+def code_of(err: BaseException) -> tuple[str, bool]:
+    """Extract the error code from an error, if it carries one."""
+    while err is not None:
+        if hasattr(err, "error_code") and callable(err.error_code):
+            return err.error_code(), True
+        err = err.__cause__
+    return "", False
 
 
 # ---------------------------------------------------------------------------
@@ -93,6 +179,12 @@ class PanicError(KniferError):
     def __str__(self) -> str:
         return f"{self.message}\n{self.stack_trace}"
 
+    def error_code(self) -> str:
+        return self.code
+
+    def unwrap(self) -> BaseException | None:
+        return self.cause
+
 
 def get_stack(skip: int = 2) -> str:
     """Capture the current call stack as a string."""
@@ -118,7 +210,7 @@ LogFunc = Callable[[str, str, str], None]
 """Error log entry writer: (level, message, stack_trace) -> None."""
 
 
-def _default_log_func(level: str, message: str, stack: str) -> None:
+def _builtin_log_func(level: str, message: str, stack: str) -> None:
     log_level = getattr(logging, level.upper(), logging.ERROR)
     _logger.log(log_level, "%s\n%s", message, stack)
 
@@ -128,7 +220,7 @@ class Wrapper:
 
     def __init__(self, fn: Callable[[], Any]) -> None:
         self._fn = fn
-        self._log_func: LogFunc = _default_log_func
+        self._log_func: LogFunc = _get_default_log_func
         self._info_format: str = ""
         self._warn_format: str = ""
         self._error_format: str = ""
@@ -192,7 +284,7 @@ class Collector:
     def __init__(self) -> None:
         self._errors: list[BaseException] = []
         self._lock = threading.Lock()
-        self._log_func: LogFunc = _default_log_func
+        self._log_func: LogFunc = _get_default_log_func
         self._runner: Callable[[Callable[[], None]], None] | None = None
 
     def with_log_func(self, log_func: LogFunc) -> Collector:
@@ -284,10 +376,36 @@ def capture_exception(error: BaseException | None = None) -> str | None:
         return None
 
 
-def error_is(err: BaseException, target: type[BaseException]) -> bool:
-    """Check if err is or contains an instance of target."""
+def error_is(err: BaseException, target: type[BaseException] | str) -> bool:
+    """Check if err is or contains an instance of target, or matches a code."""
+    if isinstance(target, str):
+        code, found = code_of(err)
+        return found and code == target
     if isinstance(err, target):
         return True
     if isinstance(err, PanicError):
         return isinstance(err.cause, target) if err.cause else False
     return False
+
+
+# ---------------------------------------------------------------------------
+# MustExit — log and exit on error (mirrors knifer-go MustExit)
+# ---------------------------------------------------------------------------
+
+
+def must_exit(err: BaseException | None) -> None:
+    """Log the error and exit the process with code 1 if err is not None."""
+    if err is None:
+        return
+    log_func = _get_default_log_func()
+    log_func("error", str(err), get_stack(3))
+    sys.exit(1)
+
+
+def must_exit_with_code(err: BaseException | None, exit_code: int = 1) -> None:
+    """Log the error and exit with ``exit_code`` if err is not None."""
+    if err is None:
+        return
+    log_func = _get_default_log_func()
+    log_func("error", str(err), get_stack(3))
+    sys.exit(exit_code)

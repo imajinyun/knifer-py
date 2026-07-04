@@ -38,8 +38,16 @@ __all__ = [
     "get_user_info",
     "idn_to_ascii",
     "is_unknown",
+    "new_host_info",
+    "new_os_info",
+    "new_runtime_info",
+    "new_user_info",
     "parse_cookies",
     "reset_info_cache",
+    "system_host_info",
+    "system_os_info",
+    "system_runtime_info",
+    "system_user_info",
 ]
 
 
@@ -161,3 +169,43 @@ def get_cpu_cores() -> int:
 def reset_info_cache() -> None:
     """Clear cached system info snapshots."""
     return sysx.reset_info_cache()
+
+
+def new_host_info() -> HostInfo:
+    """Create a fresh HostInfo instance (never cached)."""
+    return sysx.new_host_info()
+
+
+def new_os_info() -> OsInfo:
+    """Create a fresh OsInfo instance (never cached)."""
+    return sysx.new_os_info()
+
+
+def new_user_info() -> UserInfo:
+    """Create a fresh UserInfo instance (never cached)."""
+    return sysx.new_user_info()
+
+
+def new_runtime_info() -> RuntimeInfo:
+    """Create a fresh RuntimeInfo instance (never cached)."""
+    return sysx.new_runtime_info()
+
+
+def system_host_info() -> HostInfo:
+    """Return cached HostInfo (singleton, cleared by reset_info_cache)."""
+    return sysx.system_host_info()
+
+
+def system_os_info() -> OsInfo:
+    """Return cached OsInfo (singleton, cleared by reset_info_cache)."""
+    return sysx.system_os_info()
+
+
+def system_user_info() -> UserInfo:
+    """Return cached UserInfo (singleton, cleared by reset_info_cache)."""
+    return sysx.system_user_info()
+
+
+def system_runtime_info() -> RuntimeInfo:
+    """Return cached RuntimeInfo (singleton, cleared by reset_info_cache)."""
+    return sysx.system_runtime_info()

@@ -138,6 +138,26 @@ class Set(Generic[T]):
         items = cfg.unmarshal(data.encode())
         return cls(*items)
 
+    def to_yaml(self) -> Any:
+        """Return a YAML-serializable representation (list of members)."""
+        try:
+            import yaml
+            return yaml.safe_dump(self.members(), default_flow_style=False)
+        except ImportError:
+            return self.members()
+
+    @classmethod
+    def from_yaml(cls, data: str) -> Set[T]:
+        """Parse a YAML sequence into a Set."""
+        try:
+            import yaml
+            items = yaml.safe_load(data)
+        except ImportError:
+            items = json.loads(data)
+        if not isinstance(items, list):
+            items = [items]
+        return cls(*items)
+
     def to_slice(self) -> list[T]:
         return self.members()
 
@@ -160,7 +180,7 @@ class Set(Generic[T]):
         return all(self.contains(i) for i in items)
 
     def is_subset(self, other: Set[T]) -> bool:
-        return all(self.contains(i) for i in other._data)
+        return all(other.contains(i) for i in self._data)
 
     def is_superset(self, other: Set[T]) -> bool:
         return all(other.contains(i) for i in self._data)

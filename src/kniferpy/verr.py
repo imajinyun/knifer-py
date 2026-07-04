@@ -11,6 +11,13 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from kniferpy.internal.errx import (
+    ERR_CODE_INTERNAL,
+    ERR_CODE_INVALID_INPUT,
+    ERR_CODE_NOT_FOUND,
+    ERR_CODE_PROVIDER_FAILURE,
+    ERR_CODE_TIMEOUT,
+    ERR_CODE_UNSAFE_RESOURCE,
+    ERR_CODE_UNSUPPORTED,
     Collector,
     CryptoError,
     DecodeError,
@@ -22,16 +29,33 @@ from kniferpy.internal.errx import (
     ValidationError,
     Wrapper,
     capture_exception,
+    code_of,
+    configure_default_log_func,
+    err_code_name,
     error_is,
+    errorf,
     get_stack,
     get_stack_trace,
     init_sentry,
+    must_exit,
+    must_exit_with_code,
     new_collector,
+    new_error,
     recover,
     recover_without_error,
+    reset_default_log_func,
+    wrap_error,
 )
 
 __all__ = [
+    # Error codes
+    "ERR_CODE_INTERNAL",
+    "ERR_CODE_INVALID_INPUT",
+    "ERR_CODE_NOT_FOUND",
+    "ERR_CODE_PROVIDER_FAILURE",
+    "ERR_CODE_TIMEOUT",
+    "ERR_CODE_UNSAFE_RESOURCE",
+    "ERR_CODE_UNSUPPORTED",
     # Error types
     "KniferError",
     "ValidationError",
@@ -40,6 +64,12 @@ __all__ = [
     "CryptoError",
     "JSONError",
     "PanicError",
+    # Error construction
+    "new_error",
+    "wrap_error",
+    "errorf",
+    "code_of",
+    "err_code_name",
     # Stack trace
     "get_stack",
     "get_stack_trace",
@@ -56,4 +86,8 @@ __all__ = [
     "capture_exception",
     # Utilities
     "error_is",
+    "must_exit",
+    "must_exit_with_code",
+    "configure_default_log_func",
+    "reset_default_log_func",
 ]

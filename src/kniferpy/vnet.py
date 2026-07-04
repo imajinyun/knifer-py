@@ -19,6 +19,14 @@ __all__ = [
     "IP_MASK_MAX",
     "PORT_RANGE_MIN",
     "PORT_RANGE_MAX",
+    "SSL",
+    "SSLv2",
+    "SSLv3",
+    "TLS",
+    "TLSv1",
+    "TLSv11",
+    "TLSv12",
+    "TLSv13",
     # Types
     "TLSConfigBuilder",
     "MultipartFormData",
@@ -107,6 +115,7 @@ __all__ = [
     "parse_cookies",
     "get_multistage_reverse_proxy_ip",
     # Multipart
+    "new_upload_setting",
     "parse_multipart_form",
     "save_uploaded_file",
     "upload_file_name",
@@ -120,6 +129,14 @@ IP_MASK_SPLIT_MARK = netx.IP_MASK_SPLIT_MARK
 IP_MASK_MAX = netx.IP_MASK_MAX
 PORT_RANGE_MIN = netx.PORT_RANGE_MIN
 PORT_RANGE_MAX = netx.PORT_RANGE_MAX
+SSL = netx.SSL
+SSLv2 = netx.SSLv2
+SSLv3 = netx.SSLv3
+TLS = netx.TLS
+TLSv1 = netx.TLSv1
+TLSv11 = netx.TLSv11
+TLSv12 = netx.TLSv12
+TLSv13 = netx.TLSv13
 
 
 def is_ip(value: str) -> bool:
@@ -444,6 +461,11 @@ def get_multistage_reverse_proxy_ip(headers: dict[str, str]) -> str:
 # ---------------------------------------------------------------------------
 # Multipart
 # ---------------------------------------------------------------------------
+
+
+def new_upload_setting() -> UploadSetting:
+    """Create a new UploadSetting with default values."""
+    return netx.new_upload_setting()
 
 
 def parse_multipart_form(
