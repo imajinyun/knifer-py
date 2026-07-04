@@ -26,7 +26,10 @@ from kniferpy.internal.errx import (
     LogFunc,
     PanicError,
     SecurityError,
+    TimerFactory,
     ValidationError,
+    WithStack,
+    WithStackTrace,
     Wrapper,
     capture_exception,
     code_of,
@@ -36,10 +39,15 @@ from kniferpy.internal.errx import (
     errorf,
     get_stack,
     get_stack_trace,
+    get_stack_trace_with_options,
+    get_stack_with_skip,
     init_sentry,
     must_exit,
     must_exit_with_code,
+    must_exit_with_log,
+    must_exit_with_panic,
     new_collector,
+    new_collector_with_options,
     new_error,
     recover,
     recover_without_error,
@@ -56,6 +64,9 @@ __all__ = [
     "ERR_CODE_TIMEOUT",
     "ERR_CODE_UNSAFE_RESOURCE",
     "ERR_CODE_UNSUPPORTED",
+    # Protocols
+    "WithStack",
+    "WithStackTrace",
     # Error types
     "KniferError",
     "ValidationError",
@@ -73,6 +84,8 @@ __all__ = [
     # Stack trace
     "get_stack",
     "get_stack_trace",
+    "get_stack_with_skip",
+    "get_stack_trace_with_options",
     # Recovery
     "Wrapper",
     "LogFunc",
@@ -80,7 +93,9 @@ __all__ = [
     "recover_without_error",
     # Collector
     "Collector",
+    "TimerFactory",
     "new_collector",
+    "new_collector_with_options",
     # Sentry
     "init_sentry",
     "capture_exception",
@@ -88,6 +103,8 @@ __all__ = [
     "error_is",
     "must_exit",
     "must_exit_with_code",
+    "must_exit_with_log",
+    "must_exit_with_panic",
     "configure_default_log_func",
     "reset_default_log_func",
 ]

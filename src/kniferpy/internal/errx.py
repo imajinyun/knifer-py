@@ -15,10 +15,11 @@ import logging
 import os
 import sys
 import threading
+import time
 import traceback
 from dataclasses import dataclass, field
 from datetime import timedelta
-from typing import Any, Callable
+from typing import Any, Callable, Protocol, runtime_checkable
 
 _logger = logging.getLogger("kniferpy.errx")
 
@@ -409,3 +410,91 @@ def must_exit_with_code(err: BaseException | None, exit_code: int = 1) -> None:
     log_func = _get_default_log_func()
     log_func("error", str(err), get_stack(3))
     sys.exit(exit_code)
+
+
+# ── StackTrace / Frame types (Go compat) ─────────────────────────────────────
+
+
+@runtime_checkable
+class WithStack(Protocol):
+    """Protocol for errors that carry a stack trace string."""
+
+    def stack(self) -> str: ...
+
+
+@runtime_checkable
+class WithStackTrace(Protocol):
+    """Protocol for errors that carry a typed stack trace."""
+
+    def stack_trace(self) -> list[str]: ...
+
+
+# Timer / TimerFactory for Collector
+Timer = Protocol
+
+
+class TimerFactory:
+    """Creates a timer for the Collector wait loop."""
+
+    __slots__ = ("_duration",)
+
+    def __init__(self, duration: float) -> None:
+        self._duration = duration
+
+    def create(self) -> Callable[[], bool]:
+        deadline = time.monotonic() + self._duration
+        def _done() -> bool:
+            return time.monotonic() >= deadline
+        return _done
+
+
+# ── Collector advanced features ──────────────────────────────────────────────
+
+
+def new_collector_with_options(
+    *,
+    log_func: LogFunc | None = None,
+    runner: Callable[[Callable[[], None]], None] | None = None,
+    timer_factory: TimerFactory | None = None,
+) -> Collector:
+    """Create a Collector with optional configuration."""
+    c = Collector()
+    if log_func is not None:
+        c.with_log_func(log_func)
+    if runner is not None:
+        c.with_runner(runner)
+    if timer_factory is not None:
+        c._timer_factory = timer_factory
+    return c
+
+
+def get_stack_with_skip(skip: int = 2) -> str:
+    """Capture the current call stack with a configurable skip."""
+    return get_stack(skip)
+
+
+def get_stack_trace_with_options(
+    *,
+    skip: int = 2,
+    depth: int = 50,
+) -> list[str]:
+    """Capture the current call stack as a list of frame strings."""
+    return get_stack_trace(skip=skip, depth=depth)
+
+
+def must_exit_with_log(err: BaseException | None, log_func: LogFunc | None = None) -> None:
+    """Log the error with a custom log function and exit with code 1."""
+    if err is None:
+        return
+    lf = log_func or _get_default_log_func()
+    lf("error", str(err), get_stack(3))
+    sys.exit(1)
+
+
+def must_exit_with_panic(err: BaseException | None) -> None:
+    """Log the error and raise a PanicError instead of exiting."""
+    if err is None:
+        return
+    log_func = _get_default_log_func()
+    log_func("error", str(err), get_stack(3))
+    raise PanicError(str(err), cause=err if isinstance(err, BaseException) else None)

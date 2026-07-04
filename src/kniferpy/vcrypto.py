@@ -8,6 +8,15 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 
 from kniferpy.internal import cryptox
 
+# ── Error sentinels ──────────────────────────────────────────────────────────
+
+ErrInvalidKey = cryptox.ErrInvalidKey
+ErrInvalidIV = cryptox.ErrInvalidIV
+ErrInvalidCipherText = cryptox.ErrInvalidCipherText
+ErrInvalidOTP = cryptox.ErrInvalidOTP
+ErrInvalidPasswordHash = cryptox.ErrInvalidPasswordHash
+ErrInvalidJWK = cryptox.ErrInvalidJWK
+
 # ── SHA digests ─────────────────────────────────────────────────────────────
 
 sha224 = cryptox.sha224
@@ -43,6 +52,8 @@ verify_file_sha256_hex = cryptox.verify_file_sha256_hex
 
 # ── PBKDF2 ──────────────────────────────────────────────────────────────────
 
+pbkdf2 = cryptox.pbkdf2
+pbkdf2_sha256 = cryptox.pbkdf2_sha256
 pbkdf2_sha256_hex = cryptox.pbkdf2_sha256_hex
 
 # ── AES-GCM ─────────────────────────────────────────────────────────────────
@@ -55,9 +66,11 @@ aes_open_gcm = cryptox.aes_open_gcm
 # ── Secure random ───────────────────────────────────────────────────────────
 
 secure_bytes = cryptox.secure_bytes
+secure_bytes_with_options = cryptox.secure_bytes_with_options
 secure_token_urlsafe = cryptox.secure_token_urlsafe
 secure_alnum = cryptox.secure_alnum
 gen_aes_key = cryptox.gen_aes_key
+gen_aes_key_with_options = cryptox.gen_aes_key_with_options
 
 # ── OTP ─────────────────────────────────────────────────────────────────────
 
@@ -70,12 +83,16 @@ totp = cryptox.totp
 totp_now = cryptox.totp_now
 totp_verify = cryptox.totp_verify
 totp_verify_now = cryptox.totp_verify_now
+totp_now_with_options = cryptox.totp_now_with_options
+totp_verify_now_with_options = cryptox.totp_verify_now_with_options
+set_otp_clock = cryptox.set_otp_clock
 otp_auth_url = cryptox.otp_auth_url
 
 # ── Argon2id password hashing ───────────────────────────────────────────────
 
 hash_password_argon2id = cryptox.hash_password_argon2id
 verify_password_argon2id = cryptox.verify_password_argon2id
+parse_password_hash = cryptox.parse_password_hash
 
 # ── RSA ─────────────────────────────────────────────────────────────────────
 
@@ -95,6 +112,8 @@ parse_rsa_private_key_pem = cryptox.parse_rsa_private_key_pem
 parse_rsa_public_key_pem = cryptox.parse_rsa_public_key_pem
 private_key_to_pkcs8_pem = cryptox.private_key_to_pkcs8_pem
 public_key_to_pkcs1_pem = cryptox.public_key_to_pkcs1_pem
+parse_x509_certificate_pem = cryptox.parse_x509_certificate_pem
+public_key_from_certificate_pem = cryptox.public_key_from_certificate_pem
 
 # ── JWK ─────────────────────────────────────────────────────────────────────
 
@@ -122,6 +141,13 @@ validate_aes_gcm_nonce = cryptox.validate_aes_gcm_nonce
 # ── __all__ ─────────────────────────────────────────────────────────────────
 
 __all__ = [
+    # Error sentinels
+    "ErrInvalidKey",
+    "ErrInvalidIV",
+    "ErrInvalidCipherText",
+    "ErrInvalidOTP",
+    "ErrInvalidPasswordHash",
+    "ErrInvalidJWK",
     # SHA
     "sha224",
     "sha224_hex",
@@ -150,6 +176,8 @@ __all__ = [
     "verify_sha256_hex",
     "verify_file_sha256_hex",
     # PBKDF2
+    "pbkdf2",
+    "pbkdf2_sha256",
     "pbkdf2_sha256_hex",
     # AES-GCM
     "aes_encrypt_gcm",
@@ -158,9 +186,11 @@ __all__ = [
     "aes_open_gcm",
     # Random
     "secure_bytes",
+    "secure_bytes_with_options",
     "secure_token_urlsafe",
     "secure_alnum",
     "gen_aes_key",
+    "gen_aes_key_with_options",
     # OTP
     "generate_otp_secret",
     "otp_secret_base32",
@@ -171,10 +201,14 @@ __all__ = [
     "totp_now",
     "totp_verify",
     "totp_verify_now",
+    "totp_now_with_options",
+    "totp_verify_now_with_options",
+    "set_otp_clock",
     "otp_auth_url",
     # Argon2id
     "hash_password_argon2id",
     "verify_password_argon2id",
+    "parse_password_hash",
     # RSA
     "gen_rsa_key",
     "rsa_encrypt_oaep",
@@ -190,6 +224,8 @@ __all__ = [
     "parse_rsa_public_key_pem",
     "private_key_to_pkcs8_pem",
     "public_key_to_pkcs1_pem",
+    "parse_x509_certificate_pem",
+    "public_key_from_certificate_pem",
     # JWK
     "rsa_public_key_to_jwk",
     "rsa_private_key_to_jwk",

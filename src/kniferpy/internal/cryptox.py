@@ -7,6 +7,7 @@ import json
 import secrets
 import string
 import struct
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +16,16 @@ from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from argon2.low_level import hash_secret_raw, Type, verify_secret
 
-from kniferpy.verr import CryptoError
+from kniferpy.verr import CryptoError, ValidationError
+
+# ── Error sentinels (Go compat) ──────────────────────────────────────────────
+
+ErrInvalidKey = CryptoError
+ErrInvalidIV = CryptoError
+ErrInvalidCipherText = CryptoError
+ErrInvalidOTP = CryptoError
+ErrInvalidPasswordHash = CryptoError
+ErrInvalidJWK = CryptoError
 
 # ── helpers ─────────────────────────────────────────────────────────────────
 
@@ -694,3 +704,166 @@ def validate_aes_iv(iv: bytes) -> None:
 
 def validate_aes_gcm_nonce(nonce: bytes) -> None:
     _validate_aes_nonce(nonce)
+
+
+# ── Generic PBKDF2 (any hash) ────────────────────────────────────────────────
+
+
+def pbkdf2(
+    password: str | bytes,
+    salt: str | bytes,
+    *,
+    iterations: int = 600_000,
+    key_len: int = 32,
+    hash_name: str = "sha256",
+) -> bytes:
+    """Generic PBKDF2 key derivation with any hash algorithm."""
+    if iterations < 100_000:
+        raise ValidationError("iterations must be at least 100000", code="crypto.pbkdf2_iterations")
+    return hashlib.pbkdf2_hmac(
+        hash_name,
+        to_bytes(password),
+        to_bytes(salt),
+        iterations,
+        dklen=key_len,
+    )
+
+
+def pbkdf2_sha256(
+    password: str | bytes,
+    salt: str | bytes,
+    *,
+    iterations: int = 600_000,
+    key_len: int = 32,
+) -> bytes:
+    """PBKDF2-SHA256 returning raw bytes (Go compat)."""
+    return pbkdf2(password, salt, iterations=iterations, key_len=key_len, hash_name="sha256")
+
+
+# ── Password hash introspection ──────────────────────────────────────────────
+
+
+class PasswordHashInfo:
+    """Introspection for Argon2id password hash strings."""
+
+    __slots__ = ("algorithm", "version", "memory", "iterations", "parallelism", "salt_length", "key_length")
+
+    def __init__(
+        self,
+        algorithm: str = "",
+        version: int = 0,
+        memory: int = 0,
+        iterations: int = 0,
+        parallelism: int = 0,
+        salt_length: int = 0,
+        key_length: int = 0,
+    ) -> None:
+        self.algorithm = algorithm
+        self.version = version
+        self.memory = memory
+        self.iterations = iterations
+        self.parallelism = parallelism
+        self.salt_length = salt_length
+        self.key_length = key_length
+
+
+def parse_password_hash(encoded: str) -> PasswordHashInfo:
+    """Parse an Argon2id encoded hash string for introspection."""
+    if not encoded.startswith("$argon2id$"):
+        return PasswordHashInfo()
+    parts = encoded.split("$")
+    # $argon2id$v=19$m=65536,t=3,p=4$salt$hash
+    info = PasswordHashInfo(algorithm="argon2id")
+    for part in parts:
+        if part.startswith("v="):
+            info.version = int(part[2:])
+        elif "," in part and "=" in part:
+            for kv in part.split(","):
+                k, _, v = kv.partition("=")
+                if k == "m":
+                    info.memory = int(v)
+                elif k == "t":
+                    info.iterations = int(v)
+                elif k == "p":
+                    info.parallelism = int(v)
+    if len(parts) >= 5:
+        info.salt_length = len(base64.b64decode(parts[4] + "=="))
+    if len(parts) >= 6:
+        info.key_length = len(base64.b64decode(parts[5] + "=="))
+    return info
+
+
+# ── X.509 certificate parsing ────────────────────────────────────────────────
+
+
+def parse_x509_certificate_pem(data: bytes) -> Any:
+    """Parse a PEM-encoded X.509 certificate."""
+    from cryptography import x509
+    return x509.load_pem_x509_certificate(data)
+
+
+def public_key_from_certificate_pem(data: bytes) -> Any:
+    """Extract the public key from a PEM-encoded X.509 certificate."""
+    cert = parse_x509_certificate_pem(data)
+    return cert.public_key()
+
+
+# ── OTP clock injection ──────────────────────────────────────────────────────
+
+
+import time as _time
+
+_otp_clock: Callable[[], float] | None = None
+
+
+def set_otp_clock(clock: Callable[[], float] | None) -> None:
+    """Set a custom clock for OTP (for deterministic testing)."""
+    global _otp_clock
+    _otp_clock = clock
+
+
+def _otp_now() -> float:
+    return _otp_clock() if _otp_clock is not None else _time.time()
+
+
+def totp_now_with_options(
+    secret: str | bytes,
+    *,
+    digits: int = 6,
+    step: int = 30,
+) -> str:
+    """Generate TOTP using the injectable clock."""
+    now = int(_otp_now())
+    return totp(secret, now, digits=digits, step=step)
+
+
+def totp_verify_now_with_options(
+    secret: str | bytes,
+    code: str,
+    *,
+    digits: int = 6,
+    step: int = 30,
+    window: int = 1,
+) -> bool:
+    """Verify TOTP using the injectable clock."""
+    now = int(_otp_now())
+    return totp_verify(secret, code, now, digits=digits, step=step, window=window)
+
+
+# ── Random with options (Go compat) ──────────────────────────────────────────
+
+
+def secure_bytes_with_options(length: int, *, reader: Callable[[int], bytes] | None = None) -> bytes:
+    """Generate secure random bytes with optional custom reader."""
+    if reader is not None:
+        return reader(length)
+    return secrets.token_bytes(length)
+
+
+def gen_aes_key_with_options(size: int = 32, *, reader: Callable[[int], bytes] | None = None) -> bytes:
+    """Generate an AES key with optional custom reader."""
+    if size not in (16, 24, 32):
+        raise CryptoError("AES key must be 16, 24, or 32 bytes", code="crypto.invalid_key_size")
+    if reader is not None:
+        return reader(size)
+    return secrets.token_bytes(size)
