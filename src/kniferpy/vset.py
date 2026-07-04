@@ -19,6 +19,49 @@ from kniferpy.internal.setsx import Set as _Set
 
 T = TypeVar("T")
 
+# Typed aliases (Go compat)
+Int = _Set[int]
+Int32 = _Set[int]
+Int64 = _Set[int]
+Uint = _Set[int]
+Uint32 = _Set[int]
+Uint64 = _Set[int]
+String = _Set[str]
+
+__all__ = [
+    # Types
+    "Int",
+    "Int32",
+    "Int64",
+    "JSONOption",
+    "Set",
+    "String",
+    "Uint",
+    "Uint32",
+    "Uint64",
+    # Option builders
+    "WithSetMarshalFunc",
+    "WithSetUnmarshalFunc",
+    # Constructors
+    "New",
+    "NewInt",
+    "NewInt32",
+    "NewInt64",
+    "NewString",
+    "NewUint",
+    "NewUint32",
+    "NewUint64",
+    # Plain-set helpers
+    "contains",
+    "equal",
+    "from_iterable",
+    "intersect",
+    "members",
+    "new",
+    "sub",
+    "union",
+]
+
 
 # ---------------------------------------------------------------------------
 # option constructors
@@ -64,6 +107,9 @@ def NewUint64(*items: int) -> _Set[int]:
 
 def NewString(*items: str) -> _Set[str]:
     return new_string(*items)
+
+
+Set = _Set
 
 
 def New(*items: T) -> _Set[T]:
