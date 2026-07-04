@@ -1047,3 +1047,198 @@ def add_root_ca_bytes(ssl_context: ssl.SSLContext, ca_data: bytes) -> None:
         f.write(ca_data)
         f.flush()
         ssl_context.load_verify_locations(cafile=f.name)
+
+
+# ========== WithOptions variants ==========
+
+
+def is_ip_with_options(value: str, **_opts: Any) -> bool:
+    return is_ip(value)
+
+
+def is_ipv4_with_options(value: str, **_opts: Any) -> bool:
+    return is_ipv4(value)
+
+
+def is_ipv6_with_options(value: str, **_opts: Any) -> bool:
+    return is_ipv6(value)
+
+
+def is_inner_ip_with_options(value: str, **_opts: Any) -> bool:
+    return is_inner_ip(value)
+
+
+def ipv4_to_long_with_options(value: str, **_opts: Any) -> int:
+    return ipv4_to_long(value)
+
+
+def ipv4_to_long_default_with_options(value: str, default: int = 0, **_opts: Any) -> int:
+    return ipv4_to_long_default(value, default)
+
+
+def ipv6_to_int_with_options(value: str, **_opts: Any) -> int:
+    return ipv6_to_int(value)
+
+
+def is_in_range_with_options(value: str, cidr: str, **_opts: Any) -> bool:
+    return is_in_range(value, cidr)
+
+
+def matches_wildcard_with_options(wildcard: str, value: str, **_opts: Any) -> bool:
+    return matches_wildcard(wildcard, value)
+
+
+def mask_bit_by_mask_with_options(mask: str, **_opts: Any) -> int:
+    return mask_bit_by_mask(mask)
+
+
+def mask_by_ip_range_with_options(from_ip: str, to_ip: str, **_opts: Any) -> str:
+    return mask_by_ip_range(from_ip, to_ip)
+
+
+def count_by_ip_range_with_options(from_ip: str, to_ip: str, **_opts: Any) -> int:
+    return count_by_ip_range(from_ip, to_ip)
+
+
+def format_ip_block_with_options(ip: str, mask: str, **_opts: Any) -> str:
+    return format_ip_block(ip, mask)
+
+
+def begin_ip_with_options(ip: str, mask_bit: int, **_opts: Any) -> str:
+    return begin_ip(ip, mask_bit)
+
+
+def begin_ip_long_with_options(ip: str, mask_bit: int, **_opts: Any) -> int:
+    return begin_ip_long(ip, mask_bit)
+
+
+def end_ip_with_options(ip: str, mask_bit: int, **_opts: Any) -> str:
+    return end_ip(ip, mask_bit)
+
+
+def end_ip_long_with_options(ip: str, mask_bit: int, **_opts: Any) -> int:
+    return end_ip_long(ip, mask_bit)
+
+
+def is_mask_valid_with_options(mask: str, **_opts: Any) -> bool:
+    return is_mask_valid(mask)
+
+
+def list_ips_with_options(ip_range: str, is_all: bool = False, **_opts: Any) -> list[str]:
+    return list_ips(ip_range, is_all)
+
+
+def list_ip_cidr_with_options(ip: str, mask_bit: int, is_all: bool = False, **_opts: Any) -> list[str]:
+    return list_ip_cidr(ip, mask_bit, is_all)
+
+
+def list_ip_range_with_options(from_ip: str, to_ip: str, **_opts: Any) -> list[str]:
+    return list_ip_range(from_ip, to_ip)
+
+
+def get_ip_by_host_with_options(host: str, **_opts: Any) -> list[str]:
+    return get_ip_by_host(host)
+
+
+def get_dns_info_with_options(host: str, types: list[str] | None = None, **_opts: Any) -> dict[str, list[str]]:
+    return get_dns_info(host, types)
+
+
+def ping_with_options(host: str, port: int, timeout: float = 3.0, **_opts: Any) -> bool:
+    return ping(host, port, timeout)
+
+
+def is_open_with_options(host: str, port: int, timeout: float = 3.0, **_opts: Any) -> bool:
+    return ping(host, port, timeout)
+
+
+def connect_with_options(host: str, port: int, timeout: float = 3.0, **_opts: Any) -> socket.socket | None:
+    return connect(host, port, timeout)
+
+
+def netcat_with_options(host: str, port: int, data: bytes, timeout: float = 3.0, **_opts: Any) -> None:
+    return netcat(host, port, data, timeout)
+
+
+def build_inet_socket_address_with_options(host: str, default_port: int, **_opts: Any) -> tuple[str, int]:
+    return build_inet_socket_address(host, default_port)
+
+
+def create_address_with_options(host: str, port: int, **_opts: Any) -> tuple[str, int]:
+    return create_address(host, port)
+
+
+def get_network_interface_with_options(name: str, **_opts: Any) -> dict | None:
+    return get_network_interface(name)
+
+
+def get_network_interfaces_with_options(**_opts: Any) -> dict:
+    return get_network_interfaces()
+
+
+def local_ipv4s_with_options(**_opts: Any) -> list[str]:
+    return local_ipv4s()
+
+
+def local_ipv6s_with_options(**_opts: Any) -> list[str]:
+    return local_ipv6s()
+
+
+def local_ips_with_options(**_opts: Any) -> list[str]:
+    return local_ips()
+
+
+def local_address_list_with_options(address_filter=None, **_opts: Any) -> list[str]:
+    return local_address_list(address_filter)
+
+
+def get_localhost_str_with_options(**_opts: Any) -> str:
+    return get_localhost_str()
+
+
+def get_localhost_with_options(**_opts: Any) -> str:
+    return get_localhost()
+
+
+def get_local_host_name_with_options(**_opts: Any) -> str:
+    return get_local_host_name()
+
+
+def get_local_mac_address_with_options(separator: str = "-", **_opts: Any) -> str:
+    return get_local_mac_address(separator)
+
+
+def get_mac_address_with_options(inet_address: str, separator: str = "-", **_opts: Any) -> str:
+    return get_mac_address(inet_address, separator)
+
+
+def get_hardware_address_with_options(inet_address: str, **_opts: Any) -> str:
+    return get_hardware_address(inet_address)
+
+
+def get_local_hardware_address_with_options(**_opts: Any) -> str:
+    return get_local_hardware_address()
+
+
+def is_usable_local_port_with_options(port: int, **_opts: Any) -> bool:
+    return is_usable_local_port(port)
+
+
+def get_usable_local_port_with_options(**_opts: Any) -> int:
+    return get_usable_local_port()
+
+
+def get_usable_local_port_from_with_options(min_port: int, **_opts: Any) -> int:
+    return get_usable_local_port_from(min_port)
+
+
+def get_usable_local_port_in_range_with_options(min_port: int, max_port: int, **_opts: Any) -> int:
+    return get_usable_local_port_in_range(min_port, max_port)
+
+
+def get_usable_local_ports_with_options(num_requested: int, min_port: int, max_port: int, **_opts: Any) -> list[int]:
+    return get_usable_local_ports(num_requested, min_port, max_port)
+
+
+def new_local_port_generator_with_options(begin_port: int = PORT_RANGE_MIN, **_opts: Any) -> LocalPortGenerator:
+    return new_local_port_generator(begin_port)

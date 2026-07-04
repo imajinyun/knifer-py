@@ -34,47 +34,74 @@ __all__ = [
     "LocalPortGenerator",
     # IP validation
     "is_ip",
+    "is_ip_with_options",
     "is_ipv4",
+    "is_ipv4_with_options",
     "is_ipv6",
+    "is_ipv6_with_options",
     "is_inner_ip",
+    "is_inner_ip_with_options",
     # IP conversion
     "ipv4_to_long",
+    "ipv4_to_long_with_options",
     "ipv4_to_long_default",
+    "ipv4_to_long_default_with_options",
     "long_to_ipv4",
     "ipv6_to_int",
+    "ipv6_to_int_with_options",
     "int_to_ipv6",
     # IP range
     "is_in_range",
+    "is_in_range_with_options",
     "first_ip",
     "last_ip",
     "address_count",
     "matches_wildcard",
+    "matches_wildcard_with_options",
     "hide_ip_part",
     "hide_ip_part_long",
     # Port
     "is_valid_port",
     "is_usable_local_port",
+    "is_usable_local_port_with_options",
     "get_usable_local_port",
+    "get_usable_local_port_with_options",
     "get_usable_local_port_from",
+    "get_usable_local_port_from_with_options",
     "get_usable_local_port_in_range",
+    "get_usable_local_port_in_range_with_options",
     "get_usable_local_ports",
+    "get_usable_local_ports_with_options",
     "new_local_port_generator",
+    "new_local_port_generator_with_options",
     # Subnet math
     "mask_bit_by_mask",
+    "mask_bit_by_mask_with_options",
     "count_by_mask_bit",
     "mask_by_mask_bit",
     "mask_by_ip_range",
+    "mask_by_ip_range_with_options",
     "count_by_ip_range",
+    "count_by_ip_range_with_options",
     "format_ip_block",
+    "format_ip_block_with_options",
     "begin_ip",
+    "begin_ip_with_options",
     "begin_ip_long",
+    "begin_ip_long_with_options",
     "end_ip",
+    "end_ip_with_options",
     "end_ip_long",
+    "end_ip_long_with_options",
     "is_mask_valid",
+    "is_mask_valid_with_options",
     "is_mask_bit_valid",
     "list_ips",
+    "list_ips_with_options",
     "list_ip_cidr",
+    "list_ip_cidr_with_options",
     "list_ip_range",
+    "list_ip_range_with_options",
     # TLS
     "new_tls_config_builder",
     "create_tls_config",
@@ -83,33 +110,54 @@ __all__ = [
     "add_root_ca_bytes",
     # DNS
     "get_dns_info",
+    "get_dns_info_with_options",
     "get_ip_by_host",
+    "get_ip_by_host_with_options",
     "idn_to_ascii",
     # TCP
     "ping",
+    "ping_with_options",
     "is_open",
+    "is_open_with_options",
     "connect",
+    "connect_with_options",
     "is_connected",
     "netcat",
+    "netcat_with_options",
     "get_remote_address",
     # Address
     "build_inet_socket_address",
+    "build_inet_socket_address_with_options",
     "create_address",
+    "create_address_with_options",
     # Local interface
     "get_network_interface",
+    "get_network_interface_with_options",
     "get_network_interfaces",
+    "get_network_interfaces_with_options",
     "local_ipv4s",
+    "local_ipv4s_with_options",
     "local_ipv6s",
+    "local_ipv6s_with_options",
     "local_ips",
+    "local_ips_with_options",
     "to_ip_list",
     "local_address_list",
+    "local_address_list_with_options",
     "get_localhost_str",
+    "get_localhost_str_with_options",
     "get_localhost",
+    "get_localhost_with_options",
     "get_local_host_name",
+    "get_local_host_name_with_options",
     "get_local_mac_address",
+    "get_local_mac_address_with_options",
     "get_mac_address",
+    "get_mac_address_with_options",
     "get_hardware_address",
+    "get_hardware_address_with_options",
     "get_local_hardware_address",
+    "get_local_hardware_address_with_options",
     # Misc
     "is_unknown",
     "parse_cookies",
@@ -138,360 +186,151 @@ TLSv11 = netx.TLSv11
 TLSv12 = netx.TLSv12
 TLSv13 = netx.TLSv13
 
+# IP validation
+is_ip = netx.is_ip
+is_ip_with_options = netx.is_ip_with_options
+is_ipv4 = netx.is_ipv4
+is_ipv4_with_options = netx.is_ipv4_with_options
+is_ipv6 = netx.is_ipv6
+is_ipv6_with_options = netx.is_ipv6_with_options
+is_inner_ip = netx.is_inner_ip
+is_inner_ip_with_options = netx.is_inner_ip_with_options
 
-def is_ip(value: str) -> bool:
-    return netx.is_ip(value)
+# IP conversion
+ipv4_to_long = netx.ipv4_to_long
+ipv4_to_long_with_options = netx.ipv4_to_long_with_options
+ipv4_to_long_default = netx.ipv4_to_long_default
+ipv4_to_long_default_with_options = netx.ipv4_to_long_default_with_options
+long_to_ipv4 = netx.long_to_ipv4
+ipv6_to_int = netx.ipv6_to_int
+ipv6_to_int_with_options = netx.ipv6_to_int_with_options
+int_to_ipv6 = netx.int_to_ipv6
 
+# IP range
+is_in_range = netx.is_in_range
+is_in_range_with_options = netx.is_in_range_with_options
+first_ip = netx.first_ip
+last_ip = netx.last_ip
+address_count = netx.address_count
+matches_wildcard = netx.matches_wildcard
+matches_wildcard_with_options = netx.matches_wildcard_with_options
+hide_ip_part = netx.hide_ip_part
+hide_ip_part_long = netx.hide_ip_part_long
 
-def is_ipv4(value: str) -> bool:
-    return netx.is_ipv4(value)
+# Port
+is_valid_port = netx.is_valid_port
+is_usable_local_port = netx.is_usable_local_port
+is_usable_local_port_with_options = netx.is_usable_local_port_with_options
+get_usable_local_port = netx.get_usable_local_port
+get_usable_local_port_with_options = netx.get_usable_local_port_with_options
+get_usable_local_port_from = netx.get_usable_local_port_from
+get_usable_local_port_from_with_options = netx.get_usable_local_port_from_with_options
+get_usable_local_port_in_range = netx.get_usable_local_port_in_range
+get_usable_local_port_in_range_with_options = netx.get_usable_local_port_in_range_with_options
+get_usable_local_ports = netx.get_usable_local_ports
+get_usable_local_ports_with_options = netx.get_usable_local_ports_with_options
+new_local_port_generator = netx.new_local_port_generator
+new_local_port_generator_with_options = netx.new_local_port_generator_with_options
 
-
-def is_ipv6(value: str) -> bool:
-    return netx.is_ipv6(value)
-
-
-def is_inner_ip(value: str) -> bool:
-    return netx.is_inner_ip(value)
-
-
-def ipv4_to_long(value: str) -> int:
-    return netx.ipv4_to_long(value)
-
-
-def ipv4_to_long_default(value: str, default: int = 0) -> int:
-    return netx.ipv4_to_long_default(value, default)
-
-
-def long_to_ipv4(value: int) -> str:
-    return netx.long_to_ipv4(value)
-
-
-def ipv6_to_int(value: str) -> int:
-    return netx.ipv6_to_int(value)
-
-
-def int_to_ipv6(value: int) -> str:
-    return netx.int_to_ipv6(value)
-
-
-def is_in_range(value: str, cidr: str) -> bool:
-    return netx.is_in_range(value, cidr)
-
-
-def first_ip(cidr: str) -> str:
-    return netx.first_ip(cidr)
-
-
-def last_ip(cidr: str) -> str:
-    return netx.last_ip(cidr)
-
-
-def address_count(cidr: str) -> int:
-    return netx.address_count(cidr)
-
-
-def matches_wildcard(wildcard: str, value: str) -> bool:
-    return netx.matches_wildcard(wildcard, value)
-
-
-def hide_ip_part(value: str) -> str:
-    return netx.hide_ip_part(value)
-
-
-def hide_ip_part_long(value: int) -> str:
-    return netx.hide_ip_part_long(value)
-
-
-def is_valid_port(port: int) -> bool:
-    return netx.is_valid_port(port)
-
-
-def is_usable_local_port(port: int) -> bool:
-    return netx.is_usable_local_port(port)
-
-
-def get_usable_local_port() -> int:
-    return netx.get_usable_local_port()
-
-
-def get_usable_local_port_from(min_port: int) -> int:
-    return netx.get_usable_local_port_from(min_port)
-
-
-def get_usable_local_port_in_range(min_port: int, max_port: int) -> int:
-    return netx.get_usable_local_port_in_range(min_port, max_port)
-
-
-def get_usable_local_ports(num_requested: int, min_port: int, max_port: int) -> list[int]:
-    return netx.get_usable_local_ports(num_requested, min_port, max_port)
-
-
-def new_local_port_generator(begin_port: int = PORT_RANGE_MIN) -> LocalPortGenerator:
-    return netx.new_local_port_generator(begin_port)
-
-
-# ---------------------------------------------------------------------------
 # Subnet math
-# ---------------------------------------------------------------------------
+mask_bit_by_mask = netx.mask_bit_by_mask
+mask_bit_by_mask_with_options = netx.mask_bit_by_mask_with_options
+count_by_mask_bit = netx.count_by_mask_bit
+mask_by_mask_bit = netx.mask_by_mask_bit
+mask_by_ip_range = netx.mask_by_ip_range
+mask_by_ip_range_with_options = netx.mask_by_ip_range_with_options
+count_by_ip_range = netx.count_by_ip_range
+count_by_ip_range_with_options = netx.count_by_ip_range_with_options
+format_ip_block = netx.format_ip_block
+format_ip_block_with_options = netx.format_ip_block_with_options
+begin_ip = netx.begin_ip
+begin_ip_with_options = netx.begin_ip_with_options
+begin_ip_long = netx.begin_ip_long
+begin_ip_long_with_options = netx.begin_ip_long_with_options
+end_ip = netx.end_ip
+end_ip_with_options = netx.end_ip_with_options
+end_ip_long = netx.end_ip_long
+end_ip_long_with_options = netx.end_ip_long_with_options
+is_mask_valid = netx.is_mask_valid
+is_mask_valid_with_options = netx.is_mask_valid_with_options
+is_mask_bit_valid = netx.is_mask_bit_valid
+list_ips = netx.list_ips
+list_ips_with_options = netx.list_ips_with_options
+list_ip_cidr = netx.list_ip_cidr
+list_ip_cidr_with_options = netx.list_ip_cidr_with_options
+list_ip_range = netx.list_ip_range
+list_ip_range_with_options = netx.list_ip_range_with_options
 
-
-def mask_bit_by_mask(mask: str) -> int:
-    return netx.mask_bit_by_mask(mask)
-
-
-def count_by_mask_bit(mask_bit: int, is_all: bool = False) -> int:
-    return netx.count_by_mask_bit(mask_bit, is_all)
-
-
-def mask_by_mask_bit(mask_bit: int) -> str:
-    return netx.mask_by_mask_bit(mask_bit)
-
-
-def mask_by_ip_range(from_ip: str, to_ip: str) -> str:
-    return netx.mask_by_ip_range(from_ip, to_ip)
-
-
-def count_by_ip_range(from_ip: str, to_ip: str) -> int:
-    return netx.count_by_ip_range(from_ip, to_ip)
-
-
-def format_ip_block(ip: str, mask: str) -> str:
-    return netx.format_ip_block(ip, mask)
-
-
-def begin_ip(ip: str, mask_bit: int) -> str:
-    return netx.begin_ip(ip, mask_bit)
-
-
-def begin_ip_long(ip: str, mask_bit: int) -> int:
-    return netx.begin_ip_long(ip, mask_bit)
-
-
-def end_ip(ip: str, mask_bit: int) -> str:
-    return netx.end_ip(ip, mask_bit)
-
-
-def end_ip_long(ip: str, mask_bit: int) -> int:
-    return netx.end_ip_long(ip, mask_bit)
-
-
-def is_mask_valid(mask: str) -> bool:
-    return netx.is_mask_valid(mask)
-
-
-def is_mask_bit_valid(mask_bit: int) -> bool:
-    return netx.is_mask_bit_valid(mask_bit)
-
-
-def list_ips(ip_range: str, is_all: bool = False) -> list[str]:
-    return netx.list_ips(ip_range, is_all)
-
-
-def list_ip_cidr(ip: str, mask_bit: int, is_all: bool = False) -> list[str]:
-    return netx.list_ip_cidr(ip, mask_bit, is_all)
-
-
-def list_ip_range(from_ip: str, to_ip: str) -> list[str]:
-    return netx.list_ip_range(from_ip, to_ip)
-
-
-# ---------------------------------------------------------------------------
 # TLS
-# ---------------------------------------------------------------------------
+new_tls_config_builder = netx.new_tls_config_builder
+create_tls_config = netx.create_tls_config
+tls_version = netx.tls_version
+new_cert_pool = netx.new_cert_pool
+add_root_ca_bytes = netx.add_root_ca_bytes
 
-
-def new_tls_config_builder() -> TLSConfigBuilder:
-    return netx.new_tls_config_builder()
-
-
-def create_tls_config() -> ssl.SSLContext:
-    return netx.create_tls_config()
-
-
-def tls_version(version: str) -> int:
-    return netx.tls_version(version)
-
-
-def new_cert_pool() -> ssl.SSLContext:
-    return netx.new_cert_pool()
-
-
-def add_root_ca_bytes(ssl_context: ssl.SSLContext, ca_data: bytes) -> None:
-    return netx.add_root_ca_bytes(ssl_context, ca_data)
-
-
-# ---------------------------------------------------------------------------
 # DNS
-# ---------------------------------------------------------------------------
+get_dns_info = netx.get_dns_info
+get_dns_info_with_options = netx.get_dns_info_with_options
+get_ip_by_host = netx.get_ip_by_host
+get_ip_by_host_with_options = netx.get_ip_by_host_with_options
+idn_to_ascii = netx.idn_to_ascii
 
-
-def get_dns_info(host: str, types: list[str] | None = None) -> dict[str, list[str]]:
-    return netx.get_dns_info(host, types)
-
-
-def get_ip_by_host(host: str) -> list[str]:
-    return netx.get_ip_by_host(host)
-
-
-def idn_to_ascii(domain: str) -> str:
-    return netx.idn_to_ascii(domain)
-
-
-# ---------------------------------------------------------------------------
 # TCP
-# ---------------------------------------------------------------------------
+ping = netx.ping
+ping_with_options = netx.ping_with_options
+is_open = netx.is_open
+is_open_with_options = netx.is_open_with_options
+connect = netx.connect
+connect_with_options = netx.connect_with_options
+is_connected = netx.is_connected
+netcat = netx.netcat
+netcat_with_options = netx.netcat_with_options
+get_remote_address = netx.get_remote_address
 
-
-def ping(host: str, port: int, timeout: float = 3.0) -> bool:
-    return netx.ping(host, port, timeout)
-
-
-def is_open(host: str, port: int, timeout: float = 3.0) -> bool:
-    return netx.is_open(host, port, timeout)
-
-
-def connect(host: str, port: int, timeout: float = 3.0) -> socket.socket | None:
-    return netx.connect(host, port, timeout)
-
-
-def is_connected(sock: socket.socket | None) -> bool:
-    return netx.is_connected(sock)
-
-
-def netcat(host: str, port: int, data: bytes, timeout: float = 3.0) -> None:
-    return netx.netcat(host, port, data, timeout)
-
-
-def get_remote_address(sock: socket.socket) -> str:
-    return netx.get_remote_address(sock)
-
-
-# ---------------------------------------------------------------------------
 # Address
-# ---------------------------------------------------------------------------
+build_inet_socket_address = netx.build_inet_socket_address
+build_inet_socket_address_with_options = netx.build_inet_socket_address_with_options
+create_address = netx.create_address
+create_address_with_options = netx.create_address_with_options
 
-
-def build_inet_socket_address(host: str, default_port: int) -> tuple[str, int]:
-    return netx.build_inet_socket_address(host, default_port)
-
-
-def create_address(host: str, port: int) -> tuple[str, int]:
-    return netx.create_address(host, port)
-
-
-# ---------------------------------------------------------------------------
 # Local interface
-# ---------------------------------------------------------------------------
+get_network_interface = netx.get_network_interface
+get_network_interface_with_options = netx.get_network_interface_with_options
+get_network_interfaces = netx.get_network_interfaces
+get_network_interfaces_with_options = netx.get_network_interfaces_with_options
+local_ipv4s = netx.local_ipv4s
+local_ipv4s_with_options = netx.local_ipv4s_with_options
+local_ipv6s = netx.local_ipv6s
+local_ipv6s_with_options = netx.local_ipv6s_with_options
+local_ips = netx.local_ips
+local_ips_with_options = netx.local_ips_with_options
+to_ip_list = netx.to_ip_list
+local_address_list = netx.local_address_list
+local_address_list_with_options = netx.local_address_list_with_options
+get_localhost_str = netx.get_localhost_str
+get_localhost_str_with_options = netx.get_localhost_str_with_options
+get_localhost = netx.get_localhost
+get_localhost_with_options = netx.get_localhost_with_options
+get_local_host_name = netx.get_local_host_name
+get_local_host_name_with_options = netx.get_local_host_name_with_options
+get_local_mac_address = netx.get_local_mac_address
+get_local_mac_address_with_options = netx.get_local_mac_address_with_options
+get_mac_address = netx.get_mac_address
+get_mac_address_with_options = netx.get_mac_address_with_options
+get_hardware_address = netx.get_hardware_address
+get_hardware_address_with_options = netx.get_hardware_address_with_options
+get_local_hardware_address = netx.get_local_hardware_address
+get_local_hardware_address_with_options = netx.get_local_hardware_address_with_options
 
-
-def get_network_interface(name: str) -> dict | None:
-    return netx.get_network_interface(name)
-
-
-def get_network_interfaces() -> dict:
-    return netx.get_network_interfaces()
-
-
-def local_ipv4s() -> list[str]:
-    return netx.local_ipv4s()
-
-
-def local_ipv6s() -> list[str]:
-    return netx.local_ipv6s()
-
-
-def local_ips() -> list[str]:
-    return netx.local_ips()
-
-
-def to_ip_list(address_list: list[str]) -> list[str]:
-    return netx.to_ip_list(address_list)
-
-
-def local_address_list(address_filter=None) -> list[str]:
-    return netx.local_address_list(address_filter)
-
-
-def get_localhost_str() -> str:
-    return netx.get_localhost_str()
-
-
-def get_localhost() -> str:
-    return netx.get_localhost()
-
-
-def get_local_host_name() -> str:
-    return netx.get_local_host_name()
-
-
-def get_local_mac_address(separator: str = "-") -> str:
-    return netx.get_local_mac_address(separator)
-
-
-def get_mac_address(inet_address: str, separator: str = "-") -> str:
-    return netx.get_mac_address(inet_address, separator)
-
-
-def get_hardware_address(inet_address: str) -> str:
-    return netx.get_hardware_address(inet_address)
-
-
-def get_local_hardware_address() -> str:
-    return netx.get_local_hardware_address()
-
-
-# ---------------------------------------------------------------------------
 # Misc
-# ---------------------------------------------------------------------------
+is_unknown = netx.is_unknown
+parse_cookies = netx.parse_cookies
+get_multistage_reverse_proxy_ip = netx.get_multistage_reverse_proxy_ip
 
-
-def is_unknown(check_string: str) -> bool:
-    return netx.is_unknown(check_string)
-
-
-def parse_cookies(cookie_str: str) -> dict[str, str]:
-    return netx.parse_cookies(cookie_str)
-
-
-def get_multistage_reverse_proxy_ip(headers: dict[str, str]) -> str:
-    return netx.get_multistage_reverse_proxy_ip(headers)
-
-
-# ---------------------------------------------------------------------------
 # Multipart
-# ---------------------------------------------------------------------------
-
-
-def new_upload_setting() -> UploadSetting:
-    """Create a new UploadSetting with default values."""
-    return netx.new_upload_setting()
-
-
-def parse_multipart_form(
-    body: bytes,
-    content_type: str,
-    setting: UploadSetting | None = None,
-) -> MultipartFormData:
-    return netx.parse_multipart_form(body, content_type, setting)
-
-
-def save_uploaded_file(
-    file_entry: tuple[str, bytes, str],
-    dest_dir: str,
-    dest_name: str = "",
-    overwrite: bool = False,
-) -> str:
-    return netx.save_uploaded_file(file_entry, dest_dir, dest_name, overwrite)
-
-
-def upload_file_name(file_entry: tuple[str, bytes, str]) -> str:
-    return netx.upload_file_name(file_entry)
-
-
-def upload_file_size(file_entry: tuple[str, bytes, str]) -> int:
-    return netx.upload_file_size(file_entry)
-
-
-def upload_file_content_type(file_entry: tuple[str, bytes, str]) -> str:
-    return netx.upload_file_content_type(file_entry)
+new_upload_setting = netx.new_upload_setting
+parse_multipart_form = netx.parse_multipart_form
+save_uploaded_file = netx.save_uploaded_file
+upload_file_name = netx.upload_file_name
+upload_file_size = netx.upload_file_size
+upload_file_content_type = netx.upload_file_content_type
