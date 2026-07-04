@@ -13,20 +13,33 @@ from typing import Callable
 from kniferpy.internal import cronx
 from kniferpy.internal.cronx import (
     ERR_SCHEDULER_STARTED,
+    AlwaysTrueMatcher,
+    Config,
     CronError,
     CronTask,
     Part,
+    PartDayOfMonth,
+    PartDayOfWeek,
+    PartHour,
+    PartMatcher,
+    PartMinute,
+    PartMonth,
+    PartSecond,
+    PartYear,
     Pattern,
     Scheduler,
     SimpleTaskListener,
     Task,
+    TaskExecutor,
     TaskFunc,
     TaskListener,
     TaskTable,
     configure_default_scheduler,
     cron_schedule_func,
+    cron_set_match_second,
     cron_set_match_second_e,
     new_cron_error,
+    new_task_table,
     remove,
     restart,
     running_count,
@@ -42,17 +55,33 @@ from kniferpy.internal.cronx import (
 )
 
 __all__ = [
+    # Types
     "Part",
+    "PartMatcher",
     "Pattern",
+    "Config",
     "CronError",
     "CronTask",
-    "ERR_SCHEDULER_STARTED",
+    "TaskExecutor",
     "Scheduler",
     "Task",
     "TaskFunc",
     "TaskListener",
     "SimpleTaskListener",
     "TaskTable",
+    # Part constants
+    "PartSecond",
+    "PartMinute",
+    "PartHour",
+    "PartDayOfMonth",
+    "PartMonth",
+    "PartDayOfWeek",
+    "PartYear",
+    # Matcher singleton
+    "AlwaysTrueMatcher",
+    # Error sentinel
+    "ERR_SCHEDULER_STARTED",
+    # Pattern functions
     "match",
     "must_new_pattern",
     "new_pattern",
@@ -78,6 +107,7 @@ __all__ = [
     "new_cron_error",
     "new_scheduler",
     "new_cron_task",
+    "new_task_table",
     "default_scheduler",
     "wrap_cron_error",
 ]
@@ -103,6 +133,7 @@ cron_launching_count = cronx.cron_launching_count
 new_config = cronx.new_config
 new_scheduler = cronx.new_scheduler
 new_cron_task = cronx.new_cron_task
+new_task_table = cronx.new_task_table
 default_scheduler = cronx.default_scheduler
 cron_set_match_second = cronx.cron_set_match_second
 cron_set_match_second_e = cronx.cron_set_match_second_e
@@ -111,3 +142,14 @@ new_cron_error = cronx.new_cron_error
 wrap_cron_error = cronx.wrap_cron_error
 CronError = cronx.CronError
 ERR_SCHEDULER_STARTED = cronx.ERR_SCHEDULER_STARTED
+Config = cronx.Config
+AlwaysTrueMatcher = cronx.AlwaysTrueMatcher
+PartMatcher = cronx.PartMatcher
+PartSecond = cronx.PartSecond
+PartMinute = cronx.PartMinute
+PartHour = cronx.PartHour
+PartDayOfMonth = cronx.PartDayOfMonth
+PartMonth = cronx.PartMonth
+PartDayOfWeek = cronx.PartDayOfWeek
+PartYear = cronx.PartYear
+TaskExecutor = cronx.TaskExecutor

@@ -76,6 +76,36 @@ class Part(IntEnum):
             )
 
 
+# Module-level Part constants for convenience (mirrors Go's PartSecond, etc.)
+PartSecond = Part.SECOND
+PartMinute = Part.MINUTE
+PartHour = Part.HOUR
+PartDayOfMonth = Part.DAY_OF_MONTH
+PartMonth = Part.MONTH
+PartDayOfWeek = Part.DAY_OF_WEEK
+PartYear = Part.YEAR
+
+
+class PartMatcher(Protocol):
+    """Protocol for matching and advancing a single cron field."""
+
+    def match(self, v: int) -> bool: ...
+    def next_after(self, v: int) -> int: ...
+
+
+class _AlwaysTrueMatcherImpl:
+    """Matches every value (the ``*`` and ``?`` fields)."""
+
+    def match(self, v: int) -> bool:
+        return True
+
+    def next_after(self, v: int) -> int:
+        return v
+
+
+AlwaysTrueMatcher: PartMatcher = _AlwaysTrueMatcherImpl()
+
+
 _PART_RANGES: dict[Part, tuple[int, int]] = {
     Part.SECOND: (0, 59),
     Part.MINUTE: (0, 59),
@@ -439,21 +469,21 @@ class CronTask:
 class TaskListener(Protocol):
     """Listens to task execution lifecycle events."""
 
-    def on_start(self, task: CronTask) -> None: ...
-    def on_succeeded(self, task: CronTask) -> None: ...
-    def on_failed(self, task: CronTask, error: BaseException) -> None: ...
+    def on_start(self, executor: TaskExecutor) -> None: ...
+    def on_succeeded(self, executor: TaskExecutor) -> None: ...
+    def on_failed(self, executor: TaskExecutor, error: BaseException) -> None: ...
 
 
 class SimpleTaskListener:
     """No-op default implementation of TaskListener."""
 
-    def on_start(self, task: CronTask) -> None:
+    def on_start(self, executor: TaskExecutor) -> None:
         pass
 
-    def on_succeeded(self, task: CronTask) -> None:
+    def on_succeeded(self, executor: TaskExecutor) -> None:
         pass
 
-    def on_failed(self, task: CronTask, error: BaseException) -> None:
+    def on_failed(self, executor: TaskExecutor, error: BaseException) -> None:
         pass
 
 
@@ -461,6 +491,16 @@ class SimpleTaskListener:
 class TaskEntry:
     cron_task: CronTask
     next_run: datetime
+
+
+@dataclass
+class TaskExecutor:
+    """Wraps a CronTask for use in listener callbacks."""
+
+    cron_task: CronTask
+
+    def task(self) -> Task:
+        return self.cron_task.task
 
 
 class TaskTable:
@@ -535,22 +575,55 @@ class Scheduler:
         self._table = TaskTable()
         self._listeners: list[TaskListener] = []
         self._match_second = match_second
+        self._timezone: str | None = None
+        self._executor: Callable[[Callable[[], None]], None] | None = None
+        self._runner: Callable[[Callable[[], None]], None] | None = None
         self._started = False
         self._stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self._lock = threading.Lock()
         self._running_count = 0
         self._running_lock = threading.Lock()
+        self._launching_count = 0
+        self._launching_lock = threading.Lock()
 
     # -- config ---------------------------------------------------------------
+
+    def config(self) -> Config:
+        return Config(location=self._timezone, match_second=self._match_second)
 
     def set_match_second(self, match_second: bool) -> Scheduler:
         with self._lock:
             self._match_second = match_second
         return self
 
+    def set_match_second_e(self, match_second: bool) -> None:
+        if self._started:
+            raise ERR_SCHEDULER_STARTED
+        self._match_second = match_second
+
     def is_match_second(self) -> bool:
         return self._match_second
+
+    def set_time_zone(self, loc: str) -> Scheduler:
+        try:
+            self.set_time_zone_e(loc)
+        except ERR_SCHEDULER_STARTED:
+            pass
+        return self
+
+    def set_time_zone_e(self, loc: str) -> None:
+        if self._started:
+            raise ERR_SCHEDULER_STARTED
+        self._timezone = loc
+
+    def set_executor(self, exec: Callable[[Callable[[], None]], None]) -> Scheduler:
+        self._executor = exec
+        return self
+
+    def set_runner(self, runner: Callable[[Callable[[], None]], None]) -> Scheduler:
+        self._runner = runner
+        return self
 
     # -- listeners ------------------------------------------------------------
 
@@ -575,6 +648,9 @@ class Scheduler:
 
     def schedule_with_id(self, id: str, pattern: str, task: Task) -> None:
         self._table.add(id, new_pattern(pattern), task)
+
+    def schedule_pattern(self, id: str, pattern: Pattern, task: Task) -> None:
+        self._table.add(id, pattern, task)
 
     def deschedule(self, id: str) -> bool:
         return self._table.remove(id)
@@ -607,6 +683,10 @@ class Scheduler:
     def running_count(self) -> int:
         with self._running_lock:
             return self._running_count
+
+    def launching_count(self) -> int:
+        with self._launching_lock:
+            return self._launching_count
 
     def start(self) -> None:
         with self._lock:
@@ -652,35 +732,43 @@ class Scheduler:
             self._stop_event.wait(timeout=step.total_seconds() if step.total_seconds() > 0 else 1)
 
     def _execute_task(self, ct: CronTask) -> None:
+        executor = TaskExecutor(cron_task=ct)
         for listener in self._listeners:
             try:
-                listener.on_start(ct)
+                listener.on_start(executor)
             except Exception:
                 pass
 
-        with self._running_lock:
-            self._running_count += 1
+        with self._launching_lock:
+            self._launching_count += 1
 
         def _run() -> None:
+            with self._launching_lock:
+                self._launching_count -= 1
+            with self._running_lock:
+                self._running_count += 1
             try:
                 ct.execute()
                 for listener in self._listeners:
                     try:
-                        listener.on_succeeded(ct)
+                        listener.on_succeeded(executor)
                     except Exception:
                         pass
             except Exception as exc:
                 _logger.error("cron task %s failed: %s", ct.id, exc)
                 for listener in self._listeners:
                     try:
-                        listener.on_failed(ct, exc)
+                        listener.on_failed(executor, exc)
                     except Exception:
                         pass
             finally:
                 with self._running_lock:
                     self._running_count -= 1
 
-        threading.Thread(target=_run, daemon=True).start()
+        if self._executor is not None:
+            self._executor(_run)
+        else:
+            threading.Thread(target=_run, daemon=True).start()
 
 
 # ---------------------------------------------------------------------------
@@ -750,8 +838,16 @@ def running_count() -> int:
     return _get_default_scheduler().running_count()
 
 
+@dataclass
+class Config:
+    """Scheduler configuration."""
+
+    location: str | None = None
+    match_second: bool = False
+
+
 def cron_launching_count() -> int:
-    return _get_default_scheduler().running_count()
+    return _get_default_scheduler().launching_count()
 
 
 def new_config() -> Config:
@@ -764,6 +860,10 @@ def new_scheduler(match_second: bool = False) -> Scheduler:
 
 def new_cron_task(id: str, pattern: str, task: Task) -> CronTask:
     return CronTask(id=id, pattern=pattern, task=task)
+
+
+def new_task_table() -> TaskTable:
+    return TaskTable()
 
 
 def default_scheduler() -> Scheduler:
