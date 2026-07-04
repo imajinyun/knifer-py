@@ -784,20 +784,134 @@ def to_str_indent(v: Any, indent: int = 2) -> str:
 
 def to_str_with_config(v: Any, cfg: Config) -> str:
     """Serialize to JSON string using Config."""
-    return to_json_str(v, indent=cfg.indent)
+    return to_json_str(v, indent=cfg.indent_factor)
 
 
 def new_json_error(format_str: str, *args: Any) -> JSONError:
     """Create a JSONError with formatted message."""
-    return JSONError(format_str % args)
+    return JSONError(message=(format_str % args) if args else format_str, code="json.error")
 
 
 def wrap_json_error(cause: Exception, format_str: str, *args: Any) -> JSONError:
     """Create a JSONError wrapping an existing exception."""
-    return JSONError(format_str % args)
+    msg = (format_str % args) if args else format_str
+    return JSONError(message=msg, code="json.error", context={"cause": str(cause)})
 
 
 def get_by_path_or(data: Any, path: str, default: Any = None) -> Any:
     """Get value by JSON path expression with a default fallback."""
-    result = get_by_path(data, path)
+    result = get_path(data, path)
     return result if result is not None else default
+
+
+# ========== Aligned constructors (Go-style names) ==========
+
+
+def new_object_with_config(cfg: Config) -> JSONObject:
+    return JSONObject(cfg)
+
+
+def new_array_with_config(cfg: Config) -> JSONArray:
+    return JSONArray(cfg)
+
+
+def create_config(**kwargs: Any) -> Config:
+    return Config(**kwargs)
+
+
+# ========== Parse variants ==========
+
+
+def parse_with_options(src: str, **_opts: Any) -> Any:
+    return loads(src)
+
+
+def parse_with_config(src: str, cfg: Config) -> Any:
+    return loads(src)
+
+
+def parse_obj_with_options(src: str, **_opts: Any) -> JSONObject:
+    return parse_obj(src)
+
+
+def parse_obj_with_config(src: str, cfg: Config) -> JSONObject:
+    return parse_obj(src)
+
+
+def parse_array_with_options(src: str, **_opts: Any) -> JSONArray:
+    return parse_array(src)
+
+
+def parse_array_with_config(src: str, cfg: Config) -> JSONArray:
+    return parse_array(src)
+
+
+# ========== Serialize variants ==========
+
+
+def to_str(v: Any, indent: int = 0) -> str:
+    return to_json_str(v, indent=indent)
+
+
+def to_pretty_str_with_config(v: Any, cfg: Config) -> str:
+    return to_json_str(v, indent=cfg.indent_factor)
+
+
+# ========== Format ==========
+
+
+def format_json(raw: str, indent: int = 2) -> str:
+    return format_json_str(raw, indent=indent)
+
+
+def format_json_with_options(raw: str, indent: int = 2, **_opts: Any) -> str:
+    return format_json_str(raw, indent=indent)
+
+
+# ========== Validation variants ==========
+
+
+def is_json_with_options(s: str, **_opts: Any) -> bool:
+    return is_json(s)
+
+
+def is_obj(s: str) -> bool:
+    return is_json_obj(s)
+
+
+def is_obj_with_options(s: str, **_opts: Any) -> bool:
+    return is_json_obj(s)
+
+
+def is_array(s: str) -> bool:
+    return is_json_array(s)
+
+
+def is_array_with_options(s: str, **_opts: Any) -> bool:
+    return is_json_array(s)
+
+
+# ========== Bean conversion variants ==========
+
+
+def to_bean_with_options(src: Any, dst: Any, **_opts: Any) -> None:
+    to_bean(src, dst)
+
+
+def to_list_with_options(src: Any, dst: Any, **_opts: Any) -> None:
+    to_list(src, dst)
+
+
+# ========== XML bridge variants ==========
+
+
+def xml_to_json_with_options(xml_str: str, **_opts: Any) -> dict[str, Any]:
+    return xml_to_json(xml_str)
+
+
+def to_xml(root: Any, root_tag: str = "root", *, pretty: bool = False) -> str:
+    return json_to_xml(root, root_tag, pretty=pretty)
+
+
+def to_xml_with_options(root: Any, root_tag: str = "root", *, pretty: bool = False, **_opts: Any) -> str:
+    return json_to_xml(root, root_tag, pretty=pretty)
