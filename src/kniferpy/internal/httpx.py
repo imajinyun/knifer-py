@@ -1890,6 +1890,73 @@ def decode_response_body(data: bytes, content_encoding: str = "") -> bytes:
 
 # ========== HTML Utilities ==========
 
+from dataclasses import dataclass as _dc
+from typing import Callable as _Callable
+
+# ── HTMLCleanOption ────────────────────────────────────────────────────────────
+
+@_dc
+class HTMLCleanConfig:
+    tag_re: re.Pattern | None = None
+    comment_re: re.Pattern | None = None
+
+
+HTMLCleanOption: TypeAlias = _Callable[["HTMLCleanConfig"], None]
+
+_DEFAULT_TAG_RE = re.compile(r"<[^>]+>", re.DOTALL | re.IGNORECASE)
+_DEFAULT_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL | re.IGNORECASE)
+
+
+def with_html_tag_regexp(regex: re.Pattern) -> HTMLCleanOption:
+    def _apply(cfg: HTMLCleanConfig) -> None:
+        cfg.tag_re = regex
+    return _apply
+
+
+def with_html_comment_regexp(regex: re.Pattern) -> HTMLCleanOption:
+    def _apply(cfg: HTMLCleanConfig) -> None:
+        cfg.comment_re = regex
+    return _apply
+
+
+def _apply_html_clean_options(opts: list[HTMLCleanOption]) -> HTMLCleanConfig:
+    cfg = HTMLCleanConfig(tag_re=_DEFAULT_TAG_RE, comment_re=_DEFAULT_COMMENT_RE)
+    for opt in opts:
+        if opt is not None:
+            opt(cfg)
+    if cfg.tag_re is None:
+        cfg.tag_re = _DEFAULT_TAG_RE
+    if cfg.comment_re is None:
+        cfg.comment_re = _DEFAULT_COMMENT_RE
+    return cfg
+
+
+# ── HTMLFilterOption ───────────────────────────────────────────────────────────
+
+@_dc
+class HTMLFilterConfig:
+    compile: _Callable[[str], re.Pattern] = re.compile
+
+
+HTMLFilterOption: TypeAlias = _Callable[["HTMLFilterConfig"], None]
+
+
+def with_html_filter_compile_func(compile_fn: _Callable[[str], re.Pattern]) -> HTMLFilterOption:
+    def _apply(cfg: HTMLFilterConfig) -> None:
+        if compile_fn is not None:
+            cfg.compile = compile_fn
+    return _apply
+
+
+def _apply_html_filter_options(opts: list[HTMLFilterOption]) -> HTMLFilterConfig:
+    cfg = HTMLFilterConfig(compile=re.compile)
+    for opt in opts:
+        if opt is not None:
+            opt(cfg)
+    if cfg.compile is None:
+        cfg.compile = re.compile
+    return cfg
+
 
 def html_escape(s: str) -> str:
     import html
@@ -1910,16 +1977,13 @@ _INLINE_TAGS = {
 
 
 def clean_html(html_content: str) -> str:
-    import re as _re
-    # Remove script/style and their contents
-    html_content = _re.sub(r"<script[^>]*>.*?</script>", "", html_content, flags=_re.DOTALL | _re.IGNORECASE)
-    html_content = _re.sub(r"<style[^>]*>.*?</style>", "", html_content, flags=_re.DOTALL | _re.IGNORECASE)
-    # Remove all tags
-    html_content = _re.sub(r"<[^>]+>", "", html_content)
-    # Decode entities
-    html_content = html_unescape(html_content)
-    # Collapse whitespace
-    html_content = _re.sub(r"\s+", " ", html_content)
+    return clean_html_with_options(html_content)
+
+
+def clean_html_with_options(html_content: str, *opts: HTMLCleanOption) -> str:
+    cfg = _apply_html_clean_options(list(opts))
+    html_content = cfg.comment_re.sub("", html_content) if cfg.comment_re else html_content
+    html_content = cfg.tag_re.sub("", html_content) if cfg.tag_re else html_content
     return html_content.strip()
 
 
@@ -1944,6 +2008,33 @@ def filter_html_tag(html_content: str, allowed_tags: set[str] | None = None) -> 
     # Restore preserved tags
     for tag, original in preserved:
         html_content = html_content.replace(tag, original)
+    return html_content
+
+
+def filter_html_tag_with_options(
+    html_content: str,
+    tag_names: list[str] | None = None,
+    *opts: HTMLFilterOption,
+) -> str:
+    cfg = _apply_html_filter_options(list(opts))
+    if tag_names is None:
+        tag_names = list(_INLINE_TAGS)
+    for tag in tag_names:
+        t = re.escape(tag)
+        try:
+            re_full = cfg.compile(
+                f"(?is)<{t}(\\s[^>]*)?>.*?</{t}\\s*>",
+            )
+            html_content = re_full.sub("", html_content)
+        except re.error:
+            pass
+        try:
+            re_self = cfg.compile(
+                f"(?is)<{t}(\\s[^>]*)?/?>",
+            )
+            html_content = re_self.sub("", html_content)
+        except re.error:
+            pass
     return html_content
 
 
@@ -1999,23 +2090,79 @@ def is_redirected(status_code: int) -> bool:
 
 # ========== Charset Extraction ==========
 
+# ── CharsetOption ──────────────────────────────────────────────────────────────
+
+@_dc
+class CharsetConfig:
+    charset_pattern: re.Pattern | None = None
+    meta_charset_pattern: re.Pattern | None = None
+
+
+CharsetOption: TypeAlias = _Callable[["CharsetConfig"], None]
+
+_DEFAULT_CHARSET_PATTERN = re.compile(
+    r'charset\s*=\s*["\']?([^"\'>;\s]+)', re.IGNORECASE,
+)
+_DEFAULT_META_CHARSET_PATTERN = re.compile(
+    r'<meta[^>]+charset\s*=\s*["\']?([^"\'>;\s]+)', re.IGNORECASE,
+)
+
+
+def with_charset_regexp(regex: re.Pattern) -> CharsetOption:
+    def _apply(cfg: CharsetConfig) -> None:
+        cfg.charset_pattern = regex
+    return _apply
+
+
+def with_meta_charset_regexp(regex: re.Pattern) -> CharsetOption:
+    def _apply(cfg: CharsetConfig) -> None:
+        cfg.meta_charset_pattern = regex
+    return _apply
+
+
+def _apply_charset_options(opts: list[CharsetOption]) -> CharsetConfig:
+    cfg = CharsetConfig(
+        charset_pattern=_DEFAULT_CHARSET_PATTERN,
+        meta_charset_pattern=_DEFAULT_META_CHARSET_PATTERN,
+    )
+    for opt in opts:
+        if opt is not None:
+            opt(cfg)
+    if cfg.charset_pattern is None:
+        cfg.charset_pattern = _DEFAULT_CHARSET_PATTERN
+    if cfg.meta_charset_pattern is None:
+        cfg.meta_charset_pattern = _DEFAULT_META_CHARSET_PATTERN
+    return cfg
+
 
 def get_charset_from_content_type(content_type: str) -> str:
-    _, params = parse_content_type(content_type)
-    return params.get("charset", "")
+    return get_charset_from_content_type_with_options(content_type)
+
+
+def get_charset_from_content_type_with_options(
+    content_type: str, *opts: CharsetOption,
+) -> str:
+    cfg = _apply_charset_options(list(opts))
+    if cfg.charset_pattern:
+        m = cfg.charset_pattern.search(content_type)
+        if m:
+            return m.group(1)
+    return ""
 
 
 def get_charset_from_html(html_content: str) -> str:
-    """Extract charset from HTML meta tags."""
-    import re as _re
-    m = _re.search(r'<meta[^>]+charset\s*=\s*["\']?([^"\'>;\s]+)', html_content, _re.IGNORECASE)
-    if m:
-        return m.group(1)
-    m = _re.search(
-        r'<meta[^>]+http-equiv\s*=\s*["\']?content-type[^>]+content\s*=\s*["\'][^"\']*charset\s*=\s*([^"\'>;\s]+)',
-        html_content, _re.IGNORECASE,
-    )
-    return m.group(1) if m else ""
+    return get_charset_from_html_with_options(html_content)
+
+
+def get_charset_from_html_with_options(
+    html_content: str, *opts: CharsetOption,
+) -> str:
+    cfg = _apply_charset_options(list(opts))
+    if cfg.meta_charset_pattern:
+        m = cfg.meta_charset_pattern.search(html_content)
+        if m:
+            return m.group(1)
+    return ""
 
 
 def build_content_type(mime_type: str, charset: str = "") -> str:

@@ -21,6 +21,13 @@ from kniferpy.internal.httpx import (
     SessionLike,
     URLPolicy,
     UserAgent,
+    # HTML/Charset option types
+    HTMLCleanConfig,
+    HTMLCleanOption,
+    HTMLFilterConfig,
+    HTMLFilterOption,
+    CharsetConfig,
+    CharsetOption,
     # ClientOption
     ClientOption,
     with_client_global_config,
@@ -198,7 +205,14 @@ clone_global_headers = httpx.clone_global_headers
 html_escape = httpx.html_escape
 html_unescape = httpx.html_unescape
 clean_html = httpx.clean_html
+clean_html_with_options = httpx.clean_html_with_options
 filter_html_tag = httpx.filter_html_tag
+filter_html_tag_with_options = httpx.filter_html_tag_with_options
+
+# HTML option constructors
+with_html_tag_regexp = httpx.with_html_tag_regexp
+with_html_comment_regexp = httpx.with_html_comment_regexp
+with_html_filter_compile_func = httpx.with_html_filter_compile_func
 
 # Content-Type helpers
 build_content_type = httpx.build_content_type
@@ -206,6 +220,12 @@ is_default_content_type = httpx.is_default_content_type
 is_form_urlencoded = httpx.is_form_urlencoded
 guess_content_type = httpx.guess_content_type
 get_charset_from_html = httpx.get_charset_from_html
+get_charset_from_html_with_options = httpx.get_charset_from_html_with_options
+get_charset_from_content_type_with_options = httpx.get_charset_from_content_type_with_options
+
+# Charset option constructors
+with_charset_regexp = httpx.with_charset_regexp
+with_meta_charset_regexp = httpx.with_meta_charset_regexp
 
 # Cookie jar
 set_cookie_jar = httpx.set_cookie_jar
@@ -242,6 +262,13 @@ __all__ = [
     "SimpleServer",
     "URLPolicy",
     "UserAgent",
+    # HTML/Charset option types
+    "HTMLCleanConfig",
+    "HTMLCleanOption",
+    "HTMLFilterConfig",
+    "HTMLFilterOption",
+    "CharsetConfig",
+    "CharsetOption",
     # Constants
     "Method",
     "Header",
@@ -409,13 +436,24 @@ __all__ = [
     "html_escape",
     "html_unescape",
     "clean_html",
+    "clean_html_with_options",
     "filter_html_tag",
+    "filter_html_tag_with_options",
+    # HTML option constructors
+    "with_html_tag_regexp",
+    "with_html_comment_regexp",
+    "with_html_filter_compile_func",
     # Content-Type
     "build_content_type",
     "is_default_content_type",
     "is_form_urlencoded",
     "guess_content_type",
     "get_charset_from_html",
+    "get_charset_from_html_with_options",
+    "get_charset_from_content_type_with_options",
+    # Charset option constructors
+    "with_charset_regexp",
+    "with_meta_charset_regexp",
     # Cookie Jar
     "set_cookie_jar",
     "get_cookie_jar",
