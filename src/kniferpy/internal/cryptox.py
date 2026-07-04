@@ -1,12 +1,17 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import hmac
+import json
 import secrets
 import string
 import struct
 from pathlib import Path
+from typing import Any
 
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 from argon2.low_level import hash_secret_raw, Type, verify_secret
 
@@ -40,6 +45,22 @@ def sha224_hex(data: bytes) -> str:
 
 def sha256(value: str | bytes) -> bytes:
     return hashlib.sha256(to_bytes(value)).digest()
+
+
+def sha384(data: bytes) -> bytes:
+    return _digest(data, "sha384")
+
+
+def sha512(data: bytes) -> bytes:
+    return _digest(data, "sha512")
+
+
+def sha256_hex_bytes(data: bytes) -> str:
+    return _digest_hex(data, "sha256")
+
+
+def sha512_hex_bytes(data: bytes) -> str:
+    return _digest_hex(data, "sha512")
 
 
 def sha1_hex(value: str | bytes) -> str:
@@ -351,3 +372,325 @@ def verify_password_argon2id(encoded: str, password: bytes) -> bool:
         return verify_secret(encoded, password, Type.ID)
     except Exception:
         return False
+
+
+# ── Generic digest / HMAC ────────────────────────────────────────────────────
+
+
+def digest(data: bytes, algorithm: str) -> bytes:
+    return _digest(data, algorithm)
+
+
+def digest_hex(data: bytes, algorithm: str) -> str:
+    return _digest_hex(data, algorithm)
+
+
+def hmac_hex(algorithm: str, key: bytes, data: bytes) -> str:
+    return hmac.new(key, data, algorithm).hexdigest()
+
+
+def hmac_bytes(algorithm: str, key: bytes, data: bytes) -> bytes:
+    return hmac.new(key, data, algorithm).digest()
+
+
+def hmac_equal(a: bytes, b: bytes) -> bool:
+    return hmac.compare_digest(a, b)
+
+
+def constant_time_equal(a: bytes, b: bytes) -> bool:
+    return hmac.compare_digest(a, b)
+
+
+# ── RSA key generation ───────────────────────────────────────────────────────
+
+
+def gen_rsa_key(bits: int = 2048) -> rsa.RSAPrivateKey:
+    if bits < 2048:
+        raise CryptoError("RSA key size must be at least 2048 bits", code="crypto.invalid_key_size")
+    return rsa.generate_private_key(public_exponent=65537, key_size=bits)
+
+
+# ── RSA OAEP encrypt/decrypt ─────────────────────────────────────────────────
+
+
+def rsa_encrypt_oaep(
+    plain: bytes,
+    pub: rsa.RSAPublicKey,
+    label: bytes = b"",
+    *,
+    hash_algorithm: hashes.HashAlgorithm | None = None,
+) -> bytes:
+    algo = hash_algorithm or hashes.SHA256()
+    return pub.encrypt(
+        plain,
+        padding.OAEP(mgf=padding.MGF1(algorithm=algo), algorithm=algo, label=label),
+    )
+
+
+def rsa_decrypt_oaep(
+    cipher_text: bytes,
+    priv: rsa.RSAPrivateKey,
+    label: bytes = b"",
+    *,
+    hash_algorithm: hashes.HashAlgorithm | None = None,
+) -> bytes:
+    algo = hash_algorithm or hashes.SHA256()
+    return priv.decrypt(
+        cipher_text,
+        padding.OAEP(mgf=padding.MGF1(algorithm=algo), algorithm=algo, label=label),
+    )
+
+
+# ── RSA PSS sign/verify ──────────────────────────────────────────────────────
+
+
+def rsa_sign_pss(
+    priv: rsa.RSAPrivateKey,
+    digest: bytes,
+    *,
+    hash_algorithm: hashes.HashAlgorithm | None = None,
+) -> bytes:
+    algo = hash_algorithm or hashes.SHA256()
+    return priv.sign(
+        digest,
+        padding.PSS(mgf=padding.MGF1(algo), salt_length=padding.PSS.MAX_LENGTH),
+        algo,
+    )
+
+
+def rsa_verify_pss(
+    pub: rsa.RSAPublicKey,
+    digest: bytes,
+    sig: bytes,
+    *,
+    hash_algorithm: hashes.HashAlgorithm | None = None,
+) -> bool:
+    algo = hash_algorithm or hashes.SHA256()
+    try:
+        pub.verify(
+            sig,
+            digest,
+            padding.PSS(mgf=padding.MGF1(algo), salt_length=padding.PSS.MAX_LENGTH),
+            algo,
+        )
+        return True
+    except Exception:
+        return False
+
+
+# ── RSA sign/verify with data (digest internally) ─────────────────────────────
+
+
+def sign_sha256_with_rsa(data: bytes, priv: rsa.RSAPrivateKey) -> bytes:
+    digest = hashlib.sha256(data).digest()
+    return rsa_sign_pss(priv, digest, hash_algorithm=hashes.SHA256())
+
+
+def verify_sha256_with_rsa(data: bytes, sig: bytes, pub: rsa.RSAPublicKey) -> bool:
+    digest = hashlib.sha256(data).digest()
+    return rsa_verify_pss(pub, digest, sig, hash_algorithm=hashes.SHA256())
+
+
+# ── PEM serialization ────────────────────────────────────────────────────────
+
+
+def private_key_to_pem(priv: rsa.RSAPrivateKey) -> bytes:
+    return priv.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.TraditionalOpenSSL,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+
+
+def public_key_to_pem(pub: rsa.RSAPublicKey) -> bytes:
+    return pub.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+
+
+def parse_rsa_private_key_pem(data: bytes) -> rsa.RSAPrivateKey:
+    key = serialization.load_pem_private_key(data, password=None)
+    if not isinstance(key, rsa.RSAPrivateKey):
+        raise CryptoError("PEM data is not an RSA private key", code="crypto.invalid_pem")
+    return key
+
+
+def parse_rsa_public_key_pem(data: bytes) -> rsa.RSAPublicKey:
+    key = serialization.load_pem_public_key(data)
+    if not isinstance(key, rsa.RSAPublicKey):
+        raise CryptoError("PEM data is not an RSA public key", code="crypto.invalid_pem")
+    return key
+
+
+def private_key_to_pkcs8_pem(priv: rsa.RSAPrivateKey) -> bytes:
+    return priv.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+
+
+def public_key_to_pkcs1_pem(pub: rsa.RSAPublicKey) -> bytes:
+    return pub.public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.PKCS1,
+    )
+
+
+# ── JWK ──────────────────────────────────────────────────────────────────────
+
+
+def rsa_public_key_to_jwk(pub: rsa.RSAPublicKey, kid: str = "") -> dict[str, Any]:
+    nums = pub.public_numbers()
+    jwk: dict[str, Any] = {
+        "kty": "RSA",
+        "n": _b64url_encode(nums.n.to_bytes((nums.n.bit_length() + 7) // 8, "big")),
+        "e": _b64url_encode(nums.e.to_bytes((nums.e.bit_length() + 7) // 8, "big")),
+    }
+    if kid:
+        jwk["kid"] = kid
+    return jwk
+
+
+def rsa_private_key_to_jwk(priv: rsa.RSAPrivateKey, kid: str = "") -> dict[str, Any]:
+    priv_nums = priv.private_numbers()
+    pub_nums = priv_nums.public_numbers
+    jwk: dict[str, Any] = {
+        "kty": "RSA",
+        "n": _b64url_encode(pub_nums.n.to_bytes((pub_nums.n.bit_length() + 7) // 8, "big")),
+        "e": _b64url_encode(pub_nums.e.to_bytes((pub_nums.e.bit_length() + 7) // 8, "big")),
+        "d": _b64url_encode(priv_nums.d.to_bytes((priv_nums.d.bit_length() + 7) // 8, "big")),
+        "p": _b64url_encode(priv_nums.p.to_bytes((priv_nums.p.bit_length() + 7) // 8, "big")),
+        "q": _b64url_encode(priv_nums.q.to_bytes((priv_nums.q.bit_length() + 7) // 8, "big")),
+        "dp": _b64url_encode(
+            priv_nums.dmp1.to_bytes((priv_nums.dmp1.bit_length() + 7) // 8, "big")
+        ),
+        "dq": _b64url_encode(
+            priv_nums.dmq1.to_bytes((priv_nums.dmq1.bit_length() + 7) // 8, "big")
+        ),
+        "qi": _b64url_encode(
+            priv_nums.iqmp.to_bytes((priv_nums.iqmp.bit_length() + 7) // 8, "big")
+        ),
+    }
+    if kid:
+        jwk["kid"] = kid
+    return jwk
+
+
+def jwk_to_rsa_public_key(jwk: dict[str, Any]) -> rsa.RSAPublicKey:
+    n = int.from_bytes(_b64url_decode(str(jwk["n"])), "big")
+    e = int.from_bytes(_b64url_decode(str(jwk["e"])), "big")
+    return rsa.RSAPublicNumbers(e, n).public_key()
+
+
+def jwk_to_rsa_private_key(jwk: dict[str, Any]) -> rsa.RSAPrivateKey:
+    n = int.from_bytes(_b64url_decode(str(jwk["n"])), "big")
+    e = int.from_bytes(_b64url_decode(str(jwk["e"])), "big")
+    d = int.from_bytes(_b64url_decode(str(jwk["d"])), "big")
+    p = int.from_bytes(_b64url_decode(str(jwk["p"])), "big")
+    q = int.from_bytes(_b64url_decode(str(jwk["q"])), "big")
+    dmp1 = int.from_bytes(_b64url_decode(str(jwk["dp"])), "big")
+    dmq1 = int.from_bytes(_b64url_decode(str(jwk["dq"])), "big")
+    iqmp = int.from_bytes(_b64url_decode(str(jwk["qi"])), "big")
+    pub_nums = rsa.RSAPublicNumbers(e, n)
+    return rsa.RSAPrivateNumbers(p, q, d, dmp1, dmq1, iqmp, pub_nums).private_key()
+
+
+def marshal_jwk(jwk: dict[str, Any]) -> bytes:
+    return json.dumps(jwk, separators=(",", ":")).encode("utf-8")
+
+
+def parse_jwk(data: bytes) -> dict[str, Any]:
+    return json.loads(data.decode("utf-8"))
+
+
+def marshal_jwks(keys: list[dict[str, Any]]) -> bytes:
+    return json.dumps({"keys": keys}, separators=(",", ":")).encode("utf-8")
+
+
+def parse_jwks(data: bytes) -> dict[str, Any]:
+    return json.loads(data.decode("utf-8"))
+
+
+def select_jwk_by_key_id(jwks: dict[str, Any], kid: str) -> dict[str, Any]:
+    for key in jwks.get("keys", []):
+        if key.get("kid") == kid:
+            return key
+    raise CryptoError(f"JWK with kid={kid!r} not found", code="crypto.jwk_not_found")
+
+
+def _b64url_encode(data: bytes) -> str:
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("ascii")
+
+
+def _b64url_decode(s: str) -> bytes:
+    padding = 4 - (len(s) % 4)
+    if padding != 4:
+        s += "=" * padding
+    return base64.urlsafe_b64decode(s)
+
+
+# ── Sign params ──────────────────────────────────────────────────────────────
+
+
+def sign_params(
+    params: dict[str, Any],
+    digest_hex_fn,
+    separator: str = "&",
+    key_value_separator: str = "=",
+    ignore_nil: bool = False,
+    *other_params: str,
+) -> str:
+    keys = sorted(params.keys())
+    parts = []
+    for key in keys:
+        val = params[key]
+        if ignore_nil and val is None:
+            continue
+        parts.append(f"{key}{key_value_separator}{val}")
+    if other_params:
+        parts.extend(other_params)
+    raw = separator.join(parts)
+    return digest_hex_fn(raw.encode("utf-8"))
+
+
+def sign_params_sha256(
+    params: dict[str, Any], *other_params: str
+) -> str:
+    return sign_params(
+        params,
+        lambda data: hashlib.sha256(data).hexdigest(),
+        "&",
+        "=",
+        False,
+        *other_params,
+    )
+
+
+# ── Additional random helpers ────────────────────────────────────────────────
+
+
+def gen_aes_key(size: int = 32) -> bytes:
+    if size not in (16, 24, 32):
+        raise CryptoError("AES key must be 16, 24, or 32 bytes", code="crypto.invalid_key_size")
+    return secrets.token_bytes(size)
+
+
+# ── Validation ───────────────────────────────────────────────────────────────
+
+
+def validate_aes_key(key: bytes) -> None:
+    _validate_aes_key(key)
+
+
+def validate_aes_iv(iv: bytes) -> None:
+    if len(iv) != 16:
+        raise CryptoError(
+            f"AES IV must be 16 bytes, got {len(iv)}",
+            code="crypto.invalid_iv",
+        )
+
+
+def validate_aes_gcm_nonce(nonce: bytes) -> None:
+    _validate_aes_nonce(nonce)
