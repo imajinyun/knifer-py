@@ -646,3 +646,103 @@ def read(path: str) -> dict[str, Any]:
 def write(path: str, data: dict[str, Any], root_tag: str = "root", *, pretty: bool = True) -> None:
     from kniferpy.internal import filex
     filex.write_text(path, to_xml(data, root_tag, pretty=pretty))
+
+
+# ========== SAX streaming parsing =============================================
+
+
+def read_xml_reader(reader: Any) -> Document:
+    """Parse XML from a reader/stream."""
+    if hasattr(reader, "read"):
+        content = reader.read()
+        if isinstance(content, bytes):
+            content = content.decode("utf-8")
+        return parse_xml(content)
+    return parse_xml(str(reader))
+
+
+def read_by_sax(
+    xml_str: str,
+    *,
+    on_start_element: Callable[[str, dict[str, str]], None] | None = None,
+    on_end_element: Callable[[str], None] | None = None,
+    on_characters: Callable[[str], None] | None = None,
+) -> None:
+    """Parse XML with SAX-style callbacks."""
+    if _DOCTYPE_RE.search(xml_str):
+        raise DecodeError("vxml: DTD/DOCTYPE is not allowed", code="xml.doctype_forbidden")
+
+    class _SAXHandler:
+        def start(self, tag: str, attrib: dict[str, str]) -> None:
+            nonlocal on_start_element
+            if on_start_element:
+                on_start_element(_local(tag), {_local(k): v for k, v in attrib.items()})
+
+        def end(self, tag: str) -> None:
+            nonlocal on_end_element
+            if on_end_element:
+                on_end_element(_local(tag))
+
+        def data(self, text: str) -> None:
+            nonlocal on_characters
+            if on_characters and text.strip():
+                on_characters(text)
+
+    try:
+        parser = ElementTree.XMLParser(target=ElementTree.TreeBuilder())
+        parser.parser.StartElementHandler = _SAXHandler().start  # type: ignore[assignment]
+        parser.parser.EndElementHandler = _SAXHandler().end  # type: ignore[assignment]
+        parser.parser.CharacterDataHandler = _SAXHandler().data  # type: ignore[assignment]
+        parser.feed(xml_str)
+        parser.close()
+    except ElementTree.ParseError as exc:
+        raise DecodeError(f"vxml: parse error: {exc}", code="xml.invalid") from exc
+
+
+def read_by_sax_file(
+    path: str,
+    *,
+    on_start_element: Callable[[str, dict[str, str]], None] | None = None,
+    on_end_element: Callable[[str], None] | None = None,
+    on_characters: Callable[[str], None] | None = None,
+) -> None:
+    from kniferpy.internal import filex
+    read_by_sax(
+        filex.read_text(path),
+        on_start_element=on_start_element,
+        on_end_element=on_end_element,
+        on_characters=on_characters,
+    )
+
+
+# ========== XML Transformation =================================================
+
+
+def transform_with(
+    src: Document,
+    dest: Document,
+    *,
+    on_element: Callable[[Element], Element | None] | None = None,
+) -> None:
+    """Copy XML from source to result with optional transforms."""
+    if src.root is None:
+        return
+
+    def _copy(src_elem: Element, parent: Element | None) -> None:
+        transformed = on_element(src_elem) if on_element else src_elem
+        if transformed is None:
+            return
+        clone = Element(
+            name=transformed.name,
+            attr=dict(transformed.attr),
+            text=transformed.text,
+            parent=parent,
+        )
+        if parent is not None:
+            parent.children.append(clone)
+        if dest.root is None:
+            dest.root = clone
+        for child in src_elem.children:
+            _copy(child, clone)
+
+    _copy(src.root, None)

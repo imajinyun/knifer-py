@@ -840,6 +840,149 @@ def get_charset_from_content_type(content_type: str) -> str:
     return params.get("charset", "")
 
 
+def get_charset_from_html(html_content: str) -> str:
+    """Extract charset from HTML meta tags."""
+    import re as _re
+    m = _re.search(r'<meta[^>]+charset\s*=\s*["\']?([^"\'>;\s]+)', html_content, _re.IGNORECASE)
+    if m:
+        return m.group(1)
+    m = _re.search(
+        r'<meta[^>]+http-equiv\s*=\s*["\']?content-type[^>]+content\s*=\s*["\'][^"\']*charset\s*=\s*([^"\'>;\s]+)',
+        html_content, _re.IGNORECASE,
+    )
+    return m.group(1) if m else ""
+
+
+def build_content_type(mime_type: str, charset: str = "") -> str:
+    """Build a Content-Type header string with optional charset."""
+    if charset:
+        return f"{mime_type}; charset={charset}"
+    return mime_type
+
+
+def is_default_content_type(content_type: str) -> bool:
+    """Check if content-type is a default/empty value."""
+    if not content_type:
+        return True
+    ct = content_type.strip().lower()
+    return ct in ("", "text/plain", "application/octet-stream")
+
+
+def is_form_urlencoded(content_type: str) -> bool:
+    ct = content_type.strip().lower()
+    return ct == "application/x-www-form-urlencoded"
+
+
+def guess_content_type(body: str) -> str:
+    """Guess content-type from body text."""
+    body = body.strip()
+    if body.startswith("{") or body.startswith("["):
+        return "application/json"
+    if body.startswith("<"):
+        return "application/xml"
+    if body.startswith("#") or "=" in body.split("\n")[0] if body else False:
+        return "text/plain"
+    return "text/plain"
+
+
+# ========== Cookie Jar ==========
+
+
+class CookieJar:
+    """Simple cookie jar for maintaining cookie state across requests."""
+
+    def __init__(self) -> None:
+        self._cookies: dict[str, str] = {}
+
+    def set(self, name: str, value: str) -> None:
+        self._cookies[name] = value
+
+    def get(self, name: str) -> str:
+        return self._cookies.get(name, "")
+
+    def remove(self, name: str) -> None:
+        self._cookies.pop(name, None)
+
+    def clear(self) -> None:
+        self._cookies.clear()
+
+    def to_header(self) -> str:
+        return make_cookie_header(self._cookies)
+
+    def parse_set_cookie(self, header: str) -> None:
+        for part in header.split(";"):
+            part = part.strip()
+            if "=" in part:
+                k, v = part.split("=", 1)
+                k = k.strip()
+                v = v.strip()
+                if k.lower() not in ("path", "domain", "expires", "max-age", "secure", "httponly", "samesite"):
+                    self._cookies[k] = v
+
+    def __len__(self) -> int:
+        return len(self._cookies)
+
+    def __contains__(self, name: str) -> bool:
+        return name in self._cookies
+
+
+_global_cookie_jar: CookieJar | None = None
+
+
+def set_cookie_jar(jar: CookieJar) -> None:
+    global _global_cookie_jar
+    _global_cookie_jar = jar
+
+
+def get_cookie_jar() -> CookieJar:
+    global _global_cookie_jar
+    if _global_cookie_jar is None:
+        _global_cookie_jar = CookieJar()
+    return _global_cookie_jar
+
+
+def close_cookie() -> None:
+    global _global_cookie_jar
+    if _global_cookie_jar is not None:
+        _global_cookie_jar.clear()
+        _global_cookie_jar = None
+
+
+# ========== Global Boundary / Decode / EOF ==========
+
+
+_global_boundary: str = ""
+_global_decode_url: bool = True
+_ignore_eof_error: bool = False
+
+
+def set_global_boundary(boundary: str) -> None:
+    global _global_boundary
+    _global_boundary = boundary
+
+
+def get_global_boundary() -> str:
+    return _global_boundary
+
+
+def set_global_decode_url(decode: bool) -> None:
+    global _global_decode_url
+    _global_decode_url = decode
+
+
+def is_global_decode_url() -> bool:
+    return _global_decode_url
+
+
+def set_ignore_eof_error(ignore: bool) -> None:
+    global _ignore_eof_error
+    _ignore_eof_error = ignore
+
+
+def is_ignore_eof_error() -> bool:
+    return _ignore_eof_error
+
+
 # ========== URL encoded POST / GET with params ==========
 
 

@@ -632,3 +632,101 @@ def load_remote_safe(url: str, timeout: float = 10.0) -> Conf:
             context={"url": url, "hostname": parsed.hostname},
         )
     return load_remote(url, timeout)
+
+
+# ---------------------------------------------------------------------------
+# Parse by extension — YAML / TOML / JSON / INI
+# ---------------------------------------------------------------------------
+
+
+def parse_by_ext(content: str, ext: str) -> Conf:
+    """Parse content according to file extension (``.yaml``, ``.toml``, ``.json``, ``.ini``)."""
+    ext = ext.lower().lstrip(".")
+    if ext in ("yaml", "yml"):
+        return parse_yaml(content)
+    if ext == "toml":
+        return parse_toml(content)
+    if ext == "json":
+        return parse_json(content)
+    return parse(content)
+
+
+def parse_yaml(content: str) -> Conf:
+    """Parse YAML content into a Conf."""
+    try:
+        import yaml
+    except ImportError:
+        raise ValidationError(
+            message="yaml parsing requires PyYAML: pip install pyyaml",
+            code="knifer.conf.yaml_missing",
+        )
+    try:
+        data = yaml.safe_load(content)
+    except Exception as exc:
+        raise ValidationError(
+            message=f"yaml parse error: {exc}",
+            code="knifer.conf.yaml_parse_failed",
+            context={"error": str(exc)},
+        ) from exc
+    return _flatten_to_conf(data)
+
+
+def parse_toml(content: str) -> Conf:
+    """Parse TOML content into a Conf."""
+    try:
+        import tomllib
+    except ImportError:
+        try:
+            import toml as _toml
+            data = _toml.loads(content)
+        except ImportError:
+            raise ValidationError(
+                message="toml parsing requires tomli/tomllib (Python 3.11+) or toml",
+                code="knifer.conf.toml_missing",
+            )
+        except Exception as exc:
+            raise ValidationError(
+                message=f"toml parse error: {exc}",
+                code="knifer.conf.toml_parse_failed",
+                context={"error": str(exc)},
+            ) from exc
+    else:
+        try:
+            data = tomllib.loads(content)
+        except Exception as exc:
+            raise ValidationError(
+                message=f"toml parse error: {exc}",
+                code="knifer.conf.toml_parse_failed",
+                context={"error": str(exc)},
+            ) from exc
+    return _flatten_to_conf(data)
+
+
+def parse_json(content: str) -> Conf:
+    """Parse JSON content into a Conf."""
+    import json
+    try:
+        data = json.loads(content)
+    except json.JSONDecodeError as exc:
+        raise ValidationError(
+            message=f"json parse error: {exc}",
+            code="knifer.conf.json_parse_failed",
+            context={"error": str(exc)},
+        ) from exc
+    return _flatten_to_conf(data)
+
+
+def _flatten_to_conf(data: Any, prefix: str = "") -> Conf:
+    """Flatten nested dict into a Conf with dot-separated group keys."""
+    conf = Conf()
+    if isinstance(data, dict):
+        for key, value in data.items():
+            group = f"{prefix}.{key}" if prefix else key
+            if isinstance(value, dict):
+                sub = _flatten_to_conf(value, group)
+                conf.merge(sub)
+            elif isinstance(value, list):
+                conf.set_by_group(_DEFAULT_GROUP, group, ",".join(str(v) for v in value))
+            elif value is not None:
+                conf.set_by_group(_DEFAULT_GROUP, group, str(value) if not isinstance(value, (bool, int, float)) else str(value))
+    return conf

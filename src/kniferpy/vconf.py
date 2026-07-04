@@ -27,6 +27,9 @@ __all__ = [
     "FieldRule",
     "Schema",
     "WatchEvent",
+    "apply_defaults",
+    "bind",
+    "bind_group",
     "load",
     "load_files",
     "load_profile",
@@ -36,12 +39,13 @@ __all__ = [
     "new",
     "parse",
     "parse_bytes",
-    "watch",
-    "bind",
-    "bind_group",
-    "validate_schema",
-    "apply_defaults",
+    "parse_by_ext",
+    "parse_json",
+    "parse_toml",
+    "parse_yaml",
     "schema_from_struct",
+    "validate_schema",
+    "watch",
 ]
 
 
@@ -123,3 +127,23 @@ def apply_defaults(conf: Conf, schema: Schema) -> Conf:
 def schema_from_struct(obj: object) -> Schema:
     """Build a Schema from a dataclass with conf metadata tags."""
     return confx.schema_from_struct(obj)
+
+
+def parse_yaml(content: str) -> Conf:
+    """Parse YAML content into a :class:`Conf`."""
+    return confx.parse_yaml(content)
+
+
+def parse_toml(content: str) -> Conf:
+    """Parse TOML content into a :class:`Conf`."""
+    return confx.parse_toml(content)
+
+
+def parse_json(content: str) -> Conf:
+    """Parse JSON content into a :class:`Conf`."""
+    return confx.parse_json(content)
+
+
+def parse_by_ext(content: str, ext: str) -> Conf:
+    """Parse content according to file extension."""
+    return confx.parse_by_ext(content, ext)

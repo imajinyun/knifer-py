@@ -147,5 +147,31 @@ __all__ = [
     "format_xml",
     "get_by_path",
     "read",
+    "read_by_sax",
+    "read_by_sax_file",
+    "read_xml",
+    "read_xml_bytes",
+    "read_xml_file",
+    "read_xml_reader",
+    "to_bean",
+    "to_map",
+    "to_xml",
+    "trans_elements",
+    "transform_with",
+    "unescape",
     "write",
+    "write_file",
+    "write_to",
+    "xml_node_to_bean",
+    "xml_node_to_map",
+    "xml_node_to_map_into",
+    "xml_to_map_into",
 ]
+
+# SAX parsing
+read_xml_reader = xmlx.read_xml_reader
+read_by_sax = xmlx.read_by_sax
+read_by_sax_file = xmlx.read_by_sax_file
+
+# Transform
+transform_with = xmlx.transform_with
