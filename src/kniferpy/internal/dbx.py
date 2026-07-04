@@ -32,14 +32,33 @@ class Dialect(IntEnum):
     CLICK_HOUSE = 7
 
 
+# Dialect constants (Go-style names)
+DialectUnknown = Dialect.UNKNOWN
+DialectQuestion = Dialect.QUESTION
+DialectMySQL = Dialect.MYSQL
+DialectSQLite = Dialect.SQLITE
+DialectPostgres = Dialect.POSTGRES
+DialectSQLServer = Dialect.SQL_SERVER
+DialectOracle = Dialect.ORACLE
+DialectClickHouse = Dialect.CLICK_HOUSE
+
+
 class Direction(IntEnum):
     ASC = 0
     DESC = 1
 
 
+AscDirection = Direction.ASC
+DescDirection = Direction.DESC
+
+
 class LogicalOperator(IntEnum):
     AND = 0
     OR = 1
+
+
+And = LogicalOperator.AND
+Or = LogicalOperator.OR
 
 
 # --- base types ---------------------------------------------------------------
@@ -107,7 +126,26 @@ class NamedSQL:
 
 
 class DBError(KniferError):
-    pass
+    """Database error with error code and optional cause."""
+
+    def __init__(self, message: str, code: str = "knifer.db.error", cause: BaseException | None = None) -> None:
+        super().__init__(message=message, code=code)
+        self.cause = cause
+
+    def __str__(self) -> str:
+        if self.cause is not None:
+            return f"{self.message}: {self.cause}"
+        return self.message
+
+
+def new_db_error(format_str: str, *args: Any) -> DBError:
+    msg = (format_str % args) if args else format_str
+    return DBError(message=msg, code="knifer.db.error")
+
+
+def wrap_db_error(cause: BaseException, format_str: str, *args: Any) -> DBError:
+    msg = (format_str % args) if args else format_str
+    return DBError(message=msg, code="knifer.db.error", cause=cause)
 
 
 # --- builder ------------------------------------------------------------------
