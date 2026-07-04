@@ -999,6 +999,18 @@ def get_multistage_reverse_proxy_ip(headers: dict[str, str]) -> str:
     for hdr in ("X-Forwarded-For", "X-Real-IP", "Proxy-Client-IP", "WL-Proxy-Client-IP"):
         val = headers.get(hdr, "")
         if val and not is_unknown(val):
-            # X-Forwarded-For may contain multiple IPs; take the first
             return val.split(",")[0].strip()
     return ""
+
+
+# TLS cert pool
+def new_cert_pool() -> ssl.SSLContext:
+    return ssl.create_default_context()
+
+
+def add_root_ca_bytes(ssl_context: ssl.SSLContext, ca_data: bytes) -> None:
+    import tempfile
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".pem") as f:
+        f.write(ca_data)
+        f.flush()
+        ssl_context.load_verify_locations(cafile=f.name)

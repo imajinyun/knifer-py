@@ -752,3 +752,27 @@ def new_json_array(cfg: Config | None = None) -> JSONArray:
 
 def new_config(**kwargs: Any) -> Config:
     return Config(**kwargs)
+
+
+# ========== XML to JSON / JSON to XML ==========
+
+
+def xml_to_json(xml_str: str) -> dict[str, Any]:
+    """Parse XML string into a JSON object."""
+    from kniferpy.internal.xmlx import to_map as xml_to_map
+    return xml_to_map(xml_str)
+
+
+def json_to_xml(data: dict[str, Any], root_tag: str = "root", *, pretty: bool = False) -> str:
+    """Serialize a JSON value to an XML string."""
+    from kniferpy.internal.xmlx import to_xml as xml_to_xml_str
+    return xml_to_xml_str(data, root_tag, pretty=pretty)
+
+
+# ========== GetByPathOr ==========
+
+
+def get_by_path_or(data: Any, path: str, default: Any = None) -> Any:
+    """Get value by JSON path expression with a default fallback."""
+    result = get_by_path(data, path)
+    return result if result is not None else default

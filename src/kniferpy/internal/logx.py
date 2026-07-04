@@ -213,6 +213,12 @@ class ConsoleLog:
     def errorf(self, template: str, *args: object) -> None:
         self.log(Level.ERROR, template, *args)
 
+    def fatal(self, *args: object) -> None:
+        self.log(Level.FATAL, "", *args)
+
+    def fatalf(self, template: str, *args: object) -> None:
+        self.log(Level.FATAL, template, *args)
+
 
 # ANSI color codes used by ConsoleColorLog.
 _ANSI_RESET = "\033[0m"
@@ -359,3 +365,47 @@ def log_at(level: Level, template: str, *args: object) -> None:
 def log_at_e(level: Level, err: BaseException | None, template: str, *args: object) -> None:
     """Log at ``level`` with an attached error through the static logger."""
     _static_logger.log_e(level, err, template, *args)
+
+
+def fatal(*args: object) -> None:
+    """Log fatal-level output through the static logger."""
+    _static_logger.fatal(*args)
+
+
+def fatalf(template: str, *args: object) -> None:
+    """Log formatted fatal-level output through the static logger."""
+    _static_logger.fatalf(template, *args)
+
+
+# Logger factory / named loggers
+_LogFactory = Callable[[str], "ConsoleLog"]
+_log_factory: _LogFactory | None = None
+_logger_cache: dict[str, "ConsoleLog"] = {}
+
+
+def set_log_factory(factory: _LogFactory) -> None:
+    global _log_factory
+    _log_factory = factory
+
+
+def get_factory() -> _LogFactory | None:
+    return _log_factory
+
+
+def logger(name: str) -> "ConsoleLog":
+    if name in _logger_cache:
+        return _logger_cache[name]
+    if _log_factory is not None:
+        lg = _log_factory(name)
+    else:
+        lg = ConsoleLog(name)
+    _logger_cache[name] = lg
+    return lg
+
+
+def default_logger() -> "ConsoleLog":
+    return _static_logger
+
+
+def new_isolated_logger(name: str) -> "ConsoleLog":
+    return ConsoleLog(name)

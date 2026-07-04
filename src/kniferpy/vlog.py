@@ -34,17 +34,24 @@ __all__ = [
     "Level",
     "debug",
     "debugf",
+    "default_logger",
     "error",
     "errorf",
+    "fatal",
+    "fatalf",
+    "get_factory",
     "get_level",
     "info",
     "infof",
     "log_at",
     "log_at_e",
+    "logger",
     "new_console_color_log",
     "new_console_log",
+    "new_isolated_logger",
     "render_message",
     "set_level",
+    "set_log_factory",
     "trace",
     "tracef",
     "warn",
@@ -165,3 +172,38 @@ def log_at(level: Level, template: str, *args: object) -> None:
 def log_at_e(level: Level, err: BaseException | None, template: str, *args: object) -> None:
     """Log at ``level`` with an attached error through the static logger."""
     logx.log_at_e(level, err, template, *args)
+
+
+def fatal(*args: object) -> None:
+    """Log fatal-level output through the static logger."""
+    logx.fatal(*args)
+
+
+def fatalf(template: str, *args: object) -> None:
+    """Log formatted fatal-level output through the static logger."""
+    logx.fatalf(template, *args)
+
+
+def set_log_factory(factory) -> None:
+    """Set the logger factory used by the static logger."""
+    logx.set_log_factory(factory)
+
+
+def get_factory():
+    """Return the current logger factory."""
+    return logx.get_factory()
+
+
+def logger(name: str) -> ConsoleLog:
+    """Return a named logger from the factory."""
+    return logx.logger(name)
+
+
+def default_logger() -> ConsoleLog:
+    """Return the default logger."""
+    return logx.default_logger()
+
+
+def new_isolated_logger(name: str) -> ConsoleLog:
+    """Create an isolated logger with a new factory."""
+    return logx.new_isolated_logger(name)

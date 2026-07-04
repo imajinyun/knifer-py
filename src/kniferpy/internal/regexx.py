@@ -596,3 +596,73 @@ def replace_first_re(
         return content
     repl = m.expand(replacement)
     return content[: m.start()] + repl + content[m.end() :]
+
+
+# Compiled regex variants
+def get_all_group_names_re(regex: re.Pattern[str]) -> list[str]:
+    if regex is None:
+        return []
+    return list(regex.groupindex.keys())
+
+
+def find_all_group_re(regex: re.Pattern[str], content: str, group_name: str) -> list[str]:
+    if regex is None or content == "" or group_name == "":
+        return []
+    results: list[str] = []
+    for m in regex.finditer(content):
+        try:
+            val = m.group(group_name)
+            if val is not None:
+                results.append(val)
+        except IndexError:
+            pass
+    return results
+
+
+def del_last_re(regex: re.Pattern[str], content: str) -> str:
+    if regex is None or content == "":
+        return content
+    last = None
+    for m in regex.finditer(content):
+        last = m
+    if last is None:
+        return content
+    return content[:last.start()] + content[last.end():]
+
+
+def del_pre_re(regex: re.Pattern[str], content: str) -> str:
+    if regex is None or content == "":
+        return content
+    m = regex.search(content)
+    if m is None:
+        return content
+    return content[:m.start()]
+
+
+def extract_multi_re(regex: re.Pattern[str], content: str, template: str) -> str:
+    if regex is None or content == "":
+        return content
+    return regex.sub(template, content)
+
+
+def extract_multi_and_del_pre_re(regex: re.Pattern[str], content: str, template: str) -> str:
+    if regex is None or content == "":
+        return content
+    m = regex.search(content)
+    if m is None:
+        return content
+    extracted = m.expand(template)
+    delimiter = content[m.end():m.end()] if m.end() < len(content) else ""
+    return extracted + delimiter + content[m.end():]
+
+
+def replace_all_re(regex: re.Pattern[str], content: str, replacement: str) -> str:
+    if regex is None or content == "":
+        return content
+    return regex.sub(replacement, content)
+
+
+def replace_all_func_re(regex: re.Pattern[str], content: str, replacer: Callable[[re.Match[str]], str]) -> str:
+    if regex is None or content == "":
+        return content
+    return regex.sub(replacer, content)

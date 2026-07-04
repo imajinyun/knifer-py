@@ -57,6 +57,13 @@ format_json_str = jsonx.format_json_str
 # Config
 new_config = jsonx.new_config
 
+# XML conversion
+xml_to_json = jsonx.xml_to_json
+json_to_xml = jsonx.json_to_xml
+
+# Safe path access
+get_by_path_or = jsonx.get_by_path_or
+
 __all__ = [
     "Config",
     "JSONArray",
@@ -92,4 +99,7 @@ __all__ = [
     "to_list",
     "format_json_str",
     "new_config",
+    "xml_to_json",
+    "json_to_xml",
+    "get_by_path_or",
 ]

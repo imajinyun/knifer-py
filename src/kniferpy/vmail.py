@@ -62,8 +62,10 @@ __all__ = [
     "new_address",
     "new_attachment",
     "new_attachment_file",
+    "new_attachment_reader",
     "new_inline",
     "new_inline_file",
+    "new_inline_reader",
     "new_message",
     "parse_address",
     "parse_address_list",
@@ -79,8 +81,10 @@ detect_content_type = mailx.detect_content_type
 new_address = mailx.new_address
 new_attachment = mailx.new_attachment
 new_attachment_file = mailx.new_attachment_file
+new_attachment_reader = mailx.new_attachment_reader
 new_inline = mailx.new_inline
 new_inline_file = mailx.new_inline_file
+new_inline_reader = mailx.new_inline_reader
 new_message = mailx.new_message
 parse_address = mailx.parse_address
 parse_address_list = mailx.parse_address_list

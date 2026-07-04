@@ -71,6 +71,8 @@ __all__ = [
     "new_tls_config_builder",
     "create_tls_config",
     "tls_version",
+    "new_cert_pool",
+    "add_root_ca_bytes",
     # DNS
     "get_dns_info",
     "get_ip_by_host",
@@ -292,6 +294,14 @@ def create_tls_config() -> ssl.SSLContext:
 
 def tls_version(version: str) -> int:
     return netx.tls_version(version)
+
+
+def new_cert_pool() -> ssl.SSLContext:
+    return netx.new_cert_pool()
+
+
+def add_root_ca_bytes(ssl_context: ssl.SSLContext, ca_data: bytes) -> None:
+    return netx.add_root_ca_bytes(ssl_context, ca_data)
 
 
 # ---------------------------------------------------------------------------

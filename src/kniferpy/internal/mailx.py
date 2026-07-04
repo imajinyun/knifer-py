@@ -4,7 +4,7 @@ import contextlib
 import mimetypes
 import smtplib
 import ssl
-from collections.abc import Iterable, Iterator, Mapping, Sequence
+from collections.abc import Callable, Iterable, Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import datetime
 from email.message import EmailMessage
@@ -708,3 +708,12 @@ def send_account_html(
     account: Account, to: AddressInput, subject: str, html: str, **kwargs: Any
 ) -> None:
     quick_send(account, to=to, subject=subject, html=html, **kwargs)
+
+
+# Reader-based attachments
+def new_attachment_reader(name: str, reader: Callable[[], bytes], *, content_type: str = "") -> Attachment:
+    return _new_bytes_attachment(name, reader(), content_type, "", False)
+
+
+def new_inline_reader(name: str, content_id: str, reader: Callable[[], bytes], *, content_type: str = "") -> Attachment:
+    return _new_bytes_attachment(name, reader(), content_type, content_id, True)

@@ -50,6 +50,8 @@ from kniferpy.internal.restyx import (
     get_global_timeout,
     get_global_user_agent,
     get_mime_type,
+    configure_default_resty_client_provider,
+    reset_default_resty_client_provider,
     get_safe,
     get_string_e,
     get_string_e_with_options,
@@ -254,4 +256,6 @@ __all__ = [
     "get_charset_from_html",
     "get_charset_from_html_with_options",
     "get_mime_type",
+    "configure_default_resty_client_provider",
+    "reset_default_resty_client_provider",
 ]

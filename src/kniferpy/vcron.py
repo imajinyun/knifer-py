@@ -62,6 +62,12 @@ __all__ = [
     "restart",
     "set_match_second",
     "running_count",
+    "cron_launching_count",
+    "new_config",
+    "new_scheduler",
+    "new_cron_task",
+    "default_scheduler",
+    "cron_set_match_second",
 ]
 
 
@@ -79,3 +85,11 @@ def match(expr: str, moment: datetime, match_second: bool = False) -> bool:
 
 def next_time(expr: str, after: datetime, match_second: bool = False) -> datetime | None:
     return cronx.next_time(expr, after, match_second)
+
+
+cron_launching_count = cronx.cron_launching_count
+new_config = cronx.new_config
+new_scheduler = cronx.new_scheduler
+new_cron_task = cronx.new_cron_task
+default_scheduler = cronx.default_scheduler
+cron_set_match_second = cronx.cron_set_match_second

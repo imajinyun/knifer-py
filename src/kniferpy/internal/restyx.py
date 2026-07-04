@@ -1668,3 +1668,20 @@ def get_mime_type(filename: str) -> str:
     """GetMimeType returns the MIME type by file extension."""
     ext = Path(filename).suffix.lower()
     return _mime_types.get(ext, ContentType.OCTET_STREAM)
+
+
+# ---------------------------------------------------------------------------
+# Default client provider
+# ---------------------------------------------------------------------------
+
+_default_client_provider: Callable[[], "Client"] | None = None
+
+
+def configure_default_resty_client_provider(provider: Callable[[], "Client"] | None) -> None:
+    global _default_client_provider
+    _default_client_provider = provider
+
+
+def reset_default_resty_client_provider() -> None:
+    global _default_client_provider
+    _default_client_provider = None

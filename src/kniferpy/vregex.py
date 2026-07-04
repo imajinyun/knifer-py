@@ -72,6 +72,16 @@ del_all_re = regexx.del_all_re
 del_first_re = regexx.del_first_re
 replace_first_re = regexx.replace_first_re
 
+# Pre-compiled regex helpers (continued)
+get_all_group_names_re = regexx.get_all_group_names_re
+find_all_group_re = regexx.find_all_group_re
+del_last_re = regexx.del_last_re
+del_pre_re = regexx.del_pre_re
+extract_multi_re = regexx.extract_multi_re
+extract_multi_and_del_pre_re = regexx.extract_multi_and_del_pre_re
+replace_all_re = regexx.replace_all_re
+replace_all_func_re = regexx.replace_all_func_re
+
 __all__ = [
     "MatchResult",
     "RE_CHINESE",
@@ -122,4 +132,12 @@ __all__ = [
     "del_all_re",
     "del_first_re",
     "replace_first_re",
+    "get_all_group_names_re",
+    "find_all_group_re",
+    "del_last_re",
+    "del_pre_re",
+    "extract_multi_re",
+    "extract_multi_and_del_pre_re",
+    "replace_all_re",
+    "replace_all_func_re",
 ]

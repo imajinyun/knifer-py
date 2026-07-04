@@ -748,3 +748,27 @@ def set_match_second(match_second: bool) -> None:
 
 def running_count() -> int:
     return _get_default_scheduler().running_count()
+
+
+def cron_launching_count() -> int:
+    return _get_default_scheduler().running_count()
+
+
+def new_config() -> Config:
+    return Config()
+
+
+def new_scheduler(match_second: bool = False) -> Scheduler:
+    return Scheduler(match_second=match_second)
+
+
+def new_cron_task(id: str, pattern: str, task: Task) -> CronTask:
+    return CronTask(id=id, pattern=pattern, task=task)
+
+
+def default_scheduler() -> Scheduler:
+    return _get_default_scheduler()
+
+
+def cron_set_match_second(match_second: bool) -> None:
+    _get_default_scheduler().set_match_second(match_second)
