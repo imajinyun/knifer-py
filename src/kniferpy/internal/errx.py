@@ -23,6 +23,10 @@ from typing import Any, Callable, Protocol, runtime_checkable
 
 _logger = logging.getLogger("kniferpy.errx")
 
+# Sentry DSN environment variable key (Go compat)
+SENTRY_DSN = "SENTRY_DSN"
+SentryDSN = SENTRY_DSN
+
 # ---------------------------------------------------------------------------
 # Error codes (mirrors knifer-go ErrCode constants)
 # ---------------------------------------------------------------------------
@@ -348,6 +352,28 @@ class Collector:
             time.sleep(0.1)
         err = self.error()
         return err is None, err
+
+    def wait_until_with_options(
+        self,
+        duration: float,
+        *,
+        ctx: Any = None,
+        timer_factory: TimerFactory | None = None,
+    ) -> tuple[bool, BaseException | None]:
+        """Wait for a duration with options, checking if errors occurred."""
+        return self.wait_until(duration)
+
+    def collect_error(self, fn: Callable[[], Any], error_format: str = "", *args: Any) -> BaseException | None:
+        """Execute fn, collect errors, return the error."""
+        try:
+            fn()
+            return None
+        except Exception as exc:
+            stack = get_stack(3)
+            msg = error_format % args if args else str(exc)
+            self._log_func("error", msg, stack)
+            self.collect(exc)
+            return exc
 
 
 def new_collector() -> Collector:

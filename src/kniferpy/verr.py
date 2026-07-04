@@ -18,6 +18,7 @@ from kniferpy.internal.errx import (
     ERR_CODE_TIMEOUT,
     ERR_CODE_UNSAFE_RESOURCE,
     ERR_CODE_UNSUPPORTED,
+    SENTRY_DSN,
     Collector,
     CryptoError,
     DecodeError,
@@ -26,6 +27,7 @@ from kniferpy.internal.errx import (
     LogFunc,
     PanicError,
     SecurityError,
+    SentryDSN,
     TimerFactory,
     ValidationError,
     WithStack,
@@ -64,6 +66,9 @@ __all__ = [
     "ERR_CODE_TIMEOUT",
     "ERR_CODE_UNSAFE_RESOURCE",
     "ERR_CODE_UNSUPPORTED",
+    # Sentry
+    "SENTRY_DSN",
+    "SentryDSN",
     # Protocols
     "WithStack",
     "WithStackTrace",
