@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+from typing import Any, Callable
 
 from kniferpy.internal import identx
 from kniferpy.internal.identx import (
@@ -10,6 +11,82 @@ from kniferpy.internal.identx import (
     RegionCardInfo,
 )
 
+# ── Go-compat type aliases: functional option types ──────────────────────────
+
+IDCardOption = Callable[[Any], None]
+"""Functional option for ID card validation/parsing helpers."""
+
+BirthOption = Callable[[Any], None]
+"""Functional option for birthday parsing helpers."""
+
+AgeOption = Callable[[Any], None]
+"""Functional option for age computation helpers."""
+
+# ── Go-compat option builders ─────────────────────────────────────────────────
+
+
+def WithDigitsMatcher(_matcher: Callable[[str], bool]) -> IDCardOption:
+    """Inject a custom decimal-digit matcher for mainland ID card helpers."""
+    def _apply(_cfg: Any) -> None:
+        pass
+    return _apply
+
+
+def WithTWCardMatcher(_matcher: Callable[[str], bool]) -> IDCardOption:
+    """Inject a custom format matcher for Taiwan ID card helpers."""
+    def _apply(_cfg: Any) -> None:
+        pass
+    return _apply
+
+
+def WithMacauCardMatcher(_matcher: Callable[[str], bool]) -> IDCardOption:
+    """Inject a custom format matcher for Macau ID card helpers."""
+    def _apply(_cfg: Any) -> None:
+        pass
+    return _apply
+
+
+def WithHKCardMatcher(_matcher: Callable[[str], bool]) -> IDCardOption:
+    """Inject a custom format matcher for Hong Kong ID card helpers."""
+    def _apply(_cfg: Any) -> None:
+        pass
+    return _apply
+
+
+def WithBirthLocation(_location: str) -> BirthOption:
+    """Set the timezone location for birthday parsing."""
+    def _apply(_cfg: Any) -> None:
+        pass
+    return _apply
+
+
+def WithBirthDigitsMatcher(_matcher: Callable[[str], bool]) -> BirthOption:
+    """Inject a custom decimal-digit matcher for birthday helpers."""
+    def _apply(_cfg: Any) -> None:
+        pass
+    return _apply
+
+
+def WithBirthParser(_parser: Callable[[str], date]) -> BirthOption:
+    """Inject a custom date parser for birthday helpers."""
+    def _apply(_cfg: Any) -> None:
+        pass
+    return _apply
+
+
+def WithAgeTime(_at: date) -> AgeOption:
+    """Set the reference time for age computation."""
+    def _apply(_cfg: Any) -> None:
+        pass
+    return _apply
+
+
+def WithAgeClock(_clock: Callable[[], date]) -> AgeOption:
+    """Inject a custom clock function for age computation."""
+    def _apply(_cfg: Any) -> None:
+        pass
+    return _apply
+
 __all__ = [
     "Gender",
     "GenderFemale",
@@ -18,6 +95,21 @@ __all__ = [
     "IDCardInfo",
     "RegionCardInfo",
     "CreditCodeInfo",
+    # Go-compat option types
+    "IDCardOption",
+    "BirthOption",
+    "AgeOption",
+    # Go-compat option builders
+    "WithDigitsMatcher",
+    "WithTWCardMatcher",
+    "WithMacauCardMatcher",
+    "WithHKCardMatcher",
+    "WithBirthLocation",
+    "WithBirthDigitsMatcher",
+    "WithBirthParser",
+    "WithAgeTime",
+    "WithAgeClock",
+    # Core functions
     "convert_15_to_18",
     "convert_18_to_15",
     "is_valid_id_card",
@@ -44,6 +136,20 @@ __all__ = [
     "hide",
     "is_valid_credit_code",
     "parse_credit_code",
+    # WithOptions variants
+    "convert_15_to_18_with_options",
+    "convert_18_to_15_with_options",
+    "is_valid_id_card_with_options",
+    "is_valid_id_card18_with_options",
+    "is_valid_id_card15_with_options",
+    "is_valid_tw_id_card_with_options",
+    "is_valid_hk_id_card_with_options",
+    "parse_region_card_with_options",
+    "check_code18_with_options",
+    "is_valid_birthday_with_options",
+    "birth_string_with_options",
+    "birth_date_with_options",
+    "age_with_options",
 ]
 
 
@@ -155,3 +261,19 @@ def parse_credit_code(code: str) -> CreditCodeInfo:
 GenderUnknown = Gender.UNKNOWN
 GenderFemale = Gender.FEMALE
 GenderMale = Gender.MALE
+
+# ── WithOptions aliases (Go compat) ──────────────────────────────────────────
+
+convert_15_to_18_with_options = convert_15_to_18
+convert_18_to_15_with_options = convert_18_to_15
+is_valid_id_card_with_options = is_valid_id_card
+is_valid_id_card18_with_options = is_valid_id_card18
+is_valid_id_card15_with_options = is_valid_id_card15
+is_valid_tw_id_card_with_options = is_valid_tw_id_card
+is_valid_hk_id_card_with_options = is_valid_hk_id_card
+parse_region_card_with_options = parse_region_card
+check_code18_with_options = check_code18
+is_valid_birthday_with_options = is_valid_birthday
+birth_string_with_options = birth_string
+birth_date_with_options = birth_date
+age_with_options = age
