@@ -138,6 +138,13 @@ validate_aes_key = cryptox.validate_aes_key
 validate_aes_iv = cryptox.validate_aes_iv
 validate_aes_gcm_nonce = cryptox.validate_aes_gcm_nonce
 
+# ── *WithOptions aliases (Go compat) ──────────────────────────────────────────
+
+gen_aes_key_with_options = cryptox.gen_aes_key_with_options
+secure_bytes_with_options = cryptox.secure_bytes_with_options
+totp_now_with_options = cryptox.totp_now_with_options
+totp_verify_now_with_options = cryptox.totp_verify_now_with_options
+
 # ── __all__ ─────────────────────────────────────────────────────────────────
 
 __all__ = [
