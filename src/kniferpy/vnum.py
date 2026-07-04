@@ -20,10 +20,22 @@ from kniferpy.internal.numx import (
     _with_random_reader,
 )
 
+# ── Go-compat type aliases ────────────────────────────────────────────────────
+
+# Number constraint: all numeric types (Go compat: ~int | ~float | ...)
+Number = int | float
+"""Union of all built-in numeric types (Go compat: constraint.Number)."""
+
+# Ordered constraint: all ordered types (Go compat: cmp.Ordered)
+Ordered = int | float | str
+"""Union of all ordered types (Go compat: cmp.Ordered)."""
+
 __all__ = [
     # Types
     "DoubleOption",
     "FormatOption",
+    "Number",
+    "Ordered",
     "ParseOption",
     "RandomNumberOption",
     "RoundingMode",
