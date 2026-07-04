@@ -78,6 +78,15 @@ __all__ = [
     "rs_hash",
     "sdbm_hash",
     "tianl_hash",
+    # Bloom-prefixed hash aliases (Go compat)
+    "BloomRSHash",
+    "BloomJSHash",
+    "BloomPJWHash",
+    "BloomELFHash",
+    "BloomBKDRHash",
+    "BloomSDBMHash",
+    "BloomDJBHash",
+    "BloomFNVHash",
 ]
 
 
@@ -197,3 +206,15 @@ def init_from_reader(bloom: BitSetBloomFilter, reader: list[str]) -> None:
 
 def new_default_bloom_filter(max_value: int) -> FuncFilter:
     return blfx.new_default_filter(max_value)
+
+
+# ── Bloom-prefixed hash aliases (Go compat) ────────────────────────────────────
+
+BloomRSHash = rs_hash
+BloomJSHash = js_hash
+BloomPJWHash = pjw_hash
+BloomELFHash = elf_hash
+BloomBKDRHash = bkdr_hash
+BloomSDBMHash = sdbm_hash
+BloomDJBHash = djb_hash
+BloomFNVHash = fnv_hash_string
