@@ -697,3 +697,55 @@ def open_db(driver_name: str, data_source_name: str, opts: list[Callable[[Option
     wrapper = options.wrapper or wrapper_for_dialect(dialect)
     conn = sqlite3.connect(data_source_name)
     return DB(_conn=conn, _dialect=dialect, _wrapper=wrapper)
+
+
+# --- DB-level helpers --------------------------------------------------------
+
+
+def use(conn: object, opts: list[Callable[[Options], None]] | None = None) -> DB:
+    options = new_options()
+    if opts:
+        for opt in opts:
+            opt(options)
+    dialect = options.dialect if options.dialect != Dialect.UNKNOWN else Dialect.QUESTION
+    wrapper = options.wrapper or wrapper_for_dialect(dialect)
+    return DB(_conn=conn, _dialect=dialect, _wrapper=wrapper)
+
+
+def exec(db: DB, query: str, args: tuple | None = None) -> object:
+    cursor = db._conn.execute(query, args or ())
+    return cursor
+
+
+def scan_rows(cursor: object) -> list[dict]:
+    if cursor is None:
+        return []
+    try:
+        if cursor.description is None:
+            return []
+        cols = [desc[0] for desc in cursor.description]
+        rows = cursor.fetchall()
+        return [dict(zip(cols, row)) for row in rows]
+    finally:
+        try:
+            cursor.close()
+        except Exception:
+            pass
+
+
+def scan_one(cursor: object) -> tuple[dict | None, bool]:
+    if cursor is None:
+        return None, False
+    try:
+        if cursor.description is None:
+            return None, False
+        row = cursor.fetchone()
+        if row is None:
+            return None, False
+        cols = [desc[0] for desc in cursor.description]
+        return dict(zip(cols, row)), True
+    finally:
+        try:
+            cursor.close()
+        except Exception:
+            pass

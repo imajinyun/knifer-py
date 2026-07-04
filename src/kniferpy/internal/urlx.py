@@ -275,6 +275,11 @@ def new_url_builder() -> URLBuilder:
     return URLBuilder()
 
 
+def new_http_url_builder(host: str) -> URLBuilder:
+    """Create a URLBuilder pre-initialized with scheme 'http' and given host."""
+    return URLBuilder().set_scheme("http").set_host(host)
+
+
 def parse_url_builder(raw: str) -> URLBuilder:
     parsed = urlparse(raw)
     builder = URLBuilder()
@@ -431,6 +436,19 @@ def decoded_path(raw: str) -> str:
 def url_path(raw: str) -> str:
     """Return the decoded path part of a URL."""
     return decoded_path(raw)
+
+
+def path(raw: str) -> tuple[str, str]:
+    """Return the decoded path of a URL (Go-compat: (path, error_str))."""
+    parsed = urlparse(raw)
+    return unquote(parsed.path), ""
+
+
+def decoded_path_from_parsed(u: ParseResult) -> str:
+    """Return the decoded path from an already-parsed URL (Go DecodedPath compat)."""
+    if u is None:
+        return ""
+    return unquote(u.path)
 
 
 def to_uri(location: str, *, encode: bool = False) -> str:

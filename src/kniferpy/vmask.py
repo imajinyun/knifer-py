@@ -1,6 +1,31 @@
 from __future__ import annotations
 
 from kniferpy.internal import maskx
+from kniferpy.internal.maskx import MaskType
+
+__all__ = [
+    "MaskType",
+    "address",
+    "bank_card",
+    "car_license",
+    "chinese_name",
+    "clear",
+    "clear_to_nil",
+    "credit_code",
+    "email",
+    "first_mask",
+    "fixed_phone",
+    "hide",
+    "id_card",
+    "ipv4",
+    "ipv6",
+    "masked",
+    "masked_ptr",
+    "mobile_phone",
+    "passport",
+    "password",
+    "user_id_value",
+]
 
 
 def hide(value: str, start: int, end: int) -> str:
@@ -65,3 +90,19 @@ def credit_code(value: str) -> str:
 
 def clear() -> str:
     return maskx.clear()
+
+
+def masked(value: str, typ: MaskType) -> str:
+    return maskx.masked(value, typ)
+
+
+def masked_ptr(value: str, typ: MaskType) -> str | None:
+    return maskx.masked_ptr(value, typ)
+
+
+def clear_to_nil() -> None:
+    return maskx.clear_to_nil()
+
+
+def user_id_value() -> int:
+    return maskx.user_id_value()

@@ -9,37 +9,50 @@ T = TypeVar("T")
 R = TypeVar("R")
 
 __all__ = [
-    "equal",
-    "equals",
-    "not_equal",
-    "length",
-    "contains",
-    "is_none",
-    "is_not_none",
-    "is_nil",
-    "is_not_nil",
-    "is_null",
-    "is_not_null",
-    "is_empty",
-    "is_not_empty",
-    "default_if_none",
-    "default_if_none_func",
-    "default_if_none_apply",
     "apply",
     "accept",
-    "is_basic_type",
-    "is_valid_if_number",
+    "clone",
+    "clone_by_stream",
+    "clone_if_possible",
     "compare",
     "compare_none",
-    "type_of",
-    "type_name",
-    "to_string",
+    "contains",
+    "default_if_none",
+    "default_if_none_apply",
+    "default_if_none_func",
+    "deserialize",
+    "deserialize_to",
     "empty_count",
+    "equal",
+    "equals",
+    "has_empty",
     "has_none",
     "has_null",
-    "has_empty",
     "is_all_empty",
     "is_all_not_empty",
+    "is_basic_type",
+    "is_empty",
+    "is_nil",
+    "is_not_empty",
+    "is_not_nil",
+    "is_not_null",
+    "is_not_none",
+    "is_null",
+    "is_none",
+    "is_valid_if_number",
+    "length",
+    "must_deserialize",
+    "not_equal",
+    "register",
+    "register_name",
+    "serialize",
+    "serialize_or_nil",
+    "to_string",
+    "type_name",
+    "type_of",
+    "validate_accepted_types",
+    "with_decoder_factory",
+    "with_encoder_factory",
 ]
 
 
@@ -165,3 +178,71 @@ def is_not_nil(v: object) -> bool:
 
 def has_null(*values: object) -> bool:
     return objx.has_null(*values)
+
+
+# ── Clone / serialize / deserialize / register ────────────────────────────
+
+
+def clone(src: T) -> T:
+    """Deep copy through pickle serialization."""
+    return objx.clone(src)
+
+
+def clone_if_possible(src: T) -> T:
+    """Return cloned value, or src on failure."""
+    return objx.clone_if_possible(src)
+
+
+def clone_by_stream(src: T) -> T:
+    """Deep copy through pickle serialization (alias of clone)."""
+    return objx.clone_by_stream(src)
+
+
+def serialize(obj: T) -> bytes:
+    """Encode obj to bytes using the configured encoder."""
+    return objx.serialize(obj)
+
+
+def serialize_or_nil(obj: T) -> bytes | None:
+    """Encode obj to bytes, returning None on failure."""
+    return objx.serialize_or_nil(obj)
+
+
+def deserialize(data: bytes, out_type: type, *accepted_types: type) -> object:
+    """Decode data into an object, optionally validating accepted types."""
+    return objx.deserialize(data, out_type, accepted_types)
+
+
+def deserialize_to(data: bytes, *accepted_types: type) -> T:
+    """Decode data into a new value."""
+    return objx.deserialize_to(data, accepted_types)
+
+
+def must_deserialize(data: bytes, *accepted_types: type) -> T:
+    """Decode data or raise."""
+    return objx.must_deserialize(data, accepted_types)
+
+
+def register(value: type) -> None:
+    """Record a concrete type for type-registry encoding."""
+    objx.register(value)
+
+
+def register_name(name: str, value: type) -> None:
+    """Record a concrete type with a custom name."""
+    objx.register_name(name, value)
+
+
+def validate_accepted_types(value: object, *accepted_types: type) -> None:
+    """Check whether value only contains built-in safe types plus accepted types."""
+    objx.validate_accepted_types(value, *accepted_types)
+
+
+def with_encoder_factory(factory: Callable[[], Callable[[object], bytes]]) -> None:
+    """Set the encoder factory for serialization."""
+    objx.with_encoder_factory(factory)
+
+
+def with_decoder_factory(factory: Callable[[], Callable[[bytes], object]]) -> None:
+    """Set the decoder factory for deserialization."""
+    objx.with_decoder_factory(factory)

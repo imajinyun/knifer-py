@@ -772,3 +772,43 @@ def default_scheduler() -> Scheduler:
 
 def cron_set_match_second(match_second: bool) -> None:
     _get_default_scheduler().set_match_second(match_second)
+
+
+# --- CronError ---------------------------------------------------------------
+
+
+class CronError(ValidationError):
+    def __init__(self, message: str, cause: BaseException | None = None) -> None:
+        super().__init__(message=message, code="knifer.cron.error")
+        self.cause = cause
+
+    def __str__(self) -> str:
+        if self.cause is not None:
+            return f"{self.message}: {self.cause}"
+        return self.message
+
+
+def new_cron_error(format: str, *args: object) -> CronError:
+    return CronError(message=format % args if args else format)
+
+
+def wrap_cron_error(cause: BaseException, format: str, *args: object) -> CronError:
+    return CronError(message=format % args if args else format, cause=cause)
+
+
+class _ErrSchedulerStarted(RuntimeError):
+    pass
+
+
+ERR_SCHEDULER_STARTED = _ErrSchedulerStarted("scheduler already started")
+
+
+def cron_set_match_second_e(match_second: bool) -> None:
+    s = _get_default_scheduler()
+    if s.is_started():
+        raise ERR_SCHEDULER_STARTED
+    s.set_match_second(match_second)
+
+
+def cron_schedule_func(pattern: str, fn: Callable[[], None]) -> str:
+    return _get_default_scheduler().schedule_func(pattern, fn)

@@ -8,6 +8,8 @@ default, so ``bad`` still matches ``b-a-d``.
 
 from __future__ import annotations
 
+from typing import Callable
+
 from kniferpy.internal import dfax
 from kniferpy.internal.dfax import (
     DEFAULT_SEPARATOR,
@@ -15,9 +17,13 @@ from kniferpy.internal.dfax import (
     FoundWord,
     Processor,
     WordTree,
+    configure_async_runner,
     default_processor,
+    init_async,
+    init_string_async,
     is_not_stop_char,
     is_stop_char,
+    reset_async_runner,
 )
 
 __all__ = [
@@ -26,6 +32,7 @@ __all__ = [
     "FoundWord",
     "Processor",
     "WordTree",
+    "configure_async_runner",
     "contains",
     "contains_any",
     "default_processor",
@@ -38,11 +45,14 @@ __all__ = [
     "get_found_first",
     "get_found_first_any",
     "init",
+    "init_async",
     "init_string",
+    "init_string_async",
     "is_inited",
     "is_not_stop_char",
     "is_stop_char",
     "new_word_tree",
+    "reset_async_runner",
     "set_char_filter",
 ]
 
@@ -123,3 +133,24 @@ def filter_mode(
     processor: Processor | None = None,
 ) -> str:
     return dfax.filter_mode(text, density_match, greed_match, processor)
+
+
+def configure_async_runner(runner: Callable[[Callable[[], None]], None] | None) -> None:
+    return dfax.configure_async_runner(runner)
+
+
+def reset_async_runner() -> None:
+    return dfax.reset_async_runner()
+
+
+def init_async(words: list[str], *, char_filter: CharFilter | None = None) -> None:
+    return dfax.init_async(words, char_filter=char_filter)
+
+
+def init_string_async(
+    words: str,
+    separator: str = DEFAULT_SEPARATOR,
+    *,
+    char_filter: CharFilter | None = None,
+) -> None:
+    return dfax.init_string_async(words, separator, char_filter=char_filter)

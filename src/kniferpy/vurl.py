@@ -33,6 +33,8 @@ __all__ = [
     "decode_query",
     "decode_query_first",
     "decode_query_map",
+    "decoded_path",
+    "decoded_path_from_parsed",
     "encode_all",
     "encode_blank",
     "encode_fragment",
@@ -56,6 +58,7 @@ __all__ = [
     "is_jar_url",
     "is_private_host",
     "is_web_url",
+    "new_http_url_builder",
     "new_url_builder",
     "normalize",
     "normalize_query",
@@ -65,6 +68,7 @@ __all__ = [
     "parse",
     "parse_http",
     "parse_url_builder",
+    "path",
     "redact_userinfo",
     "remove_query",
     "size",
@@ -116,6 +120,7 @@ encode_blank = urlx.encode_blank
 # ── URL builder ───────────────────────────────────────────────────────────────
 
 new_url_builder = urlx.new_url_builder
+new_http_url_builder = urlx.new_http_url_builder
 parse_url_builder = urlx.parse_url_builder
 
 
@@ -137,6 +142,9 @@ file_urls = urlx.file_urls
 host = urlx.host
 complete = urlx.complete
 url_path = urlx.url_path
+decoded_path = urlx.decoded_path
+decoded_path_from_parsed = urlx.decoded_path_from_parsed
+path = urlx.path
 to_uri = urlx.to_uri
 
 

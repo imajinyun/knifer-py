@@ -193,3 +193,33 @@ def get_datacenter_id(max_datacenter_id: int = _MAX_DATACENTER_ID) -> int:
 
 def get_worker_id(datacenter_id: int, max_worker_id: int = _MAX_WORKER_ID) -> int:
     return os.getpid() & max_worker_id
+
+
+# --- Fallback random source --------------------------------------------------
+
+import random as _random
+import threading as _threading
+
+_fallback_random_lock = _threading.Lock()
+_fallback_random: _random.Random | None = None
+_fallback_random_provider: Callable[[], _random.Random] = lambda: _random.Random()
+
+
+def configure_default_fallback_random_source_provider(provider: Callable[[], _random.Random] | None) -> None:
+    global _fallback_random, _fallback_random_provider
+    with _fallback_random_lock:
+        _fallback_random = None
+        if provider is None:
+            _fallback_random_provider = lambda: _random.Random()
+            return
+        _fallback_random_provider = provider
+
+
+def reset_default_fallback_random_source() -> None:
+    configure_default_fallback_random_source_provider(None)
+
+
+def set_fallback_random_seed(seed: int) -> None:
+    global _fallback_random
+    with _fallback_random_lock:
+        _fallback_random = _random.Random(seed)

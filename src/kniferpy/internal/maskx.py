@@ -132,3 +132,80 @@ def credit_code(value: str) -> str:
 
 def clear() -> str:
     return ""
+
+
+# --- Type-based masked dispatch ----------------------------------------------
+
+from enum import IntEnum
+
+
+class MaskType(IntEnum):
+    USER_ID = 0
+    CHINESE_NAME = 1
+    ID_CARD = 2
+    FIXED_PHONE = 3
+    MOBILE_PHONE = 4
+    ADDRESS = 5
+    EMAIL = 6
+    PASSWORD = 7
+    CAR_LICENSE = 8
+    BANK_CARD = 9
+    IPV4 = 10
+    IPV6 = 11
+    PASSPORT = 12
+    CREDIT_CODE = 13
+    FIRST_MASK = 14
+    CLEAR_TO_NULL = 15
+    CLEAR_TO_EMPTY = 16
+
+
+def masked(value: str, typ: MaskType) -> str:
+    if value.strip() == "":
+        return ""
+    if typ == MaskType.USER_ID:
+        return "0"
+    if typ == MaskType.CHINESE_NAME:
+        return chinese_name(value)
+    if typ == MaskType.ID_CARD:
+        return id_card(value, 1, 2)
+    if typ == MaskType.FIXED_PHONE:
+        return fixed_phone(value)
+    if typ == MaskType.MOBILE_PHONE:
+        return mobile_phone(value)
+    if typ == MaskType.ADDRESS:
+        return address(value, 8)
+    if typ == MaskType.EMAIL:
+        return email(value)
+    if typ == MaskType.PASSWORD:
+        return password(value)
+    if typ == MaskType.CAR_LICENSE:
+        return car_license(value)
+    if typ == MaskType.BANK_CARD:
+        return bank_card(value)
+    if typ == MaskType.IPV4:
+        return ipv4(value)
+    if typ == MaskType.IPV6:
+        return ipv6(value)
+    if typ == MaskType.PASSPORT:
+        return passport(value)
+    if typ == MaskType.CREDIT_CODE:
+        return credit_code(value)
+    if typ == MaskType.FIRST_MASK:
+        return first_mask(value)
+    if typ in (MaskType.CLEAR_TO_EMPTY, MaskType.CLEAR_TO_NULL):
+        return ""
+    return value
+
+
+def masked_ptr(value: str, typ: MaskType) -> str | None:
+    if typ == MaskType.CLEAR_TO_NULL:
+        return None
+    return masked(value, typ)
+
+
+def clear_to_nil() -> None:
+    return None
+
+
+def user_id_value() -> int:
+    return 0

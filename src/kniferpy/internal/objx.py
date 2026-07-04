@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import pickle
 from collections.abc import Callable
 from typing import TypeVar
 
@@ -173,3 +174,125 @@ def is_nil(v: object) -> bool:
 
 def is_not_nil(v: object) -> bool:
     return v is not None
+
+
+# ---------------------------------------------------------------------------
+# Clone / serialize / deserialize / register (mirrors Go vobj gob-based API)
+# ---------------------------------------------------------------------------
+
+_CODEC_CONFIG: dict[str, Callable] = {}
+
+
+def _default_encoder() -> Callable[[object], bytes]:
+    return pickle.dumps
+
+
+def _default_decoder() -> Callable[[bytes], object]:
+    return pickle.loads
+
+
+def with_encoder_factory(factory: Callable[[], Callable[[object], bytes]]) -> None:
+    _CODEC_CONFIG["encoder_factory"] = factory
+
+
+def with_decoder_factory(factory: Callable[[], Callable[[bytes], object]]) -> None:
+    _CODEC_CONFIG["decoder_factory"] = factory
+
+
+def _get_encoder() -> Callable[[object], bytes]:
+    factory = _CODEC_CONFIG.get("encoder_factory")
+    return factory() if factory else _default_encoder()
+
+
+def _get_decoder() -> Callable[[bytes], object]:
+    factory = _CODEC_CONFIG.get("decoder_factory")
+    return factory() if factory else _default_decoder()
+
+
+def clone(src: T) -> T:
+    """Deep copy through pickle serialization."""
+    return _get_decoder()(_get_encoder()(src))
+
+
+def clone_if_possible(src: T) -> T:
+    """Return cloned value, or src on failure."""
+    try:
+        return clone(src)
+    except Exception:
+        return src
+
+
+def clone_by_stream(src: T) -> T:
+    """Deep copy through pickle serialization (alias of clone)."""
+    return clone(src)
+
+
+def serialize(obj: T) -> bytes:
+    """Encode obj to bytes using the configured encoder."""
+    return _get_encoder()(obj)
+
+
+def serialize_or_nil(obj: T) -> bytes | None:
+    """Encode obj to bytes, returning None on failure."""
+    try:
+        return serialize(obj)
+    except Exception:
+        return None
+
+
+def deserialize(data: bytes, out_type: type, accepted_types: tuple[type, ...] = ()) -> object:
+    """Decode data into an object, optionally validating accepted types."""
+    obj = _get_decoder()(data)
+    if accepted_types:
+        validate_accepted_types(obj, *accepted_types)
+    return obj
+
+
+def deserialize_to(data: bytes, accepted_types: tuple[type, ...] = ()) -> T:
+    """Decode data into a new value."""
+    return deserialize(data, object, accepted_types)
+
+
+def must_deserialize(data: bytes, accepted_types: tuple[type, ...] = ()) -> T:
+    """Decode data or raise."""
+    return deserialize(data, object, accepted_types)
+
+
+_REGISTERED_TYPES: dict[str, type] = {}
+
+
+def register(value: type) -> None:
+    """Record a concrete type for type-registry encoding."""
+    _REGISTERED_TYPES[value.__name__] = value
+
+
+def register_name(name: str, value: type) -> None:
+    """Record a concrete type with a custom name."""
+    _REGISTERED_TYPES[name] = value
+
+
+def validate_accepted_types(value: object, *accepted_types: type) -> None:
+    """Check whether value only contains built-in safe types plus accepted types."""
+    from kniferpy.verr import SecurityError
+    _check_type(value, accepted_types)
+
+
+def _check_type(value: object, accepted_types: tuple[type, ...]) -> None:
+    from kniferpy.verr import SecurityError
+
+    SAFE = (bool, int, float, complex, str, bytes, bytearray, type(None))
+    if isinstance(value, (dict,)):
+        if not all(isinstance(k, SAFE) for k in value):
+            raise SecurityError("unsafe key type in deserialized data", code="knifer.unsafe_type")
+        for v in value.values():
+            _check_type(v, accepted_types)
+    elif isinstance(value, (list, tuple, set)):
+        for v in value:
+            _check_type(v, accepted_types)
+    elif isinstance(value, SAFE + accepted_types):
+        pass
+    else:
+        raise SecurityError(
+            f"unsafe type in deserialized data: {type(value).__name__}",
+            code="knifer.unsafe_type",
+        )

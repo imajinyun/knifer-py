@@ -12,6 +12,8 @@ from typing import Callable
 
 from kniferpy.internal import cronx
 from kniferpy.internal.cronx import (
+    ERR_SCHEDULER_STARTED,
+    CronError,
     CronTask,
     Part,
     Pattern,
@@ -22,6 +24,9 @@ from kniferpy.internal.cronx import (
     TaskListener,
     TaskTable,
     configure_default_scheduler,
+    cron_schedule_func,
+    cron_set_match_second_e,
+    new_cron_error,
     remove,
     restart,
     running_count,
@@ -33,12 +38,15 @@ from kniferpy.internal.cronx import (
     start,
     stop,
     update_pattern,
+    wrap_cron_error,
 )
 
 __all__ = [
     "Part",
     "Pattern",
+    "CronError",
     "CronTask",
+    "ERR_SCHEDULER_STARTED",
     "Scheduler",
     "Task",
     "TaskFunc",
@@ -51,6 +59,9 @@ __all__ = [
     "next_time",
     # Global scheduler
     "configure_default_scheduler",
+    "cron_schedule_func",
+    "cron_set_match_second",
+    "cron_set_match_second_e",
     "schedule",
     "schedule_func",
     "schedule_with_id",
@@ -64,10 +75,11 @@ __all__ = [
     "running_count",
     "cron_launching_count",
     "new_config",
+    "new_cron_error",
     "new_scheduler",
     "new_cron_task",
     "default_scheduler",
-    "cron_set_match_second",
+    "wrap_cron_error",
 ]
 
 
@@ -93,3 +105,9 @@ new_scheduler = cronx.new_scheduler
 new_cron_task = cronx.new_cron_task
 default_scheduler = cronx.default_scheduler
 cron_set_match_second = cronx.cron_set_match_second
+cron_set_match_second_e = cronx.cron_set_match_second_e
+cron_schedule_func = cronx.cron_schedule_func
+new_cron_error = cronx.new_cron_error
+wrap_cron_error = cronx.wrap_cron_error
+CronError = cronx.CronError
+ERR_SCHEDULER_STARTED = cronx.ERR_SCHEDULER_STARTED

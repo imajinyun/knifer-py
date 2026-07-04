@@ -5,6 +5,9 @@ from kniferpy.internal.idx import (
     DEFAULT_NANO_ID_LENGTH,
     NANO_ID_ALPHABET,
     Snowflake,
+    configure_default_fallback_random_source_provider,
+    reset_default_fallback_random_source,
+    set_fallback_random_seed,
 )
 
 __all__ = [
@@ -29,6 +32,9 @@ __all__ = [
     "get_worker_id",
     "snowflake_next_id",
     "snowflake_next_id_str",
+    "configure_default_fallback_random_source_provider",
+    "reset_default_fallback_random_source",
+    "set_fallback_random_seed",
 ]
 
 DEFAULT_NANO_ID_LENGTH = idx.DEFAULT_NANO_ID_LENGTH
@@ -103,3 +109,15 @@ def snowflake_next_id() -> int:
 
 def snowflake_next_id_str() -> str:
     return idx.snowflake_next_id_str()
+
+
+def configure_default_fallback_random_source_provider(provider):
+    return idx.configure_default_fallback_random_source_provider(provider)
+
+
+def reset_default_fallback_random_source():
+    return idx.reset_default_fallback_random_source()
+
+
+def set_fallback_random_seed(seed: int) -> None:
+    return idx.set_fallback_random_seed(seed)
