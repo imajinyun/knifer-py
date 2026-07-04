@@ -5,6 +5,7 @@ import secrets
 import threading
 import time
 import uuid
+from typing import Callable
 
 from kniferpy.verr import ValidationError
 
@@ -32,8 +33,20 @@ def random_uuid() -> str:
     return str(uuid.uuid4())
 
 
+def fast_uuid() -> str:
+    return str(uuid.uuid4())
+
+
 def simple_uuid() -> str:
     return uuid.uuid4().hex
+
+
+def fast_simple_uuid() -> str:
+    return uuid.uuid4().hex
+
+
+# Legacy alias
+UUID = simple_uuid
 
 
 def nano_id(length: int = DEFAULT_NANO_ID_LENGTH, alphabet: str = NANO_ID_ALPHABET) -> str:
@@ -44,6 +57,10 @@ def nano_id(length: int = DEFAULT_NANO_ID_LENGTH, alphabet: str = NANO_ID_ALPHAB
             message="nano_id alphabet must not be empty", code="knifer.id.alphabet"
         )
     return "".join(secrets.choice(alphabet) for _ in range(length))
+
+
+def nano_id_n(n: int) -> str:
+    return nano_id(length=n)
 
 
 def _next_object_id_counter() -> int:
@@ -139,9 +156,40 @@ def get_snowflake() -> Snowflake:
         return _default_snowflake
 
 
+def configure_default_snowflake(worker_id: int = 0, datacenter_id: int = 0) -> Snowflake:
+    global _default_snowflake
+    with _default_snowflake_lock:
+        _default_snowflake = Snowflake(worker_id, datacenter_id)
+        return _default_snowflake
+
+
 def snowflake_next_id() -> int:
     return get_snowflake().next_id()
 
 
 def snowflake_next_id_str() -> str:
     return get_snowflake().next_id_str()
+
+
+def create_snowflake(worker_id: int = 0, datacenter_id: int = 0) -> Snowflake:
+    return Snowflake(worker_id, datacenter_id)
+
+
+def new_isolated_snowflake(worker_id: int = 0, datacenter_id: int = 0) -> Snowflake:
+    return Snowflake(worker_id, datacenter_id)
+
+
+def get_snowflake_with_worker(worker_id: int) -> Snowflake:
+    return Snowflake(worker_id, 0)
+
+
+def get_snowflake_with_worker_datacenter(worker_id: int, datacenter_id: int) -> Snowflake:
+    return Snowflake(worker_id, datacenter_id)
+
+
+def get_datacenter_id(max_datacenter_id: int = _MAX_DATACENTER_ID) -> int:
+    return (os.getpid() >> 8) & max_datacenter_id
+
+
+def get_worker_id(datacenter_id: int, max_worker_id: int = _MAX_WORKER_ID) -> int:
+    return os.getpid() & max_worker_id

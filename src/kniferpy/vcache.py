@@ -11,6 +11,9 @@ from kniferpy.internal.cachex import (
     LRUCache,
     NoCache,
     Supplier,
+    TickerFactory,
+    TimedCache,
+    WeakCache,
 )
 
 K = TypeVar("K")
@@ -23,10 +26,15 @@ __all__ = [
     "Listener",
     "NoCache",
     "Supplier",
+    "TickerFactory",
+    "TimedCache",
+    "WeakCache",
     "new_fifo",
     "new_lfu",
     "new_lru",
     "new_no_cache",
+    "new_timed",
+    "new_weak",
 ]
 
 
@@ -62,3 +70,29 @@ def new_lfu(
 
 def new_no_cache() -> NoCache[K, V]:
     return cachex.new_no_cache()
+
+
+def new_timed(
+    timeout: float,
+    *,
+    listener: Callable[[K, V], None] | None = None,
+    clock: Callable[[], float] | None = None,
+    ticker_factory: TickerFactory | None = None,
+    runner: Callable[[Callable[[], None]], None] | None = None,
+) -> TimedCache[K, V]:
+    return cachex.new_timed(
+        timeout,
+        listener=listener,
+        clock=clock,
+        ticker_factory=ticker_factory,
+        runner=runner,
+    )
+
+
+def new_weak(
+    timeout: float,
+    *,
+    listener: Callable[[K, V], None] | None = None,
+    clock: Callable[[], float] | None = None,
+) -> WeakCache[K, V]:
+    return cachex.new_weak(timeout, listener=listener, clock=clock)

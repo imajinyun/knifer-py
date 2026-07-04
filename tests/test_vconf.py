@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import dataclasses
+import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -242,3 +245,135 @@ def test_load_profile_from_file(tmp_path: Path) -> None:
     path.write_text("name = base\n[profile.test]\nname = test\n", encoding="utf-8")
     conf = vconf.load_profile(path, "test")
     assert conf.get("name") == "test"
+
+
+# ---------------------------------------------------------------------------
+# Watch
+# ---------------------------------------------------------------------------
+
+
+class TestWatch:
+    def test_watch_detects_change(self, tmp_path: Path) -> None:
+        path = tmp_path / "watch.properties"
+        path.write_text("key = first\n", encoding="utf-8")
+
+        events: list[vconf.WatchEvent] = []
+
+        def handler(event: vconf.WatchEvent) -> None:
+            events.append(event)
+
+        t = vconf.watch(path, handler, interval=0.1)
+        time.sleep(0.2)
+        path.write_text("key = second\n", encoding="utf-8")
+        time.sleep(0.3)
+
+        t._conf_stop.set()  # type: ignore[attr-defined]
+        t.join(timeout=1.0)
+        assert len(events) >= 1
+
+
+# ---------------------------------------------------------------------------
+# Bind
+# ---------------------------------------------------------------------------
+
+
+@dataclasses.dataclass
+class ServerConfig:
+    host: str = ""
+    port: int = 0
+    debug: bool = False
+
+
+class TestBind:
+    def test_bind_default_group(self) -> None:
+        conf = vconf.parse("host = localhost\nport = 8080\ndebug = true\n")
+        obj = ServerConfig()
+        vconf.bind(conf, obj)
+        assert obj.host == "localhost"
+        assert obj.port == 8080
+        assert obj.debug is True
+
+    def test_bind_group(self) -> None:
+        conf = vconf.parse("[server]\nhost = 0.0.0.0\nport = 3000\n")
+        obj = ServerConfig()
+        vconf.bind_group(conf, "server", obj)
+        assert obj.host == "0.0.0.0"
+        assert obj.port == 3000
+
+
+# ---------------------------------------------------------------------------
+# Schema
+# ---------------------------------------------------------------------------
+
+
+class TestSchema:
+    def test_validate_schema_required(self) -> None:
+        schema = vconf.Schema(fields=[
+            vconf.FieldRule(key="name", required=True),
+        ])
+        conf = vconf.parse("")
+        errors = vconf.validate_schema(conf, schema)
+        assert len(errors) == 1
+        assert "required" in errors[0].lower()
+
+    def test_validate_schema_type(self) -> None:
+        schema = vconf.Schema(fields=[
+            vconf.FieldRule(key="port", type="int"),
+        ])
+        conf = vconf.parse("port = notanumber")
+        errors = vconf.validate_schema(conf, schema)
+        assert len(errors) == 1
+
+    def test_validate_schema_choices(self) -> None:
+        schema = vconf.Schema(fields=[
+            vconf.FieldRule(key="level", choices=["debug", "info", "error"]),
+        ])
+        conf = vconf.parse("level = trace")
+        errors = vconf.validate_schema(conf, schema)
+        assert len(errors) == 1
+
+    def test_validate_schema_valid(self) -> None:
+        schema = vconf.Schema(fields=[
+            vconf.FieldRule(key="name", required=True),
+            vconf.FieldRule(key="port", type="int"),
+        ])
+        conf = vconf.parse("name = myapp\nport = 8080\n")
+        errors = vconf.validate_schema(conf, schema)
+        assert len(errors) == 0
+
+    def test_apply_defaults(self) -> None:
+        schema = vconf.Schema(fields=[
+            vconf.FieldRule(key="timeout", default="30"),
+        ])
+        conf = vconf.parse("")
+        vconf.apply_defaults(conf, schema)
+        assert conf.get("timeout") == "30"
+
+    def test_schema_from_struct(self) -> None:
+        @dataclasses.dataclass
+        class AppConfig:
+            name: str = dataclasses.field(default="", metadata={"conf": "app_name,required"})
+            port: int = dataclasses.field(default=0, metadata={"conf": "port,default:8080"})
+
+        obj = AppConfig()
+        schema = vconf.schema_from_struct(obj)
+        assert len(schema.fields) == 2
+        assert schema.fields[0].key == "app_name"
+        assert schema.fields[0].required is True
+        assert schema.fields[1].key == "port"
+        assert schema.fields[1].default == "8080"
+
+
+# ---------------------------------------------------------------------------
+# LoadRemote
+# ---------------------------------------------------------------------------
+
+
+class TestLoadRemote:
+    def test_load_remote_invalid_url(self) -> None:
+        with pytest.raises(ValidationError):
+            vconf.load_remote("http://this.host.does.not.exist.xyz123/config")
+
+    def test_load_remote_safe_private(self) -> None:
+        with pytest.raises(ValidationError):
+            vconf.load_remote_safe("http://127.0.0.1/config")

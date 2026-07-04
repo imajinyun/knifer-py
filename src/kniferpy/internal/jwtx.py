@@ -157,3 +157,87 @@ def generate_ec_key() -> ec.EllipticCurvePrivateKey:
 
 def generate_rsa_key(bits: int = 2048) -> rsa.RSAPrivateKey:
     return rsa.generate_private_key(public_exponent=65537, key_size=bits)
+
+
+# ── JWT Builder ───────────────────────────────────────────────────────────────
+
+
+class JWTBuilder:
+    """Fluent JWT token builder and validator.
+
+    Usage::
+
+        token = JWTBuilder().set_subject("user1").set_issuer("myapp").sign_hs256(secret)
+        claims = JWTBuilder().require_issuer("myapp").verify_hs256(token, secret)
+    """
+
+    def __init__(self) -> None:
+        self._claims: dict[str, Any] = {}
+        self._expires_in: int | timedelta | None = None
+        self._issuer: str | None = None
+        self._audience: str | None = None
+
+    def set_subject(self, sub: str) -> JWTBuilder:
+        self._claims["sub"] = sub
+        return self
+
+    def set_issuer(self, iss: str) -> JWTBuilder:
+        self._claims["iss"] = iss
+        return self
+
+    def set_audience(self, aud: str) -> JWTBuilder:
+        self._claims["aud"] = aud
+        return self
+
+    def set_jwt_id(self, jti: str) -> JWTBuilder:
+        self._claims["jti"] = jti
+        return self
+
+    def set_expires_in(self, expires_in: int | timedelta) -> JWTBuilder:
+        self._expires_in = expires_in
+        return self
+
+    def set_claim(self, key: str, value: Any) -> JWTBuilder:
+        self._claims[key] = value
+        return self
+
+    def set_claims(self, claims: dict[str, Any]) -> JWTBuilder:
+        self._claims.update(claims)
+        return self
+
+    def require_issuer(self, iss: str) -> JWTBuilder:
+        self._issuer = iss
+        return self
+
+    def require_audience(self, aud: str) -> JWTBuilder:
+        self._audience = aud
+        return self
+
+    def sign_hs256(self, secret: str | bytes) -> str:
+        return sign_hs256(self._claims, secret, expires_in=self._expires_in)
+
+    def sign_es256(self, private_key: ec.EllipticCurvePrivateKey) -> str:
+        return sign_es256(self._claims, private_key, expires_in=self._expires_in)
+
+    def sign_ps256(self, private_key: rsa.RSAPrivateKey) -> str:
+        return sign_ps256(self._claims, private_key, expires_in=self._expires_in)
+
+    def verify_hs256(self, token: str, secret: str | bytes) -> dict[str, Any]:
+        return verify_hs256(token, secret, issuer=self._issuer, audience=self._audience)
+
+    def verify_es256(self, token: str, public_key: ec.EllipticCurvePublicKey) -> dict[str, Any]:
+        return verify_es256(token, public_key, issuer=self._issuer, audience=self._audience)
+
+    def verify_ps256(self, token: str, public_key: rsa.RSAPublicKey) -> dict[str, Any]:
+        return verify_ps256(token, public_key, issuer=self._issuer, audience=self._audience)
+
+    def parse_unverified(self, token: str) -> dict[str, Any]:
+        """Decode a JWT without verifying the signature."""
+        try:
+            return jwt.decode(token, options={"verify_signature": False})
+        except jwt.PyJWTError as exc:
+            raise CryptoError(str(exc), code="jwt.decode_failed") from exc
+
+
+def new_jwt_builder() -> JWTBuilder:
+    return JWTBuilder()

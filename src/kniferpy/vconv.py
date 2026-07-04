@@ -5,33 +5,72 @@ from typing import Any
 from kniferpy.internal import convx
 
 
-def to_str(value: Any) -> str:
-    return convx.to_str(value)
+to_str = convx.to_str
+to_str_default = convx.to_str_default
+to_str_e = convx.to_str_e
 
+to_int = convx.to_int
+to_int_e = convx.to_int_e
+to_int_default = convx.to_int_default
+to_int_e_ok = convx.to_int_e_ok
 
-def to_int(value: Any, default: int = 0) -> int:
-    return convx.to_int(value, default)
+to_int64 = convx.to_int64
+to_int64_e = convx.to_int64_e
+to_int64_default = convx.to_int64_default
+to_int64_e_ok = convx.to_int64_e_ok
+to_int64_with_options = convx.to_int64_with_options
 
+to_float = convx.to_float
+to_float_e = convx.to_float_e
+to_float_default = convx.to_float_default
+to_float_e_ok = convx.to_float_e_ok
 
-def to_int_e(value: Any) -> int:
-    return convx.to_int_e(value)
+to_float64 = convx.to_float64
+to_float64_e = convx.to_float64_e
+to_float64_default = convx.to_float64_default
+to_float64_e_ok = convx.to_float64_e_ok
+to_float64_with_options = convx.to_float64_with_options
 
+to_bool = convx.to_bool
+to_bool_e = convx.to_bool_e
+to_bool_default = convx.to_bool_default
+to_bool_e_ok = convx.to_bool_e_ok
+to_bool_with_options = convx.to_bool_with_options
 
-def to_float(value: Any, default: float = 0.0) -> float:
-    return convx.to_float(value, default)
+to_bytes = convx.to_bytes
+to_bytes_default = convx.to_bytes_default
+to_bytes_e_ok = convx.to_bytes_e_ok
+to_bytes_with_options = convx.to_bytes_with_options
 
-
-def to_float_e(value: Any) -> float:
-    return convx.to_float_e(value)
-
-
-def to_bool(value: Any, default: bool = False) -> bool:
-    return convx.to_bool(value, default)
-
-
-def to_bool_e(value: Any) -> bool:
-    return convx.to_bool_e(value)
-
-
-def to_bytes(value: Any, *, encoding: str = "utf-8") -> bytes:
-    return convx.to_bytes(value, encoding=encoding)
+__all__ = [
+    "to_str",
+    "to_str_default",
+    "to_str_e",
+    "to_int",
+    "to_int_e",
+    "to_int_default",
+    "to_int_e_ok",
+    "to_int64",
+    "to_int64_e",
+    "to_int64_default",
+    "to_int64_e_ok",
+    "to_int64_with_options",
+    "to_float",
+    "to_float_e",
+    "to_float_default",
+    "to_float_e_ok",
+    "to_float64",
+    "to_float64_e",
+    "to_float64_default",
+    "to_float64_e_ok",
+    "to_float64_with_options",
+    "to_bool",
+    "to_bool_e",
+    "to_bool_default",
+    "to_bool_e_ok",
+    "to_bool_with_options",
+    "to_bytes",
+    "to_bytes_default",
+    "to_bytes_e_ok",
+    "to_bytes_with_options",
+]

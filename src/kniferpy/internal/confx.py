@@ -1,8 +1,14 @@
 from __future__ import annotations
 
+import dataclasses
+import hashlib
 import os
 import re
+import threading
+import time
+import urllib.parse
 from pathlib import Path
+from typing import Any, Callable
 
 from kniferpy.internal import convx
 from kniferpy.verr import ValidationError
@@ -323,3 +329,306 @@ def _first_index_any(text: str, chars: str) -> int:
         if idx >= 0 and (best < 0 or idx < best):
             best = idx
     return best
+
+
+# ---------------------------------------------------------------------------
+# Watch — file watching via polling
+# ---------------------------------------------------------------------------
+
+
+@dataclasses.dataclass
+class WatchEvent:
+    path: str
+    old_config: Conf | None
+    new_config: Conf
+
+
+_WatchCallback = Callable[[WatchEvent], None]
+
+
+def _default_watch_runner(
+    path: str,
+    interval: float,
+    onChange: _WatchCallback,
+    stop: threading.Event,
+) -> None:
+    last_hash = ""
+    while not stop.is_set():
+        try:
+            data = Path(path).read_bytes()
+            current_hash = hashlib.sha256(data).hexdigest()
+        except OSError:
+            stop.wait(interval)
+            continue
+
+        if last_hash and current_hash != last_hash:
+            try:
+                old = load(path)
+                new = load(path)
+                onChange(WatchEvent(path=path, old_config=old, new_config=new))
+            except Exception:
+                pass
+        elif not last_hash:
+            last_hash = current_hash
+        else:
+            last_hash = current_hash
+
+        stop.wait(interval)
+
+
+def watch(
+    path: str | Path,
+    onChange: Callable[[WatchEvent], None],
+    *,
+    interval: float = 1.0,
+) -> threading.Thread:
+    """Watch a file for changes via polling. Returns a thread that can be stopped via ``.stop()``."""
+    path_str = str(path)
+    stop = threading.Event()
+    t = threading.Thread(
+        target=_default_watch_runner,
+        args=(path_str, interval, onChange, stop),
+        daemon=True,
+    )
+    t._conf_stop = stop  # type: ignore[attr-defined]
+    t.start()
+    return t
+
+
+# ---------------------------------------------------------------------------
+# Bind — struct binding via dataclass fields
+# ---------------------------------------------------------------------------
+
+
+def _conf_field_name(field: dataclasses.Field[Any]) -> str:
+    """Extract config key from dataclass field metadata."""
+    name = field.name
+    if field.metadata and "conf" in field.metadata:
+        name = field.metadata["conf"]
+    return name
+
+
+def _set_reflect_value(obj: Any, field: dataclasses.Field[Any], value: Any) -> None:
+    """Set a dataclass field value with type coercion."""
+    field_type = field.type
+    # With from __future__ import annotations, field.type may be a string
+    type_str = str(field_type) if not isinstance(field_type, type) else ""
+    try:
+        if field_type is int or type_str == "int" or type_str == "<class 'int'>":
+            setattr(obj, field.name, int(value))
+        elif field_type is float or type_str == "float" or type_str == "<class 'float'>":
+            setattr(obj, field.name, float(value))
+        elif field_type is bool or type_str == "bool" or type_str == "<class 'bool'>":
+            setattr(obj, field.name, convx.to_bool(str(value)))
+        elif field_type is list[str] or type_str in ("list[str]", "list"):
+            setattr(obj, field.name, _split_list(str(value)))
+        else:
+            setattr(obj, field.name, value)
+    except (ValueError, TypeError):
+        pass
+
+
+def bind(conf: Conf, obj: Any) -> None:
+    """Bind configuration values to a dataclass instance."""
+    bind_group(conf, _DEFAULT_GROUP, obj)
+
+
+def bind_group(conf: Conf, group: str, obj: Any) -> None:
+    """Bind configuration values from a group to a dataclass instance."""
+    for field in dataclasses.fields(obj):
+        key = _conf_field_name(field)
+        value, ok = conf.lookup(group, key)
+        if ok:
+            _set_reflect_value(obj, field, value)
+
+
+# ---------------------------------------------------------------------------
+# Schema — validation rules
+# ---------------------------------------------------------------------------
+
+
+_FIELD_TYPE_STR = "str"
+_FIELD_TYPE_BOOL = "bool"
+_FIELD_TYPE_INT = "int"
+_FIELD_TYPE_FLOAT = "float"
+_FIELD_TYPE_LIST = "list"
+
+
+@dataclasses.dataclass
+class FieldRule:
+    group: str = ""
+    key: str = ""
+    required: bool = False
+    type: str = _FIELD_TYPE_STR
+    default: str = ""
+    choices: list[str] = dataclasses.field(default_factory=list)
+
+
+@dataclasses.dataclass
+class Schema:
+    fields: list[FieldRule] = dataclasses.field(default_factory=list)
+
+
+def _validate_type(value: str, field_type: str) -> bool:
+    if field_type == _FIELD_TYPE_BOOL:
+        return value.lower() in ("true", "false", "1", "0", "yes", "no", "on", "off")
+    if field_type == _FIELD_TYPE_INT:
+        try:
+            int(value)
+            return True
+        except ValueError:
+            return False
+    if field_type == _FIELD_TYPE_FLOAT:
+        try:
+            float(value)
+            return True
+        except ValueError:
+            return False
+    return True
+
+
+def validate_schema(conf: Conf, schema: Schema) -> list[str]:
+    """Validate a Conf against a Schema. Returns a list of error messages."""
+    errors: list[str] = []
+    for rule in schema.fields:
+        value, ok = conf.lookup(rule.group, rule.key)
+        if rule.required and not ok:
+            errors.append(f"{rule.group}.{rule.key}: required but missing")
+            continue
+        if not ok:
+            continue
+        if not _validate_type(value, rule.type):
+            errors.append(f"{rule.group}.{rule.key}: expected {rule.type}, got {value!r}")
+        if rule.choices and value not in rule.choices:
+            errors.append(f"{rule.group}.{rule.key}: {value!r} not in {rule.choices}")
+    return errors
+
+
+def apply_defaults(conf: Conf, schema: Schema) -> Conf:
+    """Apply schema defaults to missing keys."""
+    for rule in schema.fields:
+        if rule.default and not conf.lookup(rule.group, rule.key)[1]:
+            conf.set_by_group(rule.group, rule.key, rule.default)
+    return conf
+
+
+def _infer_rule_type(field_type: type) -> str:
+    if field_type is bool:
+        return _FIELD_TYPE_BOOL
+    if field_type is int:
+        return _FIELD_TYPE_INT
+    if field_type is float:
+        return _FIELD_TYPE_FLOAT
+    if field_type is list[str] or field_type is list:
+        return _FIELD_TYPE_LIST
+    return _FIELD_TYPE_STR
+
+
+def _parse_conf_tag(tag: str) -> dict[str, str]:
+    """Parse a conf tag like 'keyname,required,default:val' into a dict."""
+    result: dict[str, str] = {}
+    parts = tag.split(",")
+    if parts:
+        result["key"] = parts[0]
+    for part in parts[1:]:
+        part = part.strip()
+        if part == "required":
+            result["required"] = "true"
+        elif part.startswith("default:"):
+            result["default"] = part[8:]
+        elif part.startswith("choices:"):
+            result["choices"] = part[8:]
+        elif part.startswith("group:"):
+            result["group"] = part[6:]
+    return result
+
+
+def schema_from_struct(obj: Any) -> Schema:
+    """Build a Schema from a dataclass with conf metadata tags."""
+    rules: list[FieldRule] = []
+    for field in dataclasses.fields(obj):
+        conf_meta = field.metadata.get("conf", "") if hasattr(field.metadata, 'get') else ""
+        if isinstance(conf_meta, dict):
+            conf_meta = conf_meta.get("key", "")
+
+        tag = _parse_conf_tag(conf_meta) if conf_meta else {}
+        field_type = field.type
+        if not isinstance(field_type, type):
+            # String annotation from __future__
+            type_str = str(field_type)
+            if "int" in type_str:
+                field_type = int
+            elif "float" in type_str:
+                field_type = float
+            elif "bool" in type_str:
+                field_type = bool
+            elif "list" in type_str:
+                field_type = list[str]
+            else:
+                field_type = str
+
+        rule = FieldRule(
+            group=tag.get("group", _DEFAULT_GROUP),
+            key=tag.get("key", field.name),
+            required=tag.get("required") == "true",
+            type=_infer_rule_type(field_type),
+            default=tag.get("default", ""),
+            choices=tag.get("choices", "").split("|") if tag.get("choices") else [],
+        )
+        rules.append(rule)
+    return Schema(fields=rules)
+
+
+# ---------------------------------------------------------------------------
+# LoadRemote — remote config loading
+# ---------------------------------------------------------------------------
+
+
+def _is_private_host(hostname: str) -> bool:
+    """Check if a hostname resolves to a private IP."""
+    import ipaddress
+    import socket
+
+    try:
+        info = socket.getaddrinfo(hostname, None)
+        for _, _, _, _, sockaddr in info:
+            ip = ipaddress.ip_address(sockaddr[0])
+            if ip.is_loopback or ip.is_private or ip.is_link_local:
+                return True
+    except (socket.gaierror, OSError):
+        return True
+    return False
+
+
+def load_remote(url: str, timeout: float = 10.0) -> Conf:
+    """Load configuration from a remote URL."""
+    import urllib.request
+
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as resp:
+            data = resp.read()
+            return parse_bytes(data)
+    except Exception as exc:
+        raise ValidationError(
+            message=f"failed to load remote config: {url}",
+            code="knifer.conf.load_remote_failed",
+            context={"url": url, "error": str(exc)},
+        ) from exc
+
+
+def load_remote_safe(url: str, timeout: float = 10.0) -> Conf:
+    """Load configuration from a remote URL with SSRF protection."""
+    parsed = urllib.parse.urlparse(url)
+    if parsed.hostname is None:
+        raise ValidationError(
+            message=f"invalid remote URL: {url}",
+            code="knifer.conf.invalid_url",
+            context={"url": url},
+        )
+    if _is_private_host(parsed.hostname):
+        raise ValidationError(
+            message=f"remote URL resolves to private host: {parsed.hostname}",
+            code="knifer.conf.private_host",
+            context={"url": url, "hostname": parsed.hostname},
+        )
+    return load_remote(url, timeout)

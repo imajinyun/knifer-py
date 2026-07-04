@@ -138,6 +138,65 @@ class Set(Generic[T]):
         items = cfg.unmarshal(data.encode())
         return cls(*items)
 
+    def to_slice(self) -> list[T]:
+        return self.members()
+
+    def is_empty(self) -> bool:
+        return len(self._data) == 0
+
+    def size(self) -> int:
+        return len(self._data)
+
+    def clear(self) -> None:
+        self._data.clear()
+
+    def add_all(self, *items: T) -> None:
+        self.add(*items)
+
+    def remove_all(self, *items: T) -> None:
+        self.remove(*items)
+
+    def contains_all(self, *items: T) -> bool:
+        return all(self.contains(i) for i in items)
+
+    def is_subset(self, other: Set[T]) -> bool:
+        return all(self.contains(i) for i in other._data)
+
+    def is_superset(self, other: Set[T]) -> bool:
+        return all(other.contains(i) for i in self._data)
+
+    def symmetric_difference(self, other: Set[T]) -> Set[T]:
+        return self.union(other).sub(self.intersect(other))
+
+    def for_each(self, fn) -> None:
+        for item in self._data:
+            fn(item)
+
+    def filter(self, fn) -> Set[T]:
+        out: Set[T] = Set()
+        for item in self._data:
+            if fn(item):
+                out._data[item] = None
+        return out
+
+    def map(self, fn) -> Set:
+        out: Set = Set()
+        for item in self._data:
+            out._data[fn(item)] = None
+        return out
+
+    def reduce(self, fn, initial):
+        result = initial
+        for item in self._data:
+            result = fn(result, item)
+        return result
+
+    def clone(self) -> Set[T]:
+        return Set(*self._data.keys())
+
+    def difference(self, other: Set[T]) -> Set[T]:
+        return self.sub(other)
+
 
 # ---------------------------------------------------------------------------
 # typed aliases and constructors

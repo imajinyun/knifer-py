@@ -312,3 +312,50 @@ def get_found_all_mode(text: str, density_match: bool, greed_match: bool) -> lis
 def filter(text: str, greed_match: bool = True, processor: Processor | None = None) -> str:
     """Replace words found by the package-level matcher."""
     return _current_matcher().filter(text, greed_match, processor)
+
+
+def contains_any(text: str) -> bool:
+    """Report whether ``text`` contains any word from the package-level matcher (alias for contains)."""
+    return contains(text)
+
+
+def get_found_first_any(text: str) -> FoundWord | None:
+    """Return the first found word from the package-level matcher (alias for get_found_first)."""
+    return get_found_first(text)
+
+
+def get_found_all_any(text: str) -> list[FoundWord]:
+    """Return all found words from the package-level matcher (alias for get_found_all)."""
+    return get_found_all(text)
+
+
+def filter_mode(text: str, density_match: bool, greed_match: bool,
+                processor: Processor | None = None) -> str:
+    """Replace words found by the package-level matcher with density/greedy controls."""
+    matcher = _current_matcher()
+    if text == "":
+        return text
+    found = matcher.match_all_words(text, -1, density_match, greed_match)
+    if not found:
+        return text
+    if processor is None:
+        processor = default_processor
+    by_start = {word.start: word for word in found}
+    runes = list(text)
+    out: list[str] = []
+    n = len(runes)
+    i = 0
+    while i < n:
+        word = by_start.get(i)
+        if word is not None:
+            out.append(processor(word))
+            i = word.end + 1
+            continue
+        out.append(runes[i])
+        i += 1
+    return "".join(out)
+
+
+def filter_any(text: str, greed_match: bool = True, processor: Processor | None = None) -> str:
+    """Replace words found by the package-level matcher (alias for filter)."""
+    return filter(text, greed_match, processor)

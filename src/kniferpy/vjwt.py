@@ -6,6 +6,20 @@ from typing import Any
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
 from kniferpy.internal import jwtx
+from kniferpy.internal.jwtx import JWTBuilder
+
+__all__ = [
+    "JWTBuilder",
+    "new_jwt_builder",
+    "sign_hs256",
+    "verify_hs256",
+    "sign_es256",
+    "verify_es256",
+    "sign_ps256",
+    "verify_ps256",
+    "generate_ec_key",
+    "generate_rsa_key",
+]
 
 
 # ── HS256 ───────────────────────────────────────────────────────────────────

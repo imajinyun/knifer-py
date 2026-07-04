@@ -82,3 +82,82 @@ def maps_to_records(headers: Sequence[str], rows: Sequence[Row]) -> list[Record]
     for row in rows:
         records.append([row.get(header, "") for header in header_list])
     return records
+
+
+# ---------------------------------------------------------------------------
+# File-based I/O
+# ---------------------------------------------------------------------------
+
+
+def read(
+    path: str,
+    delimiter: str = ",",
+    trim_leading_space: bool = False,
+    encoding: str = "utf-8",
+) -> list[Record]:
+    """Read CSV records from a file path."""
+    with open(path, "r", encoding=encoding) as f:
+        return read_string(f.read(), delimiter, trim_leading_space)
+
+
+def read_maps(
+    path: str,
+    delimiter: str = ",",
+    trim_leading_space: bool = False,
+    encoding: str = "utf-8",
+) -> list[Row]:
+    """Read CSV records from a file path and return as dict rows."""
+    return records_to_maps(read(path, delimiter, trim_leading_space, encoding))
+
+
+def write(
+    path: str,
+    records: Sequence[Sequence[str]],
+    delimiter: str = ",",
+    use_crlf: bool = False,
+    encoding: str = "utf-8",
+) -> None:
+    """Write CSV records to a file path."""
+    content = write_string(records, delimiter, use_crlf)
+    with open(path, "w", encoding=encoding, newline="") as f:
+        f.write(content)
+
+
+def write_maps(
+    path: str,
+    headers: Sequence[str],
+    rows: Sequence[Row],
+    delimiter: str = ",",
+    use_crlf: bool = False,
+    encoding: str = "utf-8",
+) -> None:
+    """Write CSV records (as dict rows) to a file path."""
+    content = write_string_maps(headers, rows, delimiter, use_crlf)
+    with open(path, "w", encoding=encoding, newline="") as f:
+        f.write(content)
+
+
+def for_each(
+    path: str,
+    callback,
+    delimiter: str = ",",
+    trim_leading_space: bool = False,
+    encoding: str = "utf-8",
+) -> None:
+    """Iterate over CSV records from a file, calling callback for each record."""
+    records = read(path, delimiter, trim_leading_space, encoding)
+    for record in records:
+        callback(record)
+
+
+def for_each_map(
+    path: str,
+    callback,
+    delimiter: str = ",",
+    trim_leading_space: bool = False,
+    encoding: str = "utf-8",
+) -> None:
+    """Iterate over CSV records (as dict) from a file, calling callback for each."""
+    rows = read_maps(path, delimiter, trim_leading_space, encoding)
+    for row in rows:
+        callback(row)

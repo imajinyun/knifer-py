@@ -1,9 +1,17 @@
 from __future__ import annotations
 
+import logging
+import threading
+import time
+import uuid
+from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import IntEnum
+from typing import Callable, Protocol
 
 from kniferpy.verr import ValidationError
+
+_logger = logging.getLogger("kniferpy.cron")
 
 # The day-of-month field uses 32 as the sentinel for the ``L`` (last day) token.
 _LAST_DAY_SENTINEL = 32
@@ -393,3 +401,350 @@ def match(expr: str, moment: datetime, match_second: bool = False) -> bool:
 def next_time(expr: str, after: datetime, match_second: bool = False) -> datetime | None:
     """Parse ``expr`` and return the first matching moment after ``after``."""
     return Pattern(expr).next_time(after, match_second)
+
+
+# ---------------------------------------------------------------------------
+# Scheduler
+# ---------------------------------------------------------------------------
+
+
+class Task(Protocol):
+    """A cron task — anything with an execute() method."""
+
+    def execute(self) -> None: ...
+
+
+class TaskFunc:
+    """Adapter that turns a plain function into a Task."""
+
+    def __init__(self, fn: Callable[[], None]) -> None:
+        self._fn = fn
+
+    def execute(self) -> None:
+        self._fn()
+
+
+@dataclass
+class CronTask:
+    """A task paired with an id and cron pattern."""
+
+    id: str
+    pattern: Pattern
+    task: Task
+
+    def execute(self) -> None:
+        self.task.execute()
+
+
+class TaskListener(Protocol):
+    """Listens to task execution lifecycle events."""
+
+    def on_start(self, task: CronTask) -> None: ...
+    def on_succeeded(self, task: CronTask) -> None: ...
+    def on_failed(self, task: CronTask, error: BaseException) -> None: ...
+
+
+class SimpleTaskListener:
+    """No-op default implementation of TaskListener."""
+
+    def on_start(self, task: CronTask) -> None:
+        pass
+
+    def on_succeeded(self, task: CronTask) -> None:
+        pass
+
+    def on_failed(self, task: CronTask, error: BaseException) -> None:
+        pass
+
+
+@dataclass
+class TaskEntry:
+    cron_task: CronTask
+    next_run: datetime
+
+
+class TaskTable:
+    """Thread-safe ordered task storage."""
+
+    def __init__(self) -> None:
+        self._tasks: dict[str, CronTask] = {}
+        self._order: list[str] = []
+        self._lock = threading.Lock()
+
+    def add(self, id: str, pattern: Pattern, task: Task) -> None:
+        with self._lock:
+            if id in self._tasks:
+                raise ValidationError(
+                    message=f"task {id!r} already exists",
+                    code="knifer.cron.duplicate",
+                )
+            self._tasks[id] = CronTask(id=id, pattern=pattern, task=task)
+            self._order.append(id)
+
+    def remove(self, id: str) -> bool:
+        with self._lock:
+            if id in self._tasks:
+                del self._tasks[id]
+                self._order.remove(id)
+                return True
+            return False
+
+    def get(self, id: str) -> CronTask | None:
+        with self._lock:
+            return self._tasks.get(id)
+
+    def get_pattern(self, id: str) -> Pattern | None:
+        ct = self.get(id)
+        return ct.pattern if ct else None
+
+    def get_task(self, id: str) -> Task | None:
+        ct = self.get(id)
+        return ct.task if ct else None
+
+    def update_pattern(self, id: str, pattern: Pattern) -> bool:
+        with self._lock:
+            if id in self._tasks:
+                self._tasks[id].pattern = pattern
+                return True
+            return False
+
+    def ids(self) -> list[str]:
+        with self._lock:
+            return list(self._order)
+
+    def size(self) -> int:
+        with self._lock:
+            return len(self._tasks)
+
+    def is_empty(self) -> bool:
+        return self.size() == 0
+
+    def items(self) -> list[CronTask]:
+        with self._lock:
+            return [self._tasks[id] for id in self._order]
+
+
+class Scheduler:
+    """A cron scheduler that runs tasks in background threads.
+
+    Schedule tasks with cron expressions and they will be executed
+    automatically at matching times.
+    """
+
+    def __init__(self, *, match_second: bool = False) -> None:
+        self._table = TaskTable()
+        self._listeners: list[TaskListener] = []
+        self._match_second = match_second
+        self._started = False
+        self._stop_event = threading.Event()
+        self._thread: threading.Thread | None = None
+        self._lock = threading.Lock()
+        self._running_count = 0
+        self._running_lock = threading.Lock()
+
+    # -- config ---------------------------------------------------------------
+
+    def set_match_second(self, match_second: bool) -> Scheduler:
+        with self._lock:
+            self._match_second = match_second
+        return self
+
+    def is_match_second(self) -> bool:
+        return self._match_second
+
+    # -- listeners ------------------------------------------------------------
+
+    def add_listener(self, listener: TaskListener) -> Scheduler:
+        self._listeners.append(listener)
+        return self
+
+    def remove_listener(self, listener: TaskListener) -> Scheduler:
+        if listener in self._listeners:
+            self._listeners.remove(listener)
+        return self
+
+    # -- task management ------------------------------------------------------
+
+    def schedule(self, pattern: str, task: Task) -> str:
+        id = uuid.uuid4().hex[:12]
+        self._table.add(id, new_pattern(pattern), task)
+        return id
+
+    def schedule_func(self, pattern: str, fn: Callable[[], None]) -> str:
+        return self.schedule(pattern, TaskFunc(fn))
+
+    def schedule_with_id(self, id: str, pattern: str, task: Task) -> None:
+        self._table.add(id, new_pattern(pattern), task)
+
+    def deschedule(self, id: str) -> bool:
+        return self._table.remove(id)
+
+    def update_pattern(self, id: str, pattern: str) -> bool:
+        return self._table.update_pattern(id, new_pattern(pattern))
+
+    def get_task(self, id: str) -> Task | None:
+        return self._table.get_task(id)
+
+    def get_pattern(self, id: str) -> Pattern | None:
+        return self._table.get_pattern(id)
+
+    def is_empty(self) -> bool:
+        return self._table.is_empty()
+
+    def size(self) -> int:
+        return self._table.size()
+
+    def clear(self) -> None:
+        with self._lock:
+            for id in list(self._table.ids()):
+                self._table.remove(id)
+
+    # -- lifecycle ------------------------------------------------------------
+
+    def is_started(self) -> bool:
+        return self._started
+
+    def running_count(self) -> int:
+        with self._running_lock:
+            return self._running_count
+
+    def start(self) -> None:
+        with self._lock:
+            if self._started:
+                return
+            self._started = True
+            self._stop_event.clear()
+            self._thread = threading.Thread(target=self._run_loop, daemon=True)
+            self._thread.start()
+
+    def stop(self, clear_tasks: bool = False) -> None:
+        with self._lock:
+            if not self._started:
+                return
+            self._started = False
+            self._stop_event.set()
+            if clear_tasks:
+                self.clear()
+
+    def wait(self) -> None:
+        if self._thread and self._thread.is_alive():
+            self._thread.join()
+
+    def shutdown(self, clear_tasks: bool = False) -> None:
+        self.stop(clear_tasks)
+        self.wait()
+
+    def restart(self) -> None:
+        self.stop()
+        self.start()
+
+    # -- internal loop --------------------------------------------------------
+
+    def _run_loop(self) -> None:
+        step = timedelta(seconds=1) if self._match_second else timedelta(minutes=1)
+        while not self._stop_event.is_set():
+            now = datetime.now()
+            for ct in self._table.items():
+                if self._stop_event.is_set():
+                    return
+                if ct.pattern.match(now, self._match_second):
+                    self._execute_task(ct)
+            self._stop_event.wait(timeout=step.total_seconds() if step.total_seconds() > 0 else 1)
+
+    def _execute_task(self, ct: CronTask) -> None:
+        for listener in self._listeners:
+            try:
+                listener.on_start(ct)
+            except Exception:
+                pass
+
+        with self._running_lock:
+            self._running_count += 1
+
+        def _run() -> None:
+            try:
+                ct.execute()
+                for listener in self._listeners:
+                    try:
+                        listener.on_succeeded(ct)
+                    except Exception:
+                        pass
+            except Exception as exc:
+                _logger.error("cron task %s failed: %s", ct.id, exc)
+                for listener in self._listeners:
+                    try:
+                        listener.on_failed(ct, exc)
+                    except Exception:
+                        pass
+            finally:
+                with self._running_lock:
+                    self._running_count -= 1
+
+        threading.Thread(target=_run, daemon=True).start()
+
+
+# ---------------------------------------------------------------------------
+# Default global scheduler
+# ---------------------------------------------------------------------------
+
+_default_scheduler_lock = threading.Lock()
+_default_scheduler: Scheduler | None = None
+
+
+def _get_default_scheduler() -> Scheduler:
+    global _default_scheduler
+    with _default_scheduler_lock:
+        if _default_scheduler is None:
+            _default_scheduler = Scheduler()
+        return _default_scheduler
+
+
+def configure_default_scheduler(match_second: bool = False) -> Scheduler:
+    global _default_scheduler
+    with _default_scheduler_lock:
+        _default_scheduler = Scheduler(match_second=match_second)
+        return _default_scheduler
+
+
+def schedule(pattern: str, task: Task) -> str:
+    return _get_default_scheduler().schedule(pattern, task)
+
+
+def schedule_func(pattern: str, fn: Callable[[], None]) -> str:
+    return _get_default_scheduler().schedule_func(pattern, fn)
+
+
+def schedule_with_id(id: str, pattern: str, task: Task) -> None:
+    _get_default_scheduler().schedule_with_id(id, pattern, task)
+
+
+def remove(id: str) -> bool:
+    return _get_default_scheduler().deschedule(id)
+
+
+def update_pattern(id: str, pattern: str) -> bool:
+    return _get_default_scheduler().update_pattern(id, pattern)
+
+
+def start() -> None:
+    _get_default_scheduler().start()
+
+
+def stop() -> None:
+    _get_default_scheduler().stop()
+
+
+def shutdown(clear_tasks: bool = False) -> None:
+    _get_default_scheduler().shutdown(clear_tasks)
+
+
+def restart() -> None:
+    _get_default_scheduler().restart()
+
+
+def set_match_second(match_second: bool) -> None:
+    _get_default_scheduler().set_match_second(match_second)
+
+
+def running_count() -> int:
+    return _get_default_scheduler().running_count()

@@ -1,48 +1,81 @@
-"""Cron expression parsing and matching.
+"""Cron expression parsing, matching, and scheduling.
 
 Parse cron expressions and test whether a :class:`~datetime.datetime` matches,
-or compute the next matching moment. Supports 5-, 6-, and 7-field expressions,
-lists, ranges, steps, wildcards, month and weekday aliases, ``|`` alternatives,
-and the ``L`` last-day-of-month token.
-
-Only the pure expression logic is ported; the goroutine-based scheduler,
-timer, and executor from knifer-go are intentionally omitted. Combine
-:func:`next_time` with the standard library ``sched``/``asyncio`` when you need
-to run tasks.
+compute the next matching moment, or schedule recurring tasks using a built-in
+scheduler.
 """
 
 from __future__ import annotations
 
 from datetime import datetime
+from typing import Callable
 
 from kniferpy.internal import cronx
-from kniferpy.internal.cronx import Part, Pattern
+from kniferpy.internal.cronx import (
+    CronTask,
+    Part,
+    Pattern,
+    Scheduler,
+    SimpleTaskListener,
+    Task,
+    TaskFunc,
+    TaskListener,
+    TaskTable,
+    configure_default_scheduler,
+    remove,
+    restart,
+    running_count,
+    schedule,
+    schedule_func,
+    schedule_with_id,
+    set_match_second,
+    shutdown,
+    start,
+    stop,
+    update_pattern,
+)
 
 __all__ = [
     "Part",
     "Pattern",
+    "CronTask",
+    "Scheduler",
+    "Task",
+    "TaskFunc",
+    "TaskListener",
+    "SimpleTaskListener",
+    "TaskTable",
     "match",
     "must_new_pattern",
     "new_pattern",
     "next_time",
+    # Global scheduler
+    "configure_default_scheduler",
+    "schedule",
+    "schedule_func",
+    "schedule_with_id",
+    "remove",
+    "update_pattern",
+    "start",
+    "stop",
+    "shutdown",
+    "restart",
+    "set_match_second",
+    "running_count",
 ]
 
 
 def new_pattern(expr: str) -> Pattern:
-    """Parse ``expr`` into a :class:`Pattern`."""
     return cronx.new_pattern(expr)
 
 
 def must_new_pattern(expr: str) -> Pattern:
-    """Parse ``expr`` into a :class:`Pattern`, raising on any error."""
     return cronx.must_new_pattern(expr)
 
 
 def match(expr: str, moment: datetime, match_second: bool = False) -> bool:
-    """Parse ``expr`` and report whether ``moment`` matches it."""
     return cronx.match(expr, moment, match_second)
 
 
 def next_time(expr: str, after: datetime, match_second: bool = False) -> datetime | None:
-    """Parse ``expr`` and return the first matching moment after ``after``."""
     return cronx.next_time(expr, after, match_second)

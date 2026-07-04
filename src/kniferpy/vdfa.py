@@ -27,11 +27,16 @@ __all__ = [
     "Processor",
     "WordTree",
     "contains",
+    "contains_any",
     "default_processor",
     "filter",
+    "filter_any",
+    "filter_mode",
     "get_found_all",
+    "get_found_all_any",
     "get_found_all_mode",
     "get_found_first",
+    "get_found_first_any",
     "init",
     "init_string",
     "is_inited",
@@ -95,3 +100,26 @@ def get_found_all_mode(text: str, density_match: bool, greed_match: bool) -> lis
 def filter(text: str, greed_match: bool = True, processor: Processor | None = None) -> str:
     """Replace words found by the package-level matcher (masked with ``*`` by default)."""
     return dfax.filter(text, greed_match, processor)
+
+
+def contains_any(text: str) -> bool:
+    return dfax.contains_any(text)
+
+
+def get_found_first_any(text: str) -> FoundWord | None:
+    return dfax.get_found_first_any(text)
+
+
+def get_found_all_any(text: str) -> list[FoundWord]:
+    return dfax.get_found_all_any(text)
+
+
+def filter_any(text: str, greed_match: bool = True, processor: Processor | None = None) -> str:
+    return dfax.filter_any(text, greed_match, processor)
+
+
+def filter_mode(
+    text: str, density_match: bool, greed_match: bool,
+    processor: Processor | None = None,
+) -> str:
+    return dfax.filter_mode(text, density_match, greed_match, processor)

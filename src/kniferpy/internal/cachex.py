@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import threading
 import time
+import weakref
 from collections import OrderedDict
 from collections.abc import Callable
 from typing import Generic, TypeVar
@@ -15,6 +16,8 @@ V = TypeVar("V")
 Listener = Callable[[K, V], None]
 # A supplier produces a value on a GetOrLoad miss.
 Supplier = Callable[[], V]
+# A ticker factory creates a ticker channel and stopper for scheduled pruning.
+TickerFactory = Callable[[float], tuple["_Ticker", Callable[[], None]]]
 
 
 class _CacheObj(Generic[K, V]):
@@ -455,3 +458,472 @@ def new_lfu(
 
 def new_no_cache() -> NoCache[K, V]:
     return NoCache()
+
+
+# ----- TimedCache (expiration-only, no capacity limit) -----------------------
+
+
+class _Ticker:
+    __slots__ = ("_timer", "_fn")
+
+    def __init__(self, interval: float, fn: Callable[[], None]) -> None:
+        self._fn = fn
+        self._timer: threading.Timer | None = None
+        self._start(interval)
+
+    def _start(self, interval: float) -> None:
+        self._timer = threading.Timer(interval, self._tick)
+        self._timer.daemon = True
+        self._timer.start()
+
+    def _tick(self) -> None:
+        self._fn()
+
+    def stop(self) -> None:
+        if self._timer is not None:
+            self._timer.cancel()
+            self._timer = None
+
+
+def _default_ticker_factory(delay: float) -> tuple[_Ticker, Callable[[], None]]:
+    t = _Ticker(delay, lambda: None)
+    return t, t.stop
+
+
+def _default_runner(fn: Callable[[], None]) -> None:
+    t = threading.Thread(target=fn, daemon=True)
+    t.start()
+
+
+class TimedCache(Generic[K, V]):
+    """An expiration-only cache with no capacity limit.
+
+    Entries are removed only when they expire and are observed by a lookup,
+    explicit prune call, or scheduled prune task.
+    """
+
+    __slots__ = (
+        "_mu",
+        "_entries",
+        "_timeout",
+        "_listener",
+        "_hits",
+        "_misses",
+        "_clock",
+        "_ticker_factory",
+        "_runner",
+        "_prune_mu",
+        "_prune_stop",
+        "_prune_wg",
+        "_pending",
+    )
+
+    def __init__(
+        self,
+        timeout: float,
+        *,
+        listener: Listener[K, V] | None = None,
+        clock: Callable[[], float] | None = None,
+        ticker_factory: TickerFactory | None = None,
+        runner: Callable[[Callable[[], None]], None] | None = None,
+    ) -> None:
+        self._timeout = timeout if timeout and timeout > 0 else 0.0
+        self._mu = threading.RLock()
+        self._entries: dict[K, tuple[V, float, float]] = {}  # key -> (value, last_access, ttl)
+        self._listener = listener
+        self._hits = 0
+        self._misses = 0
+        self._clock = clock if clock is not None else time.monotonic
+        self._ticker_factory = ticker_factory if ticker_factory is not None else _default_ticker_factory
+        self._runner = runner if runner is not None else _default_runner
+        self._prune_mu = threading.Lock()
+        self._prune_stop: threading.Event | None = None
+        self._pending: list[tuple[K, V]] = []
+
+    def _now(self) -> float:
+        return self._clock()
+
+    def _collect(self, key: K, value: V) -> None:
+        if self._listener is not None:
+            self._pending.append((key, value))
+
+    def _drain_events(self) -> list[tuple[K, V]]:
+        if not self._pending or self._listener is None:
+            self._pending = []
+            return []
+        events = self._pending
+        self._pending = []
+        return events
+
+    def _notify(self, events: list[tuple[K, V]]) -> None:
+        listener = self._listener
+        if listener is None:
+            return
+        for key, value in events:
+            listener(key, value)
+
+    def put(self, key: K, value: V) -> None:
+        self.put_with_timeout(key, value, self._timeout)
+
+    def put_with_timeout(self, key: K, value: V, timeout: float) -> None:
+        ttl = timeout if timeout and timeout > 0 else 0.0
+        with self._mu:
+            old = self._entries.get(key)
+            if old is not None:
+                self._collect(key, old[0])
+            self._entries[key] = (value, self._now(), ttl)
+            events = self._drain_events()
+        self._notify(events)
+
+    def get(self, key: K, default: V | None = None) -> V | None:
+        with self._mu:
+            entry = self._entries.get(key)
+            if entry is None:
+                self._misses += 1
+                return default
+            now = self._now()
+            _, last_access, ttl = entry
+            if ttl > 0 and now - last_access > ttl:
+                del self._entries[key]
+                self._collect(key, entry[0])
+                self._misses += 1
+                events = self._drain_events()
+                self._notify(events)
+                return default
+            self._entries[key] = (entry[0], now, ttl)
+            self._hits += 1
+            return entry[0]
+
+    def contains_key(self, key: K) -> bool:
+        with self._mu:
+            entry = self._entries.get(key)
+            if entry is None:
+                return False
+            now = self._now()
+            _, last_access, ttl = entry
+            if ttl > 0 and now - last_access > ttl:
+                del self._entries[key]
+                self._collect(key, entry[0])
+                events = self._drain_events()
+                self._notify(events)
+                return False
+            return True
+
+    def remove(self, key: K) -> None:
+        with self._mu:
+            old = self._entries.pop(key, None)
+            if old is not None:
+                self._collect(key, old[0])
+            events = self._drain_events()
+        self._notify(events)
+
+    def clear(self) -> None:
+        with self._mu:
+            for key, entry in self._entries.items():
+                self._collect(key, entry[0])
+            self._entries.clear()
+            events = self._drain_events()
+        self._notify(events)
+
+    def prune(self) -> int:
+        with self._mu:
+            count = 0
+            now = self._now()
+            expired_keys: list[K] = []
+            for key, entry in self._entries.items():
+                _, last_access, ttl = entry
+                if ttl > 0 and now - last_access > ttl:
+                    expired_keys.append(key)
+            for key in expired_keys:
+                entry = self._entries.pop(key)
+                self._collect(key, entry[0])
+                count += 1
+            events = self._drain_events()
+        self._notify(events)
+        return count
+
+    def size(self) -> int:
+        with self._mu:
+            return len(self._entries)
+
+    def is_empty(self) -> bool:
+        with self._mu:
+            return len(self._entries) == 0
+
+    def hit_count(self) -> int:
+        with self._mu:
+            return self._hits
+
+    def miss_count(self) -> int:
+        with self._mu:
+            return self._misses
+
+    def keys(self) -> list[K]:
+        with self._mu:
+            return list(self._entries.keys())
+
+    def values(self) -> list[V]:
+        with self._mu:
+            now = self._now()
+            result: list[V] = []
+            for entry in self._entries.values():
+                v, last_access, ttl = entry
+                if ttl <= 0 or now - last_access <= ttl:
+                    result.append(v)
+            return result
+
+    def set_listener(self, listener: Listener[K, V] | None) -> TimedCache[K, V]:
+        with self._mu:
+            self._listener = listener
+        return self
+
+    def schedule_prune(self, delay: float) -> None:
+        if delay <= 0:
+            return
+        with self._prune_mu:
+            if self._prune_stop is not None:
+                return
+            self._prune_stop = threading.Event()
+
+        def _prune_loop() -> None:
+            stop = self._prune_stop
+            if stop is None:
+                return
+            ticks, ticker_stop = self._ticker_factory(delay)
+            try:
+                while not stop.is_set():
+                    stop.wait(delay)
+                    if stop.is_set():
+                        break
+                    self.prune()
+            finally:
+                ticker_stop()
+
+        self._runner(_prune_loop)
+
+    def cancel_prune_schedule(self) -> None:
+        with self._prune_mu:
+            if self._prune_stop is None:
+                return
+            self._prune_stop.set()
+            self._prune_stop = None
+
+
+# ----- WeakCache (pointer-value timed cache with best-effort finalizer) ------
+
+
+class WeakCache(Generic[K, V]):
+    """A pointer-value cache with TTL and best-effort finalizer cleanup.
+
+    Python's weakref provides similar semantics. Entries are removed when
+    the referenced object is garbage-collected or when TTL expires.
+    """
+
+    __slots__ = ("_mu", "_entries", "_timeout", "_listener", "_hits", "_misses", "_clock", "_pending")
+
+    def __init__(
+        self,
+        timeout: float,
+        *,
+        listener: Listener[K, V] | None = None,
+        clock: Callable[[], float] | None = None,
+    ) -> None:
+        self._timeout = timeout if timeout and timeout > 0 else 0.0
+        self._mu = threading.Lock()
+        self._entries: dict[K, tuple[weakref.ReferenceType[V], float, float]] = {}  # key -> (ref, last_access, ttl)
+        self._listener = listener
+        self._hits = 0
+        self._misses = 0
+        self._clock = clock if clock is not None else time.monotonic
+        self._pending: list[tuple[K, V]] = []
+
+    def _now(self) -> float:
+        return self._clock()
+
+    def _collect(self, key: K, value: V) -> None:
+        if self._listener is not None:
+            self._pending.append((key, value))
+
+    def _drain_events(self) -> list[tuple[K, V]]:
+        if not self._pending or self._listener is None:
+            self._pending = []
+            return []
+        events = self._pending
+        self._pending = []
+        return events
+
+    def _notify(self, events: list[tuple[K, V]]) -> None:
+        listener = self._listener
+        if listener is None:
+            return
+        for key, value in events:
+            listener(key, value)
+
+    def put(self, key: K, value: V) -> None:
+        self.put_with_timeout(key, value, self._timeout)
+
+    def put_with_timeout(self, key: K, value: V, timeout: float) -> None:
+        ttl = timeout if timeout and timeout > 0 else 0.0
+        ref = weakref.ref(value, lambda r, k=key: self._on_finalize(k, value))
+        with self._mu:
+            old = self._entries.get(key)
+            if old is not None:
+                old_val = old[0]()
+                if old_val is not None:
+                    self._collect(key, old_val)
+            self._entries[key] = (ref, self._now(), ttl)
+            events = self._drain_events()
+        self._notify(events)
+
+    def _on_finalize(self, key: K, value: V) -> None:
+        with self._mu:
+            entry = self._entries.get(key)
+            if entry is not None:
+                ref = entry[0]()
+                if ref is None or ref is value:
+                    del self._entries[key]
+                    self._collect(key, value)
+            events = self._drain_events()
+        self._notify(events)
+
+    def get(self, key: K, default: V | None = None) -> V | None:
+        with self._mu:
+            entry = self._entries.get(key)
+            if entry is None:
+                self._misses += 1
+                return default
+            ref, last_access, ttl = entry
+            value = ref()
+            if value is None:
+                del self._entries[key]
+                self._misses += 1
+                return default
+            now = self._now()
+            if ttl > 0 and now - last_access > ttl:
+                del self._entries[key]
+                self._collect(key, value)
+                self._misses += 1
+                events = self._drain_events()
+                self._notify(events)
+                return default
+            self._entries[key] = (ref, now, ttl)
+            self._hits += 1
+            return value
+
+    def contains_key(self, key: K) -> bool:
+        with self._mu:
+            entry = self._entries.get(key)
+            if entry is None:
+                return False
+            ref, last_access, ttl = entry
+            value = ref()
+            if value is None:
+                del self._entries[key]
+                return False
+            now = self._now()
+            if ttl > 0 and now - last_access > ttl:
+                del self._entries[key]
+                self._collect(key, value)
+                events = self._drain_events()
+                self._notify(events)
+                return False
+            return True
+
+    def remove(self, key: K) -> None:
+        with self._mu:
+            old = self._entries.pop(key, None)
+            if old is not None:
+                old_val = old[0]()
+                if old_val is not None:
+                    self._collect(key, old_val)
+            events = self._drain_events()
+        self._notify(events)
+
+    def clear(self) -> None:
+        with self._mu:
+            for key, entry in self._entries.items():
+                ref = entry[0]
+                value = ref()
+                if value is not None:
+                    self._collect(key, value)
+            self._entries.clear()
+            events = self._drain_events()
+        self._notify(events)
+
+    def prune(self) -> int:
+        with self._mu:
+            count = 0
+            now = self._now()
+            expired_keys: list[K] = []
+            for key, entry in self._entries.items():
+                ref, last_access, ttl = entry
+                value = ref()
+                if value is None:
+                    expired_keys.append(key)
+                    continue
+                if ttl > 0 and now - last_access > ttl:
+                    expired_keys.append(key)
+            for key in expired_keys:
+                entry = self._entries.pop(key, None)
+                if entry is not None:
+                    value = entry[0]()
+                    if value is not None:
+                        self._collect(key, value)
+                    count += 1
+            events = self._drain_events()
+        self._notify(events)
+        return count
+
+    def size(self) -> int:
+        with self._mu:
+            return len(self._entries)
+
+    def is_empty(self) -> bool:
+        with self._mu:
+            return len(self._entries) == 0
+
+    def hit_count(self) -> int:
+        with self._mu:
+            return self._hits
+
+    def miss_count(self) -> int:
+        with self._mu:
+            return self._misses
+
+    def keys(self) -> list[K]:
+        with self._mu:
+            return list(self._entries.keys())
+
+    def set_listener(self, listener: Listener[K, V] | None) -> WeakCache[K, V]:
+        with self._mu:
+            self._listener = listener
+        return self
+
+
+# ----- factory helpers for timed/weak ----------------------------------------
+
+
+def new_timed(
+    timeout: float,
+    *,
+    listener: Listener[K, V] | None = None,
+    clock: Callable[[], float] | None = None,
+    ticker_factory: TickerFactory | None = None,
+    runner: Callable[[Callable[[], None]], None] | None = None,
+) -> TimedCache[K, V]:
+    return TimedCache(
+        timeout,
+        listener=listener,
+        clock=clock,
+        ticker_factory=ticker_factory,
+        runner=runner,
+    )
+
+
+def new_weak(
+    timeout: float,
+    *,
+    listener: Listener[K, V] | None = None,
+    clock: Callable[[], float] | None = None,
+) -> WeakCache[K, V]:
+    return WeakCache(timeout, listener=listener, clock=clock)

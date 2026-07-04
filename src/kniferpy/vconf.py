@@ -4,30 +4,44 @@ Parse ``properties``/INI-style configuration into grouped keys and read typed
 values with fail-safe defaults. Supports ``[section]`` groups, ``#``/``;``
 comments, ``=``/``:`` separators, quoted values, ``${var}`` / ``${group.key}``
 / ``${ENV:NAME}`` / ``${key:default}`` expansion, profile overlays, merging,
-and cloning.
-
-Only the pure text-parsing core is ported. The remote loaders (``LoadRemote``),
-file watching, schema validation, struct binding, and full YAML/TOML parsing
-from knifer-go are intentionally omitted; use :mod:`kniferpy.vjson`,
-``configparser``, or a YAML/TOML library alongside this facade when needed.
+cloning, file watching, struct binding, schema validation, and remote loading
+with SSRF protection.
 """
 
 from __future__ import annotations
 
+import threading
 from pathlib import Path
+from typing import Callable
 
 from kniferpy.internal import confx
-from kniferpy.internal.confx import Conf
+from kniferpy.internal.confx import (
+    Conf,
+    FieldRule,
+    Schema,
+    WatchEvent,
+)
 
 __all__ = [
     "Conf",
+    "FieldRule",
+    "Schema",
+    "WatchEvent",
     "load",
     "load_files",
     "load_profile",
+    "load_remote",
+    "load_remote_safe",
     "merge",
     "new",
     "parse",
     "parse_bytes",
+    "watch",
+    "bind",
+    "bind_group",
+    "validate_schema",
+    "apply_defaults",
+    "schema_from_struct",
 ]
 
 
@@ -61,6 +75,51 @@ def load_profile(path: str | Path, profile: str) -> Conf:
     return confx.load_profile(path, profile)
 
 
+def load_remote(url: str, timeout: float = 10.0) -> Conf:
+    """Load configuration from a remote URL."""
+    return confx.load_remote(url, timeout)
+
+
+def load_remote_safe(url: str, timeout: float = 10.0) -> Conf:
+    """Load configuration from a remote URL with SSRF protection."""
+    return confx.load_remote_safe(url, timeout)
+
+
 def merge(*configs: Conf) -> Conf:
     """Merge configs in order; later configs override earlier ones."""
     return confx.merge(*configs)
+
+
+def watch(
+    path: str | Path,
+    onChange: Callable[[WatchEvent], None],
+    *,
+    interval: float = 1.0,
+) -> threading.Thread:
+    """Watch a file for changes via polling."""
+    return confx.watch(path, onChange, interval=interval)
+
+
+def bind(conf: Conf, obj: object) -> None:
+    """Bind configuration values to a dataclass instance."""
+    confx.bind(conf, obj)
+
+
+def bind_group(conf: Conf, group: str, obj: object) -> None:
+    """Bind configuration values from a group to a dataclass instance."""
+    confx.bind_group(conf, group, obj)
+
+
+def validate_schema(conf: Conf, schema: Schema) -> list[str]:
+    """Validate a Conf against a Schema. Returns a list of error messages."""
+    return confx.validate_schema(conf, schema)
+
+
+def apply_defaults(conf: Conf, schema: Schema) -> Conf:
+    """Apply schema defaults to missing keys."""
+    return confx.apply_defaults(conf, schema)
+
+
+def schema_from_struct(obj: object) -> Schema:
+    """Build a Schema from a dataclass with conf metadata tags."""
+    return confx.schema_from_struct(obj)

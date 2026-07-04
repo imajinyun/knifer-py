@@ -4,94 +4,92 @@ from pathlib import Path
 from typing import Any
 
 from kniferpy.internal import jsonx
-from kniferpy.verr import DecodeError
+from kniferpy.internal.jsonx import (
+    Config,
+    JSONArray,
+    JSONObject,
+    Null,
+    is_null,
+    new_json_array,
+    new_json_object,
+)
+from kniferpy.verr import JSONError
 
+# Parse
+parse = jsonx.loads
+parse_obj = jsonx.parse_obj
+parse_array = jsonx.parse_array
 
-def parse(value: str | bytes | bytearray) -> Any:
-    return jsonx.loads(value)
+# Serialize
+dumps = jsonx.dumps
+to_json_str = jsonx.to_json_str
+quote = jsonx.quote
 
+# Path access
+get_path = jsonx.get_path
+put_by_path = jsonx.put_by_path
+get_str = jsonx.get_str
+get_int = jsonx.get_int
+get_float = jsonx.get_float
+get_bool = jsonx.get_bool
+get_list = jsonx.get_list
+get_dict = jsonx.get_dict
+has_path = jsonx.has_path
 
-def parse_obj(value: str | bytes | bytearray) -> dict[str, Any]:
-    parsed = parse(value)
-    if not isinstance(parsed, dict):
-        raise DecodeError("JSON value is not an object", code="json.not_object")
-    return parsed
+# Validation
+is_json = jsonx.is_json
+is_json_obj = jsonx.is_json_obj
+is_json_array = jsonx.is_json_array
+is_valid = jsonx.is_valid
 
+# File I/O
+read = jsonx.read
+read_obj = jsonx.read_obj
+write = jsonx.write
 
-def parse_array(value: str | bytes | bytearray) -> list[Any]:
-    parsed = parse(value)
-    if not isinstance(parsed, list):
-        raise DecodeError("JSON value is not an array", code="json.not_array")
-    return parsed
+# Bean conversion
+to_bean = jsonx.to_bean
+to_list = jsonx.to_list
 
+# Format
+format_json_str = jsonx.format_json_str
 
-def dumps(value: Any) -> str:
-    return jsonx.dumps(value)
+# Config
+new_config = jsonx.new_config
 
-
-def dumps_pretty(value: Any) -> str:
-    return jsonx.dumps(value, pretty=True)
-
-
-def get_path(obj: Any, path: str, *, default: Any = None) -> Any:
-    return jsonx.get_path(obj, path, default=default)
-
-
-def get_str(obj: Any, path: str, *, default: str | None = None) -> str | None:
-    return jsonx.get_str(obj, path, default=default)
-
-
-def get_int(obj: Any, path: str, *, default: int | None = None) -> int | None:
-    return jsonx.get_int(obj, path, default=default)
-
-
-def get_float(obj: Any, path: str, *, default: float | None = None) -> float | None:
-    return jsonx.get_float(obj, path, default=default)
-
-
-def get_bool(obj: Any, path: str, *, default: bool | None = None) -> bool | None:
-    return jsonx.get_bool(obj, path, default=default)
-
-
-def get_list(obj: Any, path: str, *, default: list[Any] | None = None) -> list[Any] | None:
-    return jsonx.get_list(obj, path, default=default)
-
-
-def get_dict(
-    obj: Any,
-    path: str,
-    *,
-    default: dict[str, Any] | None = None,
-) -> dict[str, Any] | None:
-    return jsonx.get_dict(obj, path, default=default)
-
-
-def has_path(obj: Any, path: str) -> bool:
-    return jsonx.has_path(obj, path)
-
-
-def is_valid(value: str | bytes | bytearray) -> bool:
-    return jsonx.is_valid(value)
-
-
-def read(path: str | Path, *, encoding: str = "utf-8", max_bytes: int = 1_048_576) -> Any:
-    return jsonx.read(path, encoding=encoding, max_bytes=max_bytes)
-
-
-def read_obj(
-    path: str | Path,
-    *,
-    encoding: str = "utf-8",
-    max_bytes: int = 1_048_576,
-) -> dict[str, Any]:
-    return jsonx.read_obj(path, encoding=encoding, max_bytes=max_bytes)
-
-
-def write(
-    path: str | Path,
-    value: Any,
-    *,
-    pretty: bool = True,
-    encoding: str = "utf-8",
-) -> None:
-    jsonx.write(path, value, pretty=pretty, encoding=encoding)
+__all__ = [
+    "Config",
+    "JSONArray",
+    "JSONError",
+    "JSONObject",
+    "Null",
+    "is_null",
+    "new_json_array",
+    "new_json_object",
+    "parse",
+    "parse_obj",
+    "parse_array",
+    "dumps",
+    "to_json_str",
+    "quote",
+    "get_path",
+    "put_by_path",
+    "get_str",
+    "get_int",
+    "get_float",
+    "get_bool",
+    "get_list",
+    "get_dict",
+    "has_path",
+    "is_json",
+    "is_json_obj",
+    "is_json_array",
+    "is_valid",
+    "read",
+    "read_obj",
+    "write",
+    "to_bean",
+    "to_list",
+    "format_json_str",
+    "new_config",
+]

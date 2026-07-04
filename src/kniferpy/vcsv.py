@@ -14,6 +14,12 @@ __all__ = [
     "write_string_maps",
     "records_to_maps",
     "maps_to_records",
+    "read",
+    "read_maps",
+    "write",
+    "write_maps",
+    "for_each",
+    "for_each_map",
 ]
 
 
@@ -56,3 +62,62 @@ def records_to_maps(records: Sequence[Sequence[str]]) -> list[Row]:
 
 def maps_to_records(headers: Sequence[str], rows: Sequence[Row]) -> list[Record]:
     return csvx.maps_to_records(headers, rows)
+
+
+def read(
+    path: str,
+    delimiter: str = ",",
+    trim_leading_space: bool = False,
+    encoding: str = "utf-8",
+) -> list[Record]:
+    return csvx.read(path, delimiter, trim_leading_space, encoding)
+
+
+def read_maps(
+    path: str,
+    delimiter: str = ",",
+    trim_leading_space: bool = False,
+    encoding: str = "utf-8",
+) -> list[Row]:
+    return csvx.read_maps(path, delimiter, trim_leading_space, encoding)
+
+
+def write(
+    path: str,
+    records: Sequence[Sequence[str]],
+    delimiter: str = ",",
+    use_crlf: bool = False,
+    encoding: str = "utf-8",
+) -> None:
+    csvx.write(path, records, delimiter, use_crlf, encoding)
+
+
+def write_maps(
+    path: str,
+    headers: Sequence[str],
+    rows: Sequence[Row],
+    delimiter: str = ",",
+    use_crlf: bool = False,
+    encoding: str = "utf-8",
+) -> None:
+    csvx.write_maps(path, headers, rows, delimiter, use_crlf, encoding)
+
+
+def for_each(
+    path: str,
+    callback,
+    delimiter: str = ",",
+    trim_leading_space: bool = False,
+    encoding: str = "utf-8",
+) -> None:
+    csvx.for_each(path, callback, delimiter, trim_leading_space, encoding)
+
+
+def for_each_map(
+    path: str,
+    callback,
+    delimiter: str = ",",
+    trim_leading_space: bool = False,
+    encoding: str = "utf-8",
+) -> None:
+    csvx.for_each_map(path, callback, delimiter, trim_leading_space, encoding)

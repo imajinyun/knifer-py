@@ -16,6 +16,8 @@ __all__ = [
     "is_less_than_or_equal",
     "match_el",
     "match_el_with_delimiter",
+    "match_el_with_delimiter_err",
+    "match_el_by_delimiter",
 ]
 
 
@@ -53,3 +55,11 @@ def match_el(current_version: str, version_el: str) -> bool:
 
 def match_el_with_delimiter(current_version: str, version_el: str, delimiter: str) -> bool:
     return verx.match_el_with_delimiter(current_version, version_el, delimiter)
+
+
+def match_el_with_delimiter_err(current_version: str, version_el: str, delimiter: str) -> tuple[bool, str | None]:
+    return verx.match_el_with_delimiter_err(current_version, version_el, delimiter)
+
+
+def match_el_by_delimiter(current_version: str, version_el: str, delimiter: str) -> bool:
+    return verx.match_el_by_delimiter(current_version, version_el, delimiter)

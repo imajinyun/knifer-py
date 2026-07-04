@@ -262,3 +262,16 @@ def is_less_than(current_version: str, compare_version_str: str) -> bool:
 
 def is_less_than_or_equal(current_version: str, compare_version_str: str) -> bool:
     return match_el(current_version, "<=" + compare_version_str)
+
+
+def match_el_with_delimiter_err(current_version: str, version_el: str, delimiter: str) -> tuple[bool, str | None]:
+    """Return (matched, error) tuple. Error is None on success."""
+    if not _valid_delimiter(delimiter):
+        return False, f"invalid delimiter: {delimiter!r}"
+    if version_el.strip() == "":
+        return False, None
+    return match_el_with_delimiter(current_version, version_el, delimiter), None
+
+
+def match_el_by_delimiter(current_version: str, version_el: str, delimiter: str) -> bool:
+    return match_el_with_delimiter(current_version, version_el, delimiter)

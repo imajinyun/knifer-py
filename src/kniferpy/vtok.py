@@ -6,11 +6,6 @@ Python-idiomatic mappings:
 - Go context.Context -> omitted (synchronous)
 - Go Provider interface -> Protocol
 - Go functional With* options -> keyword args on Client constructor
-- Go error sentinels -> KniferError with codes knifer.tok.*
-
-Omitted (Go-specific):
-- context.Context cancellation (not needed in sync Python)
-- WithProvider functional option (provider is a constructor arg)
 """
 
 from __future__ import annotations
@@ -22,9 +17,17 @@ from kniferpy.internal.tokenizex import (
     KeywordsResponse,
     Mode,
     Provider,
+    SimpleProvider,
     Token,
     TokenizeRequest,
     TokenizeResponse,
+    bigram,
+    filter_words,
+    is_stop_word,
+    new_simple_provider,
+    ngram,
+    remove_stop_words,
+    trigram,
 )
 
 __all__ = [
@@ -34,7 +37,15 @@ __all__ = [
     "KeywordsResponse",
     "Mode",
     "Provider",
+    "SimpleProvider",
     "Token",
     "TokenizeRequest",
     "TokenizeResponse",
+    "bigram",
+    "filter_words",
+    "is_stop_word",
+    "new_simple_provider",
+    "ngram",
+    "remove_stop_words",
+    "trigram",
 ]

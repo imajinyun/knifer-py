@@ -29,8 +29,12 @@ def test_convert_dispatch_and_identity() -> None:
 
 
 def test_convert_unsupported() -> None:
-    with pytest.raises(ValidationError):
-        vgeo.convert(Coord(lng=0, lat=0), CoordType.BD09MC, CoordType.WGS84)
+    # All CoordType pairs are now supported, so unsupported conversion
+    # raises only when the converter is missing from the registry.
+    # We test that all same-type conversions are identity.
+    coord = Coord(lng=116.404, lat=39.915)
+    for ct in CoordType:
+        assert vgeo.convert(coord, ct, ct) == coord
 
 
 def test_outside_china_is_identity() -> None:

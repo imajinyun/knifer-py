@@ -66,6 +66,27 @@ class UserInfo:
         )
 
 
+@dataclass(frozen=True, slots=True)
+class RuntimeInfo:
+    """Python runtime information (knifer-go GoInfo/RuntimeInfo equivalent)."""
+
+    python_version: str
+    python_implementation: str
+    python_compiler: str
+    python_path: list[str]
+    prefix: str
+    executable: str
+
+    def __str__(self) -> str:
+        return (
+            f"Python Version:        {self.python_version}\n"
+            f"Python Implementation:  {self.python_implementation}\n"
+            f"Python Compiler:       {self.python_compiler}\n"
+            f"Python Prefix:         {self.prefix}\n"
+            f"Python Executable:     {self.executable}\n"
+        )
+
+
 def _line_separator() -> str:
     return "\r\n" if os.name == "nt" else "\n"
 
@@ -208,3 +229,146 @@ def get_bool(key: str, default: bool = False) -> bool:
     if value is None:
         return default
     return convx.to_bool(value, default)
+
+
+# --- Runtime / process info --------------------------------------------------
+
+
+def get_total_memory() -> int:
+    """Return total physical memory in bytes."""
+    try:
+        import psutil
+        return psutil.virtual_memory().total
+    except ImportError:
+        return 0
+
+
+def get_free_memory() -> int:
+    """Return free physical memory in bytes."""
+    try:
+        import psutil
+        return psutil.virtual_memory().available
+    except ImportError:
+        return 0
+
+
+def get_max_memory() -> int:
+    """Return max memory the process can use (system total)."""
+    return get_total_memory()
+
+
+def get_runtime_info() -> RuntimeInfo:
+    """Return Python runtime information."""
+    import sysconfig
+    return RuntimeInfo(
+        python_version=sys.version,
+        python_implementation=platform.python_implementation(),
+        python_compiler=platform.python_compiler(),
+        python_path=sys.path,
+        prefix=sys.prefix,
+        executable=sys.executable,
+    )
+
+
+def get_total_thread_count() -> int:
+    """Return the number of threads in the current process."""
+    try:
+        import threading
+        return threading.active_count()
+    except Exception:
+        return 0
+
+
+def get_goroutine_count() -> int:
+    """Alias for get_total_thread_count, matching knifer-go naming."""
+    return get_total_thread_count()
+
+
+# --- Network helpers ---------------------------------------------------------
+
+
+def get_ip_by_host(host: str) -> list[str]:
+    """Resolve hostname to IP addresses."""
+    try:
+        info = socket.getaddrinfo(host, None)
+        return sorted(set(a[4][0] for a in info))
+    except (socket.gaierror, OSError):
+        return []
+
+
+def get_multistage_reverse_proxy_ip(headers: dict[str, str]) -> str:
+    """Extract the client IP from reverse proxy headers like X-Forwarded-For."""
+    for key in ("X-Forwarded-For", "X-Real-IP", "CF-Connecting-IP"):
+        value = headers.get(key, "").strip()
+        if value:
+            # Take the first IP in X-Forwarded-For chain
+            return value.split(",")[0].strip()
+    return ""
+
+
+def is_unknown(value: str) -> bool:
+    """Check if a string is 'unknown' or empty (used for IP detection)."""
+    v = value.strip().lower()
+    return v == "" or v == "unknown"
+
+
+def parse_cookies(cookie_header: str) -> dict[str, str]:
+    """Parse a Cookie header string into a dict."""
+    if not cookie_header:
+        return {}
+    result: dict[str, str] = {}
+    for part in cookie_header.split(";"):
+        part = part.strip()
+        if "=" in part:
+            k, v = part.split("=", 1)
+            result[k.strip()] = v.strip()
+    return result
+
+
+def idn_to_ascii(domain: str) -> str:
+    """Convert an internationalized domain name to ASCII."""
+    return domain.encode("idna").decode("ascii")
+
+
+# --- Dump system info --------------------------------------------------------
+
+
+def _readable_size(byte_count: int) -> str:
+    if byte_count < 1024:
+        return f"{byte_count} B"
+    for unit in ("KB", "MB", "GB", "TB"):
+        byte_count /= 1024.0
+        if byte_count < 1024:
+            return f"{byte_count:.1f} {unit}"
+    return f"{byte_count:.1f} PB"
+
+
+def dump_system_info() -> str:
+    """Return a human-readable string of system information."""
+    lines: list[str] = []
+    os_info = get_os_info()
+    host_info = get_host_info()
+    user_info = get_user_info()
+
+    lines.append("=== System Info ===")
+    lines.append(f"OS:      {os_info.name} {os_info.version} ({os_info.arch})")
+    lines.append(f"Host:    {host_info.name} ({host_info.address})")
+    lines.append(f"User:    {user_info.name}")
+    lines.append(f"Home:    {user_info.home_dir}")
+    lines.append(f"Temp:    {user_info.temp_dir}")
+    lines.append(f"PID:     {get_current_pid()}")
+    lines.append(f"Threads: {get_total_thread_count()}")
+    lines.append(f"Memory:  {_readable_size(get_total_memory())} total, {_readable_size(get_free_memory())} free")
+    lines.append("")
+
+    try:
+        import sysconfig
+        lines.append("=== Python Info ===")
+        lines.append(f"Version: {sys.version}")
+        lines.append(f"Platform: {sys.platform}")
+        lines.append(f"Prefix: {sys.prefix}")
+        lines.append("")
+    except ImportError:
+        pass
+
+    return "\n".join(lines)
