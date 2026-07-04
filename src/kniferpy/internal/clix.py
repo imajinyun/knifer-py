@@ -9,9 +9,31 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum, StrEnum
 from io import StringIO
-from typing import TextIO
+from typing import Protocol, TextIO
 
 from kniferpy.verr import KniferError, ValidationError
+
+
+# --- Runner injection ---------------------------------------------------------
+
+
+class Runner(Protocol):
+    """Pluggable process runner for testing and mocking."""
+
+    def __call__(
+        self,
+        name: str,
+        args: Sequence[str] | None,
+        *,
+        dir: str | os.PathLike[str] | None,
+        env: Mapping[str, str] | None,
+        stdin: str | bytes | None,
+        max_output_bytes: int,
+        timeout: float | None,
+    ) -> "ExecResult": ...
+
+
+RunnerFunc = Callable[[str, Sequence[str] | None, str | os.PathLike[str] | None, Mapping[str, str] | None, str | bytes | None, int, float | None], "ExecResult"]
 
 # --- Errors -------------------------------------------------------------------
 
@@ -72,9 +94,9 @@ def _limit_result(result: ExecResult, max_bytes: int) -> tuple[ExecResult, bool]
     return result, False
 
 
-def run(
+def _default_runner(
     name: str,
-    args: Sequence[str] | None = None,
+    args: Sequence[str] | None,
     *,
     dir: str | os.PathLike[str] | None = None,
     env: Mapping[str, str] | None = None,
@@ -82,15 +104,7 @@ def run(
     max_output_bytes: int = 0,
     timeout: float | None = None,
 ) -> ExecResult:
-    """Execute ``name`` with ``args`` without invoking a shell.
-
-    Environment entries in ``env`` are layered on top of the current process
-    environment. stdout/stderr are captured and optionally truncated to
-    ``max_output_bytes``; exceeding the limit raises
-    :class:`~kniferpy.verr.KniferError`.
-    """
-    if not name:
-        raise _empty_command()
+    """Default process runner using ``subprocess.run``."""
     argv = [name, *(args or ())]
     child_env: dict[str, str] | None = None
     if env is not None:
@@ -124,11 +138,46 @@ def run(
         ) from exc
     duration = time.monotonic() - started
 
-    result = ExecResult(
+    return ExecResult(
         stdout=completed.stdout.decode(errors="replace"),
         stderr=completed.stderr.decode(errors="replace"),
         exit_code=completed.returncode,
         duration=duration,
+    )
+
+
+def run(
+    name: str,
+    args: Sequence[str] | None = None,
+    *,
+    dir: str | os.PathLike[str] | None = None,
+    env: Mapping[str, str] | None = None,
+    stdin: str | bytes | None = None,
+    max_output_bytes: int = 0,
+    timeout: float | None = None,
+    runner: Runner | None = None,
+) -> ExecResult:
+    """Execute ``name`` with ``args`` without invoking a shell.
+
+    Environment entries in ``env`` are layered on top of the current process
+    environment. stdout/stderr are captured and optionally truncated to
+    ``max_output_bytes``; exceeding the limit raises
+    :class:`~kniferpy.verr.KniferError`.
+
+    Pass a ``runner`` callable to replace the default ``subprocess.run``
+    backend (useful for testing).
+    """
+    if not name:
+        raise _empty_command()
+    r = runner if runner is not None else _default_runner
+    result = r(
+        name,
+        args,
+        dir=dir,
+        env=env,
+        stdin=stdin,
+        max_output_bytes=max_output_bytes,
+        timeout=timeout,
     )
     limited, overflowed = _limit_result(result, max_output_bytes)
     if overflowed:
@@ -145,6 +194,7 @@ def output(
     stdin: str | bytes | None = None,
     max_output_bytes: int = 0,
     timeout: float | None = None,
+    runner: Runner | None = None,
 ) -> str:
     """Execute ``name`` with ``args`` and return captured stdout."""
     return run(
@@ -155,6 +205,7 @@ def output(
         stdin=stdin,
         max_output_bytes=max_output_bytes,
         timeout=timeout,
+        runner=runner,
     ).stdout
 
 

@@ -5,7 +5,7 @@ import types
 import typing
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Any
 
 from kniferpy.internal import convx
@@ -496,5 +496,47 @@ def string_to_datetime_hook(fmt: str) -> DecodeHook:
         if from_type is str and to_type is datetime:
             return datetime.strptime(value, fmt)
         return value
+
+    return hook
+
+
+def string_to_timedelta_hook() -> DecodeHook:
+    """Convert ``str`` values to :class:`~datetime.timedelta`.
+
+    Supports formats like ``"1h30m"``, ``"2d"``, ``"30s"``, ``"1h"``, ``"90m"``.
+    """
+
+    def hook(from_type: type | None, to_type: Any, value: Any) -> Any:
+        if from_type is not str or to_type is not timedelta:
+            return value
+        value = value.strip()
+        if not value:
+            return timedelta(0)
+        total = timedelta()
+        buf = ""
+        for ch in value:
+            if ch.isalpha():
+                unit = ch.lower()
+                if not buf:
+                    return value
+                num = float(buf)
+                buf = ""
+                if unit == "d":
+                    total += timedelta(days=num)
+                elif unit == "h":
+                    total += timedelta(hours=num)
+                elif unit == "m":
+                    total += timedelta(minutes=num)
+                elif unit == "s":
+                    total += timedelta(seconds=num)
+                elif unit == "u" or unit == "µ":
+                    total += timedelta(microseconds=num)
+                elif unit == "w":
+                    total += timedelta(weeks=num)
+                else:
+                    return value
+            else:
+                buf += ch
+        return total
 
     return hook

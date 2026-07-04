@@ -40,6 +40,7 @@ __all__ = [
     "merge_result",
     "new_options",
     "string_to_datetime_hook",
+    "string_to_timedelta_hook",
     "to_map",
     "to_struct",
 ]
@@ -103,3 +104,11 @@ def compose_decode_hook(*hooks: DecodeHook | None) -> DecodeHook:
 def string_to_datetime_hook(fmt: str) -> DecodeHook:
     """Convert ``str`` values to :class:`~datetime.datetime` using ``fmt``."""
     return beanx.string_to_datetime_hook(fmt)
+
+
+def string_to_timedelta_hook() -> DecodeHook:
+    """Convert ``str`` values to :class:`~datetime.timedelta`.
+
+    Supports formats like ``"1h30m"``, ``"2d"``, ``"30s"``.
+    """
+    return beanx.string_to_timedelta_hook()

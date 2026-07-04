@@ -7,11 +7,10 @@ subcommand tree with :class:`Command`, render deterministic usage text with
 :func:`render_help`, and wrap strings in ANSI escapes with :func:`colorize`.
 
 knifer-go's functional ``With*`` exec/execute/color options collapse into
-keyword arguments; its injectable ``Runner``/``RunnerFunc`` and the imperative
-``FlagParser`` wrapper around ``flag.FlagSet`` are intentionally omitted in
-favor of the stdlib :mod:`subprocess` runner and an :mod:`argparse` parser
-supplied through :attr:`Command.flags`. ``io.Reader``/``io.Writer`` streams
-become ``str``/``bytes`` and :class:`~typing.TextIO`. Errors raise
+keyword arguments; its ``FlagParser`` wrapper around ``flag.FlagSet`` is
+replaced by an :mod:`argparse` parser supplied through
+:attr:`Command.flags`. ``io.Reader``/``io.Writer`` streams become
+``str``/``bytes`` and :class:`~typing.TextIO`. Errors raise
 :mod:`kniferpy.verr` types instead of returning sentinels.
 """
 
@@ -25,6 +24,8 @@ from kniferpy.internal.clix import (
     ExecResult,
     Handler,
     Invocation,
+    Runner,
+    RunnerFunc,
 )
 
 __all__ = [
@@ -34,6 +35,8 @@ __all__ = [
     "ExecResult",
     "Handler",
     "Invocation",
+    "Runner",
+    "RunnerFunc",
     "colorize",
     "output",
     "render_help",
