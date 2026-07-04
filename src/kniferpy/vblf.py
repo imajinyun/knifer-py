@@ -36,6 +36,19 @@ from kniferpy.internal.hashx import (
 FileOption = Callable[[Any], None]
 """Functional option for bloom filter file loading (Go compat)."""
 
+FuncFilterOption = Callable[[Any], None]
+"""Functional option for FuncFilter construction (Go compat)."""
+
+BitMapBloomFilterOption = Callable[[Any], None]
+"""Functional option for BitMapBloomFilter construction (Go compat)."""
+
+BitSetBloomFilterOption = Callable[[Any], None]
+"""Functional option for BitSetBloomFilter construction (Go compat)."""
+
+# ── Go-compat error type alias ─────────────────────────────────────────────────
+
+BloomFilterError = "BloomFilterError"  # Go compat: sentinel error type name
+
 __all__ = [
     "DEFAULT_MACHINE_NUM",
     "MACHINE_32",
@@ -45,6 +58,10 @@ __all__ = [
     "BloomFilter",
     "FuncFilter",
     "FileOption",
+    "FuncFilterOption",
+    "BitMapBloomFilterOption",
+    "BitSetBloomFilterOption",
+    "BloomFilterError",
     "HashFunc",
     "IntMap",
     "LongMap",
