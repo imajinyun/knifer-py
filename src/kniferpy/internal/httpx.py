@@ -24,6 +24,55 @@ class SessionLike(Protocol):
 
     def post(self, url: str, json: JSONValue, timeout: float) -> ResponseLike: ...
 
+    def put(self, url: str, json: JSONValue, timeout: float) -> ResponseLike: ...
+
+    def delete(self, url: str, timeout: float) -> ResponseLike: ...
+
+    def patch(self, url: str, json: JSONValue, timeout: float) -> ResponseLike: ...
+
+    def head(self, url: str, timeout: float) -> ResponseLike: ...
+
+    def options(self, url: str, timeout: float) -> ResponseLike: ...
+
+
+def _request_safe(
+    method: str,
+    raw_url: str,
+    *,
+    allowed_hosts: set[str] | None = None,
+    timeout: float = 10.0,
+    max_bytes: int = 1_048_576,
+    resolver: urlx.Resolver | None = None,
+    session: SessionLike | None = None,
+    json_body: JSONValue | None = None,
+) -> bytes:
+    urlx.validate_http_url(raw_url, allowed_hosts=allowed_hosts, resolver=resolver)
+    client = session or requests.Session()
+    if method == "GET":
+        response = client.get(raw_url, timeout=timeout)
+    elif method == "POST":
+        response = client.post(raw_url, json=json_body, timeout=timeout)
+    elif method == "PUT":
+        response = client.put(raw_url, json=json_body, timeout=timeout)
+    elif method == "DELETE":
+        response = client.delete(raw_url, timeout=timeout)
+    elif method == "PATCH":
+        response = client.patch(raw_url, json=json_body, timeout=timeout)
+    elif method == "HEAD":
+        response = client.head(raw_url, timeout=timeout)
+    elif method == "OPTIONS":
+        response = client.options(raw_url, timeout=timeout)
+    else:
+        raise ValueError(f"unsupported HTTP method: {method}")
+    response.raise_for_status()
+    if len(response.content) > max_bytes:
+        raise SecurityError(
+            "response exceeds max_bytes",
+            code="http.response_too_large",
+            context={"size": len(response.content), "max_bytes": max_bytes},
+        )
+    return response.content
+
 
 def get_string_safe(
     raw_url: str,
@@ -34,15 +83,12 @@ def get_string_safe(
     resolver: urlx.Resolver | None = None,
     session: SessionLike | None = None,
 ) -> str:
-    response = get_bytes_safe(
-        raw_url,
-        allowed_hosts=allowed_hosts,
-        timeout=timeout,
-        max_bytes=max_bytes,
-        resolver=resolver,
-        session=session,
+    body = _request_safe(
+        "GET", raw_url,
+        allowed_hosts=allowed_hosts, timeout=timeout,
+        max_bytes=max_bytes, resolver=resolver, session=session,
     )
-    return response.decode("utf-8")
+    return body.decode("utf-8")
 
 
 def get_bytes_safe(
@@ -54,17 +100,11 @@ def get_bytes_safe(
     resolver: urlx.Resolver | None = None,
     session: SessionLike | None = None,
 ) -> bytes:
-    urlx.validate_http_url(raw_url, allowed_hosts=allowed_hosts, resolver=resolver)
-    client = session or requests.Session()
-    response = client.get(raw_url, timeout=timeout)
-    response.raise_for_status()
-    if len(response.content) > max_bytes:
-        raise SecurityError(
-            "response exceeds max_bytes",
-            code="http.response_too_large",
-            context={"size": len(response.content), "max_bytes": max_bytes},
-        )
-    return response.content
+    return _request_safe(
+        "GET", raw_url,
+        allowed_hosts=allowed_hosts, timeout=timeout,
+        max_bytes=max_bytes, resolver=resolver, session=session,
+    )
 
 
 def download_file_safe(
@@ -122,20 +162,103 @@ def post_json_safe(
     resolver: urlx.Resolver | None = None,
     session: SessionLike | None = None,
 ) -> dict[str, JSONValue]:
-    urlx.validate_http_url(raw_url, allowed_hosts=allowed_hosts, resolver=resolver)
-    client = session or requests.Session()
-    response = client.post(raw_url, json=payload, timeout=timeout)
-    response.raise_for_status()
-    if len(response.content) > max_bytes:
-        raise SecurityError(
-            "response exceeds max_bytes",
-            code="http.response_too_large",
-            context={"size": len(response.content), "max_bytes": max_bytes},
-        )
-    decoded = _to_json_value(json.loads(response.content))
+    body = _request_safe(
+        "POST", raw_url, json_body=payload,
+        allowed_hosts=allowed_hosts, timeout=timeout,
+        max_bytes=max_bytes, resolver=resolver, session=session,
+    )
+    decoded = _to_json_value(json.loads(body))
     if not isinstance(decoded, dict):
         raise SecurityError("response JSON is not an object", code="http.response_not_object")
     return decoded
+
+
+def put_json_safe(
+    raw_url: str,
+    payload: JSONValue,
+    *,
+    allowed_hosts: set[str] | None = None,
+    timeout: float = 10.0,
+    max_bytes: int = 1_048_576,
+    resolver: urlx.Resolver | None = None,
+    session: SessionLike | None = None,
+) -> dict[str, JSONValue]:
+    body = _request_safe(
+        "PUT", raw_url, json_body=payload,
+        allowed_hosts=allowed_hosts, timeout=timeout,
+        max_bytes=max_bytes, resolver=resolver, session=session,
+    )
+    decoded = _to_json_value(json.loads(body))
+    if not isinstance(decoded, dict):
+        raise SecurityError("response JSON is not an object", code="http.response_not_object")
+    return decoded
+
+
+def delete_safe(
+    raw_url: str,
+    *,
+    allowed_hosts: set[str] | None = None,
+    timeout: float = 10.0,
+    max_bytes: int = 1_048_576,
+    resolver: urlx.Resolver | None = None,
+    session: SessionLike | None = None,
+) -> bytes:
+    return _request_safe(
+        "DELETE", raw_url,
+        allowed_hosts=allowed_hosts, timeout=timeout,
+        max_bytes=max_bytes, resolver=resolver, session=session,
+    )
+
+
+def patch_json_safe(
+    raw_url: str,
+    payload: JSONValue,
+    *,
+    allowed_hosts: set[str] | None = None,
+    timeout: float = 10.0,
+    max_bytes: int = 1_048_576,
+    resolver: urlx.Resolver | None = None,
+    session: SessionLike | None = None,
+) -> dict[str, JSONValue]:
+    body = _request_safe(
+        "PATCH", raw_url, json_body=payload,
+        allowed_hosts=allowed_hosts, timeout=timeout,
+        max_bytes=max_bytes, resolver=resolver, session=session,
+    )
+    decoded = _to_json_value(json.loads(body))
+    if not isinstance(decoded, dict):
+        raise SecurityError("response JSON is not an object", code="http.response_not_object")
+    return decoded
+
+
+def head_safe(
+    raw_url: str,
+    *,
+    allowed_hosts: set[str] | None = None,
+    timeout: float = 10.0,
+    resolver: urlx.Resolver | None = None,
+    session: SessionLike | None = None,
+) -> int:
+    urlx.validate_http_url(raw_url, allowed_hosts=allowed_hosts, resolver=resolver)
+    client = session or requests.Session()
+    response = client.head(raw_url, timeout=timeout)
+    response.raise_for_status()
+    return response.status_code
+
+
+def options_safe(
+    raw_url: str,
+    *,
+    allowed_hosts: set[str] | None = None,
+    timeout: float = 10.0,
+    resolver: urlx.Resolver | None = None,
+    session: SessionLike | None = None,
+) -> int:
+    urlx.validate_http_url(raw_url, allowed_hosts=allowed_hosts, resolver=resolver)
+    client = session or requests.Session()
+    response = client.options(raw_url, timeout=timeout)
+    response.raise_for_status()
+    return response.status_code
 
 
 def _to_json_value(value: object) -> JSONValue:

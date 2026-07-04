@@ -29,6 +29,8 @@ PyJWT = "^2.8.0"
 pillow = "^10.0.0"
 qrcode = "^7.4.0"
 openpyxl = "^3.1.0"
+cryptography = "^49.0.0"
+argon2-cffi = "^25.1.0"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.0"
