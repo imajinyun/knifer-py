@@ -54,6 +54,15 @@ from kniferpy.internal.cronx import (
     wrap_cron_error,
 )
 
+# ── Go-compat option type aliases ──────────────────────────────────────────────
+
+from typing import Any, Callable as _Callable
+
+SchedulerOption = _Callable[[Any], None]
+DefaultSchedulerOption = _Callable[[Any], None]
+ConfigOption = _Callable[[Any], None]
+PatternOption = _Callable[[Any], None]
+
 __all__ = [
     # Types
     "Part",
@@ -110,6 +119,11 @@ __all__ = [
     "new_task_table",
     "default_scheduler",
     "wrap_cron_error",
+    # Option types (Go compat)
+    "SchedulerOption",
+    "DefaultSchedulerOption",
+    "ConfigOption",
+    "PatternOption",
 ]
 
 
