@@ -2,15 +2,57 @@ from __future__ import annotations
 
 from kniferpy.internal import codecx
 
-# ── Base32 Encoding ──────────────────────────────────────────────────────────
+# ── Encoding constants ─────────────────────────────────────────────────────────
 
 BASE32_STD_ENCODING = "std"
 BASE32_HEX_ENCODING = "hex"
 
-# ── Base58 Alphabet ──────────────────────────────────────────────────────────
-
 BASE58_BITCOIN_ALPHABET = "bitcoin"
 BASE58_FLICKR_ALPHABET = "flickr"
+
+__all__ = [
+    # Constants
+    "BASE32_HEX_ENCODING",
+    "BASE32_STD_ENCODING",
+    "BASE58_BITCOIN_ALPHABET",
+    "BASE58_FLICKR_ALPHABET",
+    # Base64
+    "base64_decode",
+    "base64_decode_str",
+    "base64_decode_with_encoding",
+    "base64_encode",
+    "base64_encode_str",
+    "base64_encode_with_encoding",
+    "base64_raw_url_decode",
+    "base64_raw_url_encode",
+    "base64_url_decode",
+    "base64_url_encode",
+    # Hex
+    "hex_decode",
+    "hex_decode_str",
+    "hex_encode",
+    "hex_encode_str",
+    # Base32
+    "base32_decode",
+    "base32_decode_with_encoding",
+    "base32_encode",
+    "base32_encode_with_encoding",
+    # Base58
+    "base58_decode",
+    "base58_decode_with_alphabet",
+    "base58_encode",
+    "base58_encode_with_alphabet",
+    # Base62
+    "base62_decode",
+    "base62_encode",
+    # Morse
+    "morse_decode",
+    "morse_encode",
+    # ROT
+    "rot13",
+    "rot47",
+    "rotn",
+]
 
 # ── Base64 ───────────────────────────────────────────────────────────────────
 
