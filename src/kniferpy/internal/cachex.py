@@ -1083,3 +1083,121 @@ def new_timed_scheduled(
 def new_no() -> NoCache[K, V]:
     """Alias for new_no_cache (Go compat)."""
     return NoCache()
+
+
+# ── Option builders (Go-style functional options) ────────────────────────────
+
+Option = Callable[["_AbstractCache[K, V]"], None]  # type: ignore[misc]
+
+
+class CacheListener(Protocol[K, V]):
+    """Listener for cache eviction events (Go CacheListener equivalent)."""
+
+    def on_remove(self, key: K, value: V) -> None: ...
+
+
+class CacheListenerFunc(Generic[K, V]):
+    """Adapt a plain function to CacheListener."""
+
+    def __init__(self, fn: Callable[[K, V], None]) -> None:
+        self._fn = fn
+
+    def on_remove(self, key: K, value: V) -> None:
+        self._fn(key, value)
+
+
+def with_capacity(capacity: int) -> Option[K, V]:
+    def _apply(c: _AbstractCache[K, V]) -> None:
+        c._capacity = capacity
+    return _apply
+
+
+def with_timeout(timeout: float) -> Option[K, V]:
+    def _apply(c: _AbstractCache[K, V]) -> None:
+        c._timeout = timeout
+    return _apply
+
+
+def with_listener(listener: CacheListener[K, V]) -> Option[K, V]:
+    def _apply(c: _AbstractCache[K, V]) -> None:
+        c.set_listener(listener.on_remove)
+    return _apply
+
+
+def with_clock(clock: Callable[[], float]) -> Option[K, V]:
+    def _apply(c: _AbstractCache[K, V]) -> None:
+        c._clock = clock
+    return _apply
+
+
+def with_ticker_factory(factory: TickerFactory) -> Option[K, V]:
+    def _apply(c: _AbstractCache[K, V]) -> None:
+        c._ticker_factory = factory  # type: ignore[attr-defined]
+    return _apply
+
+
+def with_runner(runner: Callable[[Callable[[], None]], None]) -> Option[K, V]:
+    def _apply(c: _AbstractCache[K, V]) -> None:
+        c._runner = runner  # type: ignore[attr-defined]
+    return _apply
+
+
+# ── Constructor variants with Options (Go style) ─────────────────────────────
+
+
+def new_fifo_with_options(opts: list[Option[K, V]] | None = None) -> FIFOCache[K, V]:
+    c = FIFOCache(0)
+    for opt in (opts or []):
+        opt(c)
+    return c
+
+
+def new_fifo_with_timeout(capacity: int, timeout: float) -> FIFOCache[K, V]:
+    return new_fifo(capacity, timeout=timeout)
+
+
+def new_lru_with_options(opts: list[Option[K, V]] | None = None) -> LRUCache[K, V]:
+    c = LRUCache(0)
+    for opt in (opts or []):
+        opt(c)
+    return c
+
+
+def new_lru_with_timeout(capacity: int, timeout: float) -> LRUCache[K, V]:
+    return new_lru(capacity, timeout=timeout)
+
+
+def new_lfu_with_options(opts: list[Option[K, V]] | None = None) -> LFUCache[K, V]:
+    c = LFUCache(0)
+    for opt in (opts or []):
+        opt(c)
+    return c
+
+
+def new_lfu_with_timeout(capacity: int, timeout: float) -> LFUCache[K, V]:
+    return new_lfu(capacity, timeout=timeout)
+
+
+def new_timed_with_options(opts: list[Option[K, V]] | None = None) -> TimedCache[K, V]:
+    c = TimedCache(0.0)
+    for opt in (opts or []):
+        opt(c)  # type: ignore[arg-type]
+    return c
+
+
+def new_weak_with_options(opts: list[Option[K, V]] | None = None) -> WeakCache[K, V]:
+    c = WeakCache(0.0)
+    for opt in (opts or []):
+        opt(c)  # type: ignore[arg-type]
+    return c
+
+
+def new_timed_scheduled_with_options(
+    timeout: float,
+    schedule_prune_delay: float,
+    opts: list[Option[K, V]] | None = None,
+) -> TimedCache[K, V]:
+    c = new_timed_with_options(opts)
+    c.set_timeout(timeout)  # type: ignore[attr-defined]
+    c.schedule_prune(schedule_prune_delay)
+    return c

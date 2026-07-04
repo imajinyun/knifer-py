@@ -5,6 +5,8 @@ from typing import TypeVar
 
 from kniferpy.internal import cachex
 from kniferpy.internal.cachex import (
+    CacheListener,
+    CacheListenerFunc,
     FIFOCache,
     LFUCache,
     Listener,
@@ -21,26 +23,47 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 __all__ = [
+    # Types
     "Cache",
+    "CacheListener",
+    "CacheListenerFunc",
     "CacheObj",
     "FIFOCache",
     "LFUCache",
     "LRUCache",
     "Listener",
     "NoCache",
+    "Option",
     "Supplier",
     "SupplierE",
     "TickerFactory",
     "TimedCache",
     "WeakCache",
+    # Option builders
+    "with_capacity",
+    "with_timeout",
+    "with_listener",
+    "with_clock",
+    "with_ticker_factory",
+    "with_runner",
+    # Constructors
     "new_fifo",
+    "new_fifo_with_options",
+    "new_fifo_with_timeout",
     "new_lfu",
+    "new_lfu_with_options",
+    "new_lfu_with_timeout",
     "new_lru",
+    "new_lru_with_options",
+    "new_lru_with_timeout",
     "new_no",
     "new_no_cache",
     "new_timed",
     "new_timed_scheduled",
+    "new_timed_scheduled_with_options",
+    "new_timed_with_options",
     "new_weak",
+    "new_weak_with_options",
 ]
 
 
@@ -130,3 +153,25 @@ def new_no() -> NoCache[K, V]:
 # Re-export types
 Cache = cachex.Cache
 CacheObj = cachex.CacheObj
+Option = cachex.Option
+CacheListener = cachex.CacheListener
+CacheListenerFunc = cachex.CacheListenerFunc
+
+# Option builders
+with_capacity = cachex.with_capacity
+with_timeout = cachex.with_timeout
+with_listener = cachex.with_listener
+with_clock = cachex.with_clock
+with_ticker_factory = cachex.with_ticker_factory
+with_runner = cachex.with_runner
+
+# Constructor variants
+new_fifo_with_options = cachex.new_fifo_with_options
+new_fifo_with_timeout = cachex.new_fifo_with_timeout
+new_lru_with_options = cachex.new_lru_with_options
+new_lru_with_timeout = cachex.new_lru_with_timeout
+new_lfu_with_options = cachex.new_lfu_with_options
+new_lfu_with_timeout = cachex.new_lfu_with_timeout
+new_timed_with_options = cachex.new_timed_with_options
+new_weak_with_options = cachex.new_weak_with_options
+new_timed_scheduled_with_options = cachex.new_timed_scheduled_with_options
