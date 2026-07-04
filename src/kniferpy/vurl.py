@@ -1,3 +1,10 @@
+"""URL parsing, encoding, building, normalization, and resource opening.
+
+Secure URL utilities for parsing, query manipulation, encoding, normalization,
+type checking, and resource (file/HTTP) opening. All functions raise
+:mod:`kniferpy.verr` types instead of returning sentinel errors.
+"""
+
 from __future__ import annotations
 
 from urllib.parse import ParseResult
@@ -5,115 +12,173 @@ from urllib.parse import ParseResult
 from kniferpy.internal import urlx
 from kniferpy.internal.urlx import URLBuilder
 
+__all__ = [
+    "FileURLPrefix",
+    "JarURLSeparator",
+    "URLBuilder",
+    "URLProtocolFile",
+    "URLProtocolJar",
+    "URLProtocolZip",
+    "add_query",
+    "append_query",
+    "build_query",
+    "complete",
+    "content_length",
+    "content_length_safe",
+    "data_uri",
+    "data_uri_base64",
+    "decode",
+    "decode_for_path",
+    "decode_plus",
+    "decode_query",
+    "decode_query_first",
+    "decode_query_map",
+    "encode_all",
+    "encode_blank",
+    "encode_fragment",
+    "encode_params",
+    "encode_path",
+    "encode_path_segment",
+    "encode_query",
+    "encode_query_map",
+    "file_url",
+    "file_urls",
+    "form_url_encode",
+    "get_query",
+    "host",
+    "is_absolute_url",
+    "is_file_url",
+    "is_http",
+    "is_http_url",
+    "is_https",
+    "is_https_url",
+    "is_jar_file_url",
+    "is_jar_url",
+    "is_private_host",
+    "is_web_url",
+    "new_url_builder",
+    "normalize",
+    "normalize_query",
+    "normalize_with_options",
+    "open_safe",
+    "open_url",
+    "parse",
+    "parse_http",
+    "parse_url_builder",
+    "redact_userinfo",
+    "remove_query",
+    "size",
+    "string_uri",
+    "to_uri",
+    "url_decode",
+    "url_encode",
+    "url_path",
+    "validate_http_url",
+]
 
-def parse(raw_url: str) -> ParseResult:
-    return urlx.parse(raw_url)
+# ── Parsing ───────────────────────────────────────────────────────────────────
 
-
-def normalize_query(raw_url: str) -> str:
-    return urlx.normalize_query(raw_url)
-
-
-def add_query(raw_url: str, params: dict[str, str | int | float | bool | None]) -> str:
-    return urlx.add_query(raw_url, params)
-
-
-def get_query(raw_url: str) -> dict[str, str]:
-    return urlx.get_query(raw_url)
-
-
-def remove_query(raw_url: str, keys: set[str]) -> str:
-    return urlx.remove_query(raw_url, keys)
-
-
-def redact_userinfo(raw_url: str, *, replacement: str = "***") -> str:
-    return urlx.redact_userinfo(raw_url, replacement=replacement)
-
-
-def validate_http_url(
-    raw_url: str,
-    *,
-    allowed_hosts: set[str] | None = None,
-    resolver: urlx.Resolver | None = None,
-) -> bool:
-    return urlx.validate_http_url(raw_url, allowed_hosts=allowed_hosts, resolver=resolver)
-
-
-def is_private_host(host: str, *, resolver: urlx.Resolver | None = None) -> bool:
-    return urlx.is_private_host(host, resolver=resolver)
-
-
-# ── URL encoding / decoding ─────────────────────────────────────────────────
-
-
-def encode_query(value: str) -> str:
-    return urlx.encode_query(value)
-
-
-def decode_query(value: str) -> str:
-    return urlx.decode_query(value)
-
-
-def encode_path_segment(value: str) -> str:
-    return urlx.encode_path_segment(value)
-
-
-def encode_path(value: str) -> str:
-    return urlx.encode_path(value)
-
-
-def encode_fragment(value: str) -> str:
-    return urlx.encode_fragment(value)
-
-
-def decode(value: str) -> str:
-    return urlx.decode(value)
-
-
-def decode_for_path(value: str) -> str:
-    return urlx.decode_for_path(value)
-
-
-# ── URL builder ─────────────────────────────────────────────────────────────
+parse = urlx.parse
+parse_http = urlx.parse_http
 
 
-def new_url_builder() -> URLBuilder:
-    return urlx.new_url_builder()
+# ── Query manipulation ────────────────────────────────────────────────────────
+
+normalize_query = urlx.normalize_query
+add_query = urlx.add_query
+get_query = urlx.get_query
+remove_query = urlx.remove_query
+build_query = urlx.build_query
+append_query = urlx.append_query
+encode_query_map = urlx.encode_query_map
+encode_params = urlx.encode_params
+decode_query_first = urlx.decode_query_first
+decode_query_map = urlx.decode_query_map
 
 
-def parse_url_builder(raw: str) -> URLBuilder:
-    return urlx.parse_url_builder(raw)
+# ── Encoding / decoding ───────────────────────────────────────────────────────
+
+encode_query = urlx.encode_query
+decode_query = urlx.decode_query
+encode_path_segment = urlx.encode_path_segment
+encode_path = urlx.encode_path
+encode_fragment = urlx.encode_fragment
+decode = urlx.decode
+decode_for_path = urlx.decode_for_path
+url_encode = urlx.url_encode
+url_decode = urlx.url_decode
+decode_plus = urlx.decode_plus
+encode_all = urlx.encode_all
+form_url_encode = urlx.form_url_encode
+encode_blank = urlx.encode_blank
 
 
-# ── Data URI ────────────────────────────────────────────────────────────────
+# ── URL builder ───────────────────────────────────────────────────────────────
+
+new_url_builder = urlx.new_url_builder
+parse_url_builder = urlx.parse_url_builder
 
 
-def data_uri(mime_type: str, charset: str, encoding: str, data: str) -> str:
-    return urlx.data_uri(mime_type, charset, encoding, data)
+# ── Data URI ──────────────────────────────────────────────────────────────────
+
+data_uri = urlx.data_uri
+data_uri_base64 = urlx.data_uri_base64
+string_uri = urlx.string_uri
 
 
-def data_uri_base64(mime_type: str, data: str) -> str:
-    return urlx.data_uri_base64(mime_type, data)
+# ── File URL ──────────────────────────────────────────────────────────────────
+
+file_url = urlx.file_url
+file_urls = urlx.file_urls
 
 
-# ── URL helpers ─────────────────────────────────────────────────────────────
+# ── URL helpers ───────────────────────────────────────────────────────────────
+
+host = urlx.host
+complete = urlx.complete
+url_path = urlx.url_path
+to_uri = urlx.to_uri
 
 
-def is_http_url(raw: str) -> bool:
-    return urlx.is_http_url(raw)
+# ── Normalization ─────────────────────────────────────────────────────────────
+
+normalize = urlx.normalize
+normalize_with_options = urlx.normalize_with_options
 
 
-def is_https_url(raw: str) -> bool:
-    return urlx.is_https_url(raw)
+# ── Type checks ───────────────────────────────────────────────────────────────
+
+is_http_url = urlx.is_http_url
+is_https_url = urlx.is_https_url
+is_absolute_url = urlx.is_absolute_url
+is_file_url = urlx.is_file_url
+is_jar_url = urlx.is_jar_url
+is_jar_file_url = urlx.is_jar_file_url
+is_http = urlx.is_http
+is_https = urlx.is_https
+is_web_url = urlx.is_web_url
 
 
-def is_absolute_url(raw: str) -> bool:
-    return urlx.is_absolute_url(raw)
+# ── Resource opening ──────────────────────────────────────────────────────────
+
+open_url = urlx.open_url
+open_safe = urlx.open_safe
+content_length = urlx.content_length
+content_length_safe = urlx.content_length_safe
+size = urlx.size
 
 
-def build_query(params: dict[str, str | int | float | bool | None]) -> str:
-    return urlx.build_query(params)
+# ── Validation ────────────────────────────────────────────────────────────────
+
+validate_http_url = urlx.validate_http_url
+is_private_host = urlx.is_private_host
+redact_userinfo = urlx.redact_userinfo
 
 
-def append_query(raw_url: str, params: dict[str, str | int | float | bool | None]) -> str:
-    return urlx.append_query(raw_url, params)
+# ── Constants ─────────────────────────────────────────────────────────────────
+
+FileURLPrefix = urlx.FileURLPrefix
+URLProtocolFile = urlx.URLProtocolFile
+URLProtocolJar = urlx.URLProtocolJar
+URLProtocolZip = urlx.URLProtocolZip
+JarURLSeparator = urlx.JarURLSeparator

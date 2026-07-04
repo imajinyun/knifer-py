@@ -1,9 +1,14 @@
 from __future__ import annotations
 
 import ipaddress
+import os
+import re
 import socket
-from collections.abc import Callable
-from urllib.parse import ParseResult, parse_qsl, urlencode, urlparse, urlunparse
+import unicodedata
+from collections.abc import Callable, Mapping
+from io import IOBase
+from pathlib import Path
+from urllib.parse import ParseResult, parse_qsl, quote, unquote, urlencode, urljoin, urlparse, urlunparse
 
 from kniferpy.verr import SecurityError, ValidationError
 
@@ -326,3 +331,310 @@ def build_query(params: dict[str, str | int | float | bool | None]) -> str:
 
 def append_query(raw_url: str, params: dict[str, str | int | float | bool | None]) -> str:
     return add_query(raw_url, params)
+
+
+# ── File URL ──────────────────────────────────────────────────────────────────
+
+
+def file_url(path: str | Path) -> str:
+    """Convert a filesystem path to a ``file://`` URL."""
+    p = Path(path).resolve()
+    return p.as_uri()
+
+
+def file_urls(*paths: str | Path) -> list[str]:
+    """Convert filesystem paths to ``file://`` URLs."""
+    return [file_url(p) for p in paths]
+
+
+# ── URL helpers ───────────────────────────────────────────────────────────────
+
+
+def host(raw_url: str) -> str:
+    """Return scheme + host from a URL."""
+    parsed = urlparse(raw_url)
+    if parsed.scheme and parsed.hostname:
+        result = f"{parsed.scheme}://{parsed.hostname}"
+        if parsed.port is not None:
+            result += f":{parsed.port}"
+        return result
+    return ""
+
+
+def complete(base_url: str, relative_path: str) -> str:
+    """Resolve ``relative_path`` against ``base_url``."""
+    return urljoin(base_url, relative_path)
+
+
+def encode_blank(raw: str) -> str:
+    """Encode all Unicode blank characters as ``%20``."""
+    result: list[str] = []
+    for ch in raw:
+        cat = unicodedata.category(ch)
+        if cat == "Zs" or ch in ("\t", "\n", "\r", "\x0b", "\x0c"):
+            result.append("%20")
+        else:
+            result.append(ch)
+    return "".join(result)
+
+
+def string_uri(content: str) -> str:
+    """Build a ``string:`` scheme URI for content."""
+    encoded = quote(content, safe="")
+    return f"string:{encoded}"
+
+
+def parse_http(raw: str) -> ParseResult:
+    """Parse raw after encoding blank characters."""
+    return urlparse(encode_blank(raw))
+
+
+# ── URL encoding variants ─────────────────────────────────────────────────────
+
+
+def url_encode(s: str) -> str:
+    """Encode a string for URL query components."""
+    return quote(s, safe="")
+
+
+def url_decode(s: str) -> str:
+    """Decode a URL query component; plus signs become spaces."""
+    return unquote(s.replace("+", " "))
+
+
+def decode_plus(s: str, *, plus_to_space: bool = True) -> str:
+    """Decode percent-encoded text with control over plus-to-space conversion."""
+    if plus_to_space:
+        s = s.replace("+", " ")
+    return unquote(s)
+
+
+def encode_all(s: str) -> str:
+    """Percent-encode every non-unreserved character."""
+    return quote(s, safe="")
+
+
+def form_url_encode(s: str) -> str:
+    """Encode text for ``application/x-www-form-urlencoded``."""
+    return quote(s, safe="")
+
+
+# ── Path extraction ───────────────────────────────────────────────────────────
+
+
+def decoded_path(raw: str) -> str:
+    """Return the decoded path part of a URL."""
+    parsed = urlparse(raw)
+    return unquote(parsed.path)
+
+
+def url_path(raw: str) -> str:
+    """Return the decoded path part of a URL."""
+    return decoded_path(raw)
+
+
+def to_uri(location: str, *, encode: bool = False) -> str:
+    """Parse a location as a URI, optionally encoding blank characters first."""
+    if encode:
+        location = encode_blank(location)
+    parsed = urlparse(location)
+    return parsed.geturl() if parsed.scheme else location
+
+
+# ── URL type checks ───────────────────────────────────────────────────────────
+
+
+def is_file_url(raw: str) -> bool:
+    """Check if raw uses a file-like scheme."""
+    return urlparse(raw).scheme == "file"
+
+
+def is_jar_url(raw: str) -> bool:
+    """Check if raw uses an archive-like scheme (jar, zip, etc.)."""
+    return urlparse(raw).scheme in ("jar", "zip", "vfszip", "wsjar")
+
+
+def is_jar_file_url(raw: str) -> bool:
+    """Check if raw is a file URL ending with ``.jar``."""
+    parsed = urlparse(raw)
+    if parsed.scheme != "file":
+        return False
+    return parsed.path.lower().endswith(".jar")
+
+
+def is_http(raw: str) -> bool:
+    """Check if raw uses the http scheme."""
+    return urlparse(raw).scheme == "http"
+
+
+def is_https(raw: str) -> bool:
+    """Check if raw uses the https scheme."""
+    return urlparse(raw).scheme == "https"
+
+
+def _is_http_url(raw: str) -> bool:
+    parsed = urlparse(raw)
+    return parsed.scheme == "http" and parsed.netloc != ""
+
+
+def _is_https_url(raw: str) -> bool:
+    parsed = urlparse(raw)
+    return parsed.scheme == "https" and parsed.netloc != ""
+
+
+def is_web_url(raw: str) -> bool:
+    """Check if raw is an absolute http or https URL with a host."""
+    parsed = urlparse(raw)
+    return parsed.scheme in ("http", "https") and parsed.netloc != ""
+
+
+# ── URL normalization ─────────────────────────────────────────────────────────
+
+
+def normalize(raw: str, *, encode_path: bool = False, replace_slash: bool = False) -> str:
+    """Normalize a URL string with optional path encoding and slash collapsing."""
+    parsed = urlparse(raw)
+    path = parsed.path
+    if replace_slash:
+        path = re.sub(r"/+", "/", path)
+    if encode_path:
+        path = quote(path, safe="/")
+    return urlunparse(parsed._replace(path=path))
+
+
+def normalize_with_options(raw: str, *, encode_path: bool = False, replace_slash: bool = False) -> str:
+    """Normalize a URL string (alias for normalize)."""
+    return normalize(raw, encode_path=encode_path, replace_slash=replace_slash)
+
+
+# ── Query encoding/decoding ───────────────────────────────────────────────────
+
+
+def encode_query_map(m: dict[str, str | int | float | bool | None]) -> str:
+    """Encode a map into a URL query string."""
+    return urlencode({k: _format_query_value(v) for k, v in m.items() if v is not None}, doseq=True)
+
+
+def encode_params(raw_url: str) -> str:
+    """Encode the query part of a URL; leaves URLs without query unchanged."""
+    parsed = urlparse(raw_url)
+    if not parsed.query:
+        return raw_url
+    return urlunparse(parsed._replace(query=quote(parsed.query, safe="")))
+
+
+def decode_query_first(params_str: str) -> dict[str, str]:
+    """Parse a query string into a single-value map (first value wins)."""
+    result: dict[str, str] = {}
+    for key, value in parse_qsl(params_str, keep_blank_values=True):
+        if key not in result:
+            result[key] = value
+    return result
+
+
+def decode_query_map(params_str: str) -> dict[str, list[str]]:
+    """Parse a query string into a multi-value map."""
+    result: dict[str, list[str]] = {}
+    for key, value in parse_qsl(params_str, keep_blank_values=True):
+        result.setdefault(key, []).append(value)
+    return result
+
+
+# ── URL resource opening ──────────────────────────────────────────────────────
+
+
+def _open_file(path: str) -> IOBase:
+    p = Path(path).resolve()
+    if not p.exists():
+        raise ValidationError(message=f"file not found: {path}", code="url.file_not_found")
+    return p.open("rb")
+
+
+def _open_http(raw_url: str, *, timeout: float | None = None, check_status: bool = True) -> IOBase:
+    import io
+    import urllib.request
+
+    try:
+        resp = urllib.request.urlopen(raw_url, timeout=timeout)  # noqa: S310
+        if check_status and resp.status >= 400:
+            raise ValidationError(
+                message=f"HTTP {resp.status} for {raw_url}",
+                code="url.http_status",
+                context={"status": resp.status},
+            )
+        return io.BytesIO(resp.read())
+    except Exception as exc:
+        raise ValidationError(
+            message=f"failed to open {raw_url}",
+            code="url.open_failed",
+            context={"cause": str(exc)},
+        ) from exc
+
+
+def open_url(raw: str, *, timeout: float | None = None, check_status: bool = True) -> IOBase:
+    """Open a URL resource for reading.
+
+    Supports http, https, and file URLs.
+    """
+    parsed = urlparse(raw)
+    if parsed.scheme in ("http", "https"):
+        return _open_http(raw, timeout=timeout, check_status=check_status)
+    if parsed.scheme == "file" or (not parsed.scheme and Path(raw).exists()):
+        path = parsed.path if parsed.scheme == "file" else raw
+        return _open_file(path)
+    raise ValidationError(message=f"unsupported scheme: {parsed.scheme}", code="url.unsupported_scheme")
+
+
+def open_safe(raw: str, *, timeout: float | None = None, check_status: bool = True) -> IOBase:
+    """Open an HTTP(S) URL with secure defaults."""
+    parsed = urlparse(raw)
+    if parsed.scheme not in ("http", "https"):
+        raise SecurityError(
+            message=f"scheme not allowed for safe open: {parsed.scheme}",
+            code="url.scheme_not_allowed",
+        )
+    if parsed.hostname and is_private_host(parsed.hostname):
+        raise SecurityError(
+            message="private host not allowed for safe open",
+            code="url.private_host",
+            context={"host": parsed.hostname},
+        )
+    return _open_http(raw, timeout=timeout, check_status=check_status)
+
+
+def content_length(raw: str, *, timeout: float | None = None) -> int:
+    """Get the resource content length. Returns -1 if unknown."""
+    try:
+        f = open_url(raw, timeout=timeout, check_status=True)
+        f.seek(0, 2)
+        size = f.tell()
+        f.close()
+        return size
+    except Exception:
+        return -1
+
+
+def content_length_safe(raw: str, *, timeout: float | None = None) -> int:
+    """Get an HTTP(S) resource content length with secure defaults."""
+    try:
+        f = open_safe(raw, timeout=timeout, check_status=True)
+        f.seek(0, 2)
+        size = f.tell()
+        f.close()
+        return size
+    except Exception:
+        return -1
+
+
+def size(raw: str, *, timeout: float | None = None) -> int:
+    """Get the resource size (alias for content_length)."""
+    return content_length(raw, timeout=timeout)
+
+
+# ── Constants ─────────────────────────────────────────────────────────────────
+
+FileURLPrefix = "file:"
+URLProtocolFile = "file"
+URLProtocolJar = "jar"
+URLProtocolZip = "zip"
+JarURLSeparator = "!/"
