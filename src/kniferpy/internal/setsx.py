@@ -217,6 +217,29 @@ class Set(Generic[T]):
     def difference(self, other: Set[T]) -> Set[T]:
         return self.sub(other)
 
+    # ── JSON / YAML marshal (Go compat) ──────────────────────────────────────
+
+    def marshal_json(self, opts: list[JSONOption] | None = None) -> bytes:
+        """Encode the set as a JSON array."""
+        cfg = _apply_json_options(opts or [])
+        return cfg.marshal(self.members())
+
+    def unmarshal_json(self, data: bytes | str, opts: list[JSONOption] | None = None) -> None:
+        """Decode a JSON array into the set."""
+        cfg = _apply_json_options(opts or [])
+        items = cfg.unmarshal(data if isinstance(data, bytes) else data.encode())
+        if isinstance(items, list):
+            self.add(*items)
+
+    def marshal_yaml(self) -> list[T]:
+        """Encode the set as a YAML sequence."""
+        return self.members()
+
+    def unmarshal_yaml(self, items: list[T]) -> None:
+        """Decode a YAML sequence into the set."""
+        if isinstance(items, list):
+            self.add(*items)
+
 
 # ---------------------------------------------------------------------------
 # typed aliases and constructors
