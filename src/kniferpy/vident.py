@@ -12,6 +12,9 @@ from kniferpy.internal.identx import (
 
 __all__ = [
     "Gender",
+    "GenderFemale",
+    "GenderMale",
+    "GenderUnknown",
     "IDCardInfo",
     "RegionCardInfo",
     "CreditCodeInfo",
@@ -146,3 +149,9 @@ def is_valid_credit_code(code: str) -> bool:
 
 def parse_credit_code(code: str) -> CreditCodeInfo:
     return identx.parse_credit_code(code)
+
+
+# Go compat Gender constants
+GenderUnknown = Gender.UNKNOWN
+GenderFemale = Gender.FEMALE
+GenderMale = Gender.MALE

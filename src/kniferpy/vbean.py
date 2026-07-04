@@ -25,8 +25,13 @@ from typing import Any
 
 from kniferpy.internal import beanx
 from kniferpy.internal.beanx import DecodeHook, Options, Result
+from kniferpy.verr import ValidationError
+
+# BeanError alias for Go compat
+BeanError = ValidationError
 
 __all__ = [
+    "BeanError",
     "DecodeHook",
     "Options",
     "Result",
