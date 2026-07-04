@@ -13,6 +13,21 @@ from kniferpy.internal.blfx import (
     IntMap,
     LongMap,
 )
+from kniferpy.internal.hashx import (
+    ap_hash,
+    bkdr_hash,
+    djb_hash,
+    elf_hash,
+    fnv_hash_string,
+    hf_hash,
+    hf_ip_hash,
+    java_default_hash,
+    js_hash,
+    pjw_hash,
+    rs_hash,
+    sdbm_hash,
+    tianl_hash,
+)
 
 __all__ = [
     "DEFAULT_MACHINE_NUM",
@@ -25,8 +40,17 @@ __all__ = [
     "HashFunc",
     "IntMap",
     "LongMap",
+    "ap_hash",
+    "bkdr_hash",
+    "djb_hash",
+    "elf_hash",
+    "fnv_hash_string",
+    "hf_hash",
+    "hf_ip_hash",
     "init_from_file_with_options",
     "init_from_reader",
+    "java_default_hash",
+    "js_hash",
     "new_bit_set_bloom_filter",
     "new_bit_set_bloom_filter_e",
     "new_bitmap_bloom_filter",
@@ -34,6 +58,7 @@ __all__ = [
     "new_bitmap_bloom_filter_with_filters",
     "new_bitmap_bloom_filter_with_filters_e",
     "new_default_filter",
+    "new_default_bloom_filter",
     "new_elf_filter",
     "new_fnv_filter",
     "new_func_filter",
@@ -49,6 +74,10 @@ __all__ = [
     "new_rs_filter",
     "new_sdbm_filter",
     "new_tianl_filter",
+    "pjw_hash",
+    "rs_hash",
+    "sdbm_hash",
+    "tianl_hash",
 ]
 
 
@@ -164,3 +193,7 @@ def init_from_file_with_options(bloom: BitSetBloomFilter, path: str, opts: list 
 
 def init_from_reader(bloom: BitSetBloomFilter, reader: list[str]) -> None:
     blfx.init_from_reader(bloom, reader)
+
+
+def new_default_bloom_filter(max_value: int) -> FuncFilter:
+    return blfx.new_default_filter(max_value)

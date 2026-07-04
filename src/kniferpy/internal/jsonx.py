@@ -772,6 +772,31 @@ def json_to_xml(data: dict[str, Any], root_tag: str = "root", *, pretty: bool = 
 # ========== GetByPathOr ==========
 
 
+def to_pretty_str(v: Any) -> str:
+    """Serialize to pretty-printed JSON string."""
+    return dumps(v, pretty=True)
+
+
+def to_str_indent(v: Any, indent: int = 2) -> str:
+    """Serialize to JSON string with specified indent."""
+    return to_json_str(v, indent=indent)
+
+
+def to_str_with_config(v: Any, cfg: Config) -> str:
+    """Serialize to JSON string using Config."""
+    return to_json_str(v, indent=cfg.indent)
+
+
+def new_json_error(format_str: str, *args: Any) -> JSONError:
+    """Create a JSONError with formatted message."""
+    return JSONError(format_str % args)
+
+
+def wrap_json_error(cause: Exception, format_str: str, *args: Any) -> JSONError:
+    """Create a JSONError wrapping an existing exception."""
+    return JSONError(format_str % args)
+
+
 def get_by_path_or(data: Any, path: str, default: Any = None) -> Any:
     """Get value by JSON path expression with a default fallback."""
     result = get_by_path(data, path)

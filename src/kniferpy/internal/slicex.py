@@ -253,7 +253,13 @@ def flatten(a: list[list[T]]) -> list[T]:
 
 
 def compact(a: list[T]) -> list[T]:
+    """Remove None values from the list."""
     return [item for item in a if item is not None]
+
+
+def compact_by(a: list[T], pred: Callable[[T], bool]) -> list[T]:
+    """Remove elements for which ``pred`` returns True."""
+    return [item for item in a if not pred(item)]
 
 
 def partition_by(a: list[T], key_fn: Callable[[T], K]) -> list[list[T]]:

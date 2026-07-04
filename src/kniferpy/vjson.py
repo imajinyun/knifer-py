@@ -23,6 +23,9 @@ parse_array = jsonx.parse_array
 # Serialize
 dumps = jsonx.dumps
 to_json_str = jsonx.to_json_str
+to_pretty_str = jsonx.to_pretty_str
+to_str_indent = jsonx.to_str_indent
+to_str_with_config = jsonx.to_str_with_config
 quote = jsonx.quote
 
 # Path access
@@ -57,6 +60,10 @@ format_json_str = jsonx.format_json_str
 # Config
 new_config = jsonx.new_config
 
+# Error constructors
+new_json_error = jsonx.new_json_error
+wrap_json_error = jsonx.wrap_json_error
+
 # XML conversion
 xml_to_json = jsonx.xml_to_json
 json_to_xml = jsonx.json_to_xml
@@ -78,6 +85,9 @@ __all__ = [
     "parse_array",
     "dumps",
     "to_json_str",
+    "to_pretty_str",
+    "to_str_indent",
+    "to_str_with_config",
     "quote",
     "get_path",
     "put_by_path",
@@ -99,6 +109,8 @@ __all__ = [
     "to_list",
     "format_json_str",
     "new_config",
+    "new_json_error",
+    "wrap_json_error",
     "xml_to_json",
     "json_to_xml",
     "get_by_path_or",

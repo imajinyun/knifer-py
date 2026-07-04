@@ -8,9 +8,11 @@ from kniferpy.verr import ValidationError
 NORM_PATTERN = "%Y-%m-%d %H:%M:%S"
 NORM_DATE_PATTERN = "%Y-%m-%d"
 NORM_TIME_PATTERN = "%H:%M:%S"
+NORM_DATETIME_PATTERN = "%Y-%m-%d %H:%M:%S"
 PURE_DATE_PATTERN = "%Y%m%d"
 PURE_DATETIME_PATTERN = "%Y%m%d%H%M%S"
 UTC_PATTERN = "%Y-%m-%dT%H:%M:%SZ"
+HTTP_PATTERN = "%a, %d %b %Y %H:%M:%S GMT"
 
 _PARSE_PATTERNS: tuple[str, ...] = (
     NORM_PATTERN,

@@ -4,8 +4,10 @@ from datetime import datetime
 
 from kniferpy.internal import datex
 from kniferpy.internal.datex import (
+    HTTP_PATTERN,
     LunarDate,
     NORM_DATE_PATTERN,
+    NORM_DATETIME_PATTERN,
     NORM_PATTERN,
     NORM_TIME_PATTERN,
     PURE_DATE_PATTERN,
@@ -17,8 +19,10 @@ from kniferpy.internal.datex import (
 __all__ = [
     "LunarDate",
     "SolarDate",
+    "HTTP_PATTERN",
     "NORM_PATTERN",
     "NORM_DATE_PATTERN",
+    "NORM_DATETIME_PATTERN",
     "NORM_TIME_PATTERN",
     "PURE_DATE_PATTERN",
     "PURE_DATETIME_PATTERN",

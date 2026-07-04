@@ -1,8 +1,17 @@
 from __future__ import annotations
 
+import io
 import json
+import os
+import re
+import socket
+import ssl
+import threading
+from dataclasses import dataclass, field
+from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from typing import Protocol, TypeAlias
+from typing import Any, Callable, Dict, List, Protocol, TypeAlias
+from urllib.parse import urlencode, urlparse
 
 import requests
 
@@ -15,24 +24,1232 @@ JSONValue: TypeAlias = None | bool | int | float | str | list["JSONValue"] | dic
 class ResponseLike(Protocol):
     text: str
     content: bytes
+    status_code: int
+    headers: Any
 
     def raise_for_status(self) -> None: ...
 
 
 class SessionLike(Protocol):
-    def get(self, url: str, timeout: float) -> ResponseLike: ...
+    headers: Any
 
-    def post(self, url: str, json: JSONValue, timeout: float) -> ResponseLike: ...
 
-    def put(self, url: str, json: JSONValue, timeout: float) -> ResponseLike: ...
+    def get(self, url: str, timeout: float, **kwargs: Any) -> ResponseLike: ...
 
-    def delete(self, url: str, timeout: float) -> ResponseLike: ...
+    def post(self, url: str, json: JSONValue, timeout: float, **kwargs: Any) -> ResponseLike: ...
 
-    def patch(self, url: str, json: JSONValue, timeout: float) -> ResponseLike: ...
+    def put(self, url: str, json: JSONValue, timeout: float, **kwargs: Any) -> ResponseLike: ...
 
-    def head(self, url: str, timeout: float) -> ResponseLike: ...
+    def delete(self, url: str, timeout: float, **kwargs: Any) -> ResponseLike: ...
 
-    def options(self, url: str, timeout: float) -> ResponseLike: ...
+    def patch(self, url: str, json: JSONValue, timeout: float, **kwargs: Any) -> ResponseLike: ...
+
+    def head(self, url: str, timeout: float, **kwargs: Any) -> ResponseLike: ...
+
+    def options(self, url: str, timeout: float, **kwargs: Any) -> ResponseLike: ...
+
+
+# ========== Method / Header / ContentType Constants ==========
+
+
+class Method:
+    GET = "GET"
+    POST = "POST"
+    PUT = "PUT"
+    DELETE = "DELETE"
+    PATCH = "PATCH"
+    HEAD = "HEAD"
+    OPTIONS = "OPTIONS"
+    TRACE = "TRACE"
+    CONNECT = "CONNECT"
+
+
+class Header:
+    AUTHORIZATION = "Authorization"
+    PROXY_AUTHORIZATION = "Proxy-Authorization"
+    DATE = "Date"
+    CONNECTION = "Connection"
+    MIME_VERSION = "MIME-Version"
+    TRAILER = "Trailer"
+    TRANSFER_ENCODING = "Transfer-Encoding"
+    UPGRADE = "Upgrade"
+    VIA = "Via"
+    CACHE_CONTROL = "Cache-Control"
+    PRAGMA = "Pragma"
+    CONTENT_TYPE = "Content-Type"
+    HOST = "Host"
+    REFERER = "Referer"
+    ORIGIN = "Origin"
+    USER_AGENT = "User-Agent"
+    ACCEPT = "Accept"
+    ACCEPT_LANGUAGE = "Accept-Language"
+    ACCEPT_ENCODING = "Accept-Encoding"
+    ACCEPT_CHARSET = "Accept-Charset"
+    COOKIE = "Cookie"
+    CONTENT_LENGTH = "Content-Length"
+    WWW_AUTHENTICATE = "WWW-Authenticate"
+    SET_COOKIE = "Set-Cookie"
+    CONTENT_ENCODING = "Content-Encoding"
+    CONTENT_DISPOSITION = "Content-Disposition"
+    ETAG = "ETag"
+    LOCATION = "Location"
+
+
+class ContentType:
+    FORM_URL_ENCODED = "application/x-www-form-urlencoded"
+    MULTIPART = "multipart/form-data"
+    JSON = "application/json"
+    XML = "application/xml"
+    TEXT_PLAIN = "text/plain"
+    TEXT_XML = "text/xml"
+    TEXT_HTML = "text/html"
+    OCTET_STREAM = "application/octet-stream"
+    EVENT_STREAM = "text/event-stream"
+
+
+# ========== HTTPError ==========
+
+
+class HTTPError(Exception):
+    def __init__(self, msg: str, code: str = "", cause: Exception | None = None) -> None:
+        super().__init__(msg)
+        self.code = code
+        self.cause = cause
+
+    def __repr__(self) -> str:
+        return f"HTTPError(code={self.code!r}, msg={self.args[0]!r})"
+
+
+def new_error(msg: str, cause: Exception | None = None) -> HTTPError:
+    return HTTPError(msg, "", cause)
+
+
+def new_error_with_code(code: str, msg: str, cause: Exception | None = None) -> HTTPError:
+    return HTTPError(msg, code, cause)
+
+
+def errorf(format_str: str, *args: Any) -> HTTPError:
+    return HTTPError(format_str % args)
+
+
+def errorf_with_code(code: str, format_str: str, *args: Any) -> HTTPError:
+    return HTTPError(format_str % args, code)
+
+
+# ========== URLPolicy ==========
+
+
+@dataclass
+class URLPolicy:
+    allowed_schemes: list[str] = field(default_factory=lambda: ["https", "http"])
+    allowed_hosts: list[str] = field(default_factory=list)
+    reject_private: bool = True
+    lookup_ip: Callable[[str], list[str]] | None = None
+
+
+# ========== RequestOption / ClientOption ==========
+
+RequestOption = Callable[["HTTPRequest"], None]
+ClientOption = Callable[["Client"], None]
+
+
+def with_timeout(d: float) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.timeout = d
+    return _apply
+
+
+def with_header(name: str, value: str) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.headers[name] = value
+    return _apply
+
+
+def with_headers(headers: dict[str, str]) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.headers.update(headers)
+    return _apply
+
+
+def with_follow_redirects(b: bool) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.follow_redirects = b
+    return _apply
+
+
+def with_max_redirects(n: int) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.max_redirects = n
+    return _apply
+
+
+def with_tls_config(cfg: ssl.SSLContext) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.tls_config = cfg
+    return _apply
+
+
+def with_session(session: requests.Session) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.session = session
+    return _apply
+
+
+def with_user_agent(ua: str) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.headers[Header.USER_AGENT] = ua
+    return _apply
+
+
+def with_content_type(ct: str) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.headers[Header.CONTENT_TYPE] = ct
+    return _apply
+
+
+def with_charset(charset: str) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.charset = charset
+    return _apply
+
+
+def with_max_response_bytes(max_bytes: int) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.max_response_bytes = max_bytes
+    return _apply
+
+
+def with_url_policy(policy: URLPolicy) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.url_policy = policy
+    return _apply
+
+
+def with_allowed_hosts(*hosts: str) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.url_policy = URLPolicy(allowed_hosts=list(hosts))
+    return _apply
+
+
+def with_global_config(cfg: GlobalConfig) -> RequestOption:
+    def _apply(r: HTTPRequest) -> None:
+        r.timeout = cfg.timeout
+        r.max_redirects = cfg.max_redirects
+        r.max_response_bytes = cfg.max_response_bytes
+        r.follow_redirects = cfg.follow_redirects
+        if cfg.user_agent:
+            r.headers.setdefault(Header.USER_AGENT, cfg.user_agent)
+        for k, v in cfg.headers.items():
+            r.headers.setdefault(k, v)
+    return _apply
+
+
+def with_client_global_config(cfg: GlobalConfig) -> ClientOption:
+    def _apply(c: Client) -> None:
+        c.global_config = cfg
+    return _apply
+
+
+def with_client_request_options(opts: list[RequestOption]) -> ClientOption:
+    def _apply(c: Client) -> None:
+        c.default_options = list(opts)
+    return _apply
+
+
+# ========== FormFile ==========
+
+
+@dataclass
+class FormFile:
+    field_name: str
+    file_name: str
+    data: bytes
+    content_type: str = ""
+
+
+# ========== HTTPRequest (Builder) ==========
+
+
+class HTTPRequest:
+    def __init__(self) -> None:
+        self.method: str = Method.GET
+        self.raw_url: str = ""
+        self.headers: dict[str, str] = {}
+        self.query_params: dict[str, Any] = {}
+        self.body: bytes | None = None
+        self.body_reader: Any | None = None
+        self.form_data: dict[str, Any] = {}
+        self.form_files: list[FormFile] = []
+        self.timeout: float = 30.0
+        self.max_redirects: int = 10
+        self.max_response_bytes: int = 10_485_760
+        self.follow_redirects: bool = True
+        self.charset: str = ""
+        self.tls_config: ssl.SSLContext | None = None
+        self.session: requests.Session | None = None
+        self.url_policy: URLPolicy | None = None
+        self._safe: bool = False
+        self._allowed_hosts: set[str] = set()
+        self._resolver: urlx.Resolver | None = None
+
+    def set_method(self, m: str) -> HTTPRequest:
+        self.method = m
+        return self
+
+    def set_url(self, u: str) -> HTTPRequest:
+        self.raw_url = u
+        return self
+
+    def set_header(self, name: str, value: str) -> HTTPRequest:
+        self.headers[name] = value
+        return self
+
+    def add_header(self, name: str, value: str) -> HTTPRequest:
+        self.headers[name] = value
+        return self
+
+    def set_headers(self, h: dict[str, str]) -> HTTPRequest:
+        self.headers.update(h)
+        return self
+
+    def set_cookie(self, name: str, value: str) -> HTTPRequest:
+        existing = self.headers.get(Header.COOKIE, "")
+        if existing:
+            self.headers[Header.COOKIE] = f"{existing}; {name}={value}"
+        else:
+            self.headers[Header.COOKIE] = f"{name}={value}"
+        return self
+
+    def set_content_type(self, ct: str) -> HTTPRequest:
+        self.headers[Header.CONTENT_TYPE] = ct
+        return self
+
+    def set_charset(self, c: str) -> HTTPRequest:
+        self.charset = c
+        return self
+
+    def set_timeout(self, d: float) -> HTTPRequest:
+        self.timeout = d
+        return self
+
+    def set_follow_redirects(self, b: bool) -> HTTPRequest:
+        self.follow_redirects = b
+        return self
+
+    def set_max_redirects(self, n: int) -> HTTPRequest:
+        self.max_redirects = n
+        return self
+
+    def set_tls_config(self, cfg: ssl.SSLContext) -> HTTPRequest:
+        self.tls_config = cfg
+        return self
+
+    def set_basic_auth(self, user: str, password: str) -> HTTPRequest:
+        self.headers[Header.AUTHORIZATION] = basic_auth_header(user, password)
+        return self
+
+    def set_bearer_auth(self, token: str) -> HTTPRequest:
+        self.headers[Header.AUTHORIZATION] = bearer_auth_header(token)
+        return self
+
+    def set_query(self, key: str, value: Any) -> HTTPRequest:
+        self.query_params[key] = value
+        return self
+
+    def set_query_map(self, m: dict[str, Any]) -> HTTPRequest:
+        self.query_params.update(m)
+        return self
+
+    def set_body(self, data: bytes) -> HTTPRequest:
+        self.body = data
+        return self
+
+    def set_body_string(self, s: str) -> HTTPRequest:
+        self.body = s.encode("utf-8")
+        return self
+
+    def set_body_json(self, s: str) -> HTTPRequest:
+        self.body = s.encode("utf-8")
+        self.headers[Header.CONTENT_TYPE] = ContentType.JSON
+        return self
+
+    def set_body_reader(self, reader: Any) -> HTTPRequest:
+        self.body_reader = reader
+        return self
+
+    def set_form(self, data: dict[str, Any]) -> HTTPRequest:
+        self.form_data = data
+        return self
+
+    def set_form_file(self, field: str, file_name: str, data: bytes, content_type: str = "") -> HTTPRequest:
+        self.form_files.append(FormFile(field, file_name, data, content_type))
+        return self
+
+    def clone(self) -> HTTPRequest:
+        r = HTTPRequest()
+        r.method = self.method
+        r.raw_url = self.raw_url
+        r.headers = dict(self.headers)
+        r.query_params = dict(self.query_params)
+        r.body = self.body
+        r.body_reader = self.body_reader
+        r.form_data = dict(self.form_data)
+        r.form_files = list(self.form_files)
+        r.timeout = self.timeout
+        r.max_redirects = self.max_redirects
+        r.max_response_bytes = self.max_response_bytes
+        r.follow_redirects = self.follow_redirects
+        r.charset = self.charset
+        r.tls_config = self.tls_config
+        r.session = self.session
+        r.url_policy = self.url_policy
+        r._safe = self._safe
+        r._allowed_hosts = set(self._allowed_hosts)
+        r._resolver = self._resolver
+        return r
+
+    def _build_url(self) -> str:
+        url = self.raw_url
+        if self.query_params:
+            qs = urlencode(self.query_params)
+            sep = "&" if "?" in url else "?"
+            url = f"{url}{sep}{qs}"
+        return url
+
+    def _build_kwargs(self) -> dict[str, Any]:
+        kwargs: dict[str, Any] = {"timeout": self.timeout}
+        if self.headers:
+            kwargs["headers"] = self.headers
+        if self.body is not None:
+            kwargs["data"] = self.body
+        elif self.body_reader is not None:
+            kwargs["data"] = self.body_reader
+        elif self.form_data or self.form_files:
+            if self.form_data:
+                kwargs["data"] = self.form_data
+            if self.form_files:
+                files = {}
+                for ff in self.form_files:
+                    files[ff.field_name] = (ff.file_name, ff.data, ff.content_type or "application/octet-stream")
+                kwargs["files"] = files
+        if not self.follow_redirects:
+            kwargs["allow_redirects"] = False
+        return kwargs
+
+    def execute(self) -> HTTPResponse:
+        """Execute the request and return an HTTPResponse."""
+        url = self._build_url()
+        if self._safe:
+            urlx.validate_http_url(
+                url, allowed_hosts=self._allowed_hosts or None, resolver=self._resolver,
+            )
+        session = self.session or requests.Session()
+        kwargs = self._build_kwargs()
+        try:
+            resp = session.request(self.method, url, **kwargs)
+        except requests.RequestException as e:
+            return HTTPResponse(_err=new_error(str(e), e), _status=0)
+        resp.raise_for_status()
+        if len(resp.content) > self.max_response_bytes:
+            raise SecurityError(
+                "response exceeds max_bytes",
+                code="http.response_too_large",
+                context={"size": len(resp.content), "max_bytes": self.max_response_bytes},
+            )
+        return HTTPResponse(_raw=resp)
+
+    def must_execute(self) -> HTTPResponse:
+        resp = self.execute()
+        if resp.err is not None:
+            raise resp.err
+        return resp
+
+    def execute_string(self) -> tuple[str, HTTPError | None]:
+        resp = self.execute()
+        if resp.err is not None:
+            return "", resp.err
+        return resp.body(), None
+
+    def execute_bytes(self) -> tuple[bytes, HTTPError | None]:
+        resp = self.execute()
+        if resp.err is not None:
+            return b"", resp.err
+        return resp.bytes(), None
+
+
+# ========== HTTPResponse ==========
+
+
+class HTTPResponse:
+    def __init__(
+        self,
+        _raw: ResponseLike | None = None,
+        _err: HTTPError | None = None,
+        _status: int = 0,
+        _body: bytes | None = None,
+    ) -> None:
+        self._raw = _raw
+        self.err = _err
+        self._status = _status if _status else (_raw.status_code if _raw else 0)
+        self._body = _body
+
+    def status(self) -> int:
+        return self._status
+
+    def is_ok(self) -> bool:
+        return 200 <= self._status < 300
+
+    def header(self, name: str) -> str:
+        if self._raw:
+            return self._raw.headers.get(name, "")
+        return ""
+
+    def headers(self) -> dict[str, str]:
+        if self._raw:
+            return dict(self._raw.headers)
+        return {}
+
+    def cookies(self) -> dict[str, str]:
+        """Parse Set-Cookie headers into a dict."""
+        result: dict[str, str] = {}
+        cookie_header = self.header(Header.SET_COOKIE)
+        if not cookie_header:
+            return result
+        for part in cookie_header.split(";"):
+            part = part.strip()
+            if "=" in part:
+                k, v = part.split("=", 1)
+                k = k.strip()
+                v = v.strip()
+                if k.lower() not in ("path", "domain", "expires", "max-age", "secure", "httponly", "samesite"):
+                    result[k] = v
+        return result
+
+    def content_type(self) -> str:
+        return self.header(Header.CONTENT_TYPE)
+
+    def content_length(self) -> int:
+        val = self.header(Header.CONTENT_LENGTH)
+        try:
+            return int(val)
+        except (ValueError, TypeError):
+            return 0
+
+    def charset(self) -> str:
+        return get_charset_from_content_type(self.content_type())
+
+    def bytes(self) -> bytes:
+        if self._body is not None:
+            return self._body
+        if self._raw:
+            return self._raw.content
+        return b""
+
+    def body(self) -> str:
+        b = self.bytes()
+        cs = self.charset()
+        if cs:
+            try:
+                return b.decode(cs)
+            except (LookupError, UnicodeDecodeError):
+                pass
+        return b.decode("utf-8", errors="replace")
+
+    def write_to(self, w: Any) -> int:
+        """Write response body to a writer. Returns bytes written."""
+        b = self.bytes()
+        n = w.write(b)
+        if hasattr(w, "flush"):
+            w.flush()
+        return n
+
+    def save_as(self, dest: str | Path, overwrite: bool = True) -> int:
+        """Save response body to a file. Returns bytes written."""
+        dest = Path(dest)
+        if not overwrite and dest.exists():
+            raise FileExistsError(f"file already exists: {dest}")
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        b = self.bytes()
+        dest.write_bytes(b)
+        return len(b)
+
+    def close(self) -> None:
+        if self._raw and hasattr(self._raw, "close"):
+            self._raw.close()
+
+    def raw(self) -> ResponseLike | None:
+        return self._raw
+
+
+# ========== Client ==========
+
+
+class Client:
+    def __init__(self) -> None:
+        self.global_config: GlobalConfig | None = None
+        self.default_options: list[RequestOption] = []
+        self.session: requests.Session | None = None
+
+    def _apply_global(self, r: HTTPRequest) -> None:
+        if self.global_config:
+            with_global_config(self.global_config)(r)
+        for opt in self.default_options:
+            opt(r)
+
+    def new_request(self, method: str, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        r = HTTPRequest()
+        r.method = method
+        r.raw_url = raw_url
+        self._apply_global(r)
+        for opt in opts:
+            opt(r)
+        return r
+
+    def new_safe_request(self, method: str, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        r = self.new_request(method, raw_url, *opts)
+        r._safe = True
+        return r
+
+    def get(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_request(Method.GET, raw_url, *opts)
+
+    def get_safe(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_safe_request(Method.GET, raw_url, *opts)
+
+    def post(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_request(Method.POST, raw_url, *opts)
+
+    def post_safe(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_safe_request(Method.POST, raw_url, *opts)
+
+    def put(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_request(Method.PUT, raw_url, *opts)
+
+    def put_safe(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_safe_request(Method.PUT, raw_url, *opts)
+
+    def delete(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_request(Method.DELETE, raw_url, *opts)
+
+    def delete_safe(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_safe_request(Method.DELETE, raw_url, *opts)
+
+    def patch(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_request(Method.PATCH, raw_url, *opts)
+
+    def patch_safe(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_safe_request(Method.PATCH, raw_url, *opts)
+
+    def head(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_request(Method.HEAD, raw_url, *opts)
+
+    def head_safe(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_safe_request(Method.HEAD, raw_url, *opts)
+
+    def options(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_request(Method.OPTIONS, raw_url, *opts)
+
+    def options_safe(self, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+        return self.new_safe_request(Method.OPTIONS, raw_url, *opts)
+
+
+def new_client(*opts: ClientOption) -> Client:
+    c = Client()
+    for opt in opts:
+        opt(c)
+    return c
+
+
+def new_isolated_client(*opts: ClientOption) -> Client:
+    c = new_client(*opts)
+    c.session = requests.Session()
+    return c
+
+
+def new_client_with_config(cfg: GlobalConfig, opts: list[RequestOption] | None = None) -> Client:
+    c = Client()
+    c.global_config = cfg
+    if opts:
+        c.default_options = list(opts)
+    return c
+
+
+# ========== Request Constructors ==========
+
+
+def _new_request(method: str, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    r = HTTPRequest()
+    r.method = method
+    r.raw_url = raw_url
+    _apply_global_defaults(r)
+    for opt in opts:
+        opt(r)
+    return r
+
+
+def _new_request_safe(method: str, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    r = _new_request(method, raw_url, *opts)
+    r._safe = True
+    return r
+
+
+def _apply_global_defaults(r: HTTPRequest) -> None:
+    g = _global_config
+    r.timeout = g.timeout
+    r.max_redirects = g.max_redirects
+    r.max_response_bytes = g.max_response_bytes
+    r.follow_redirects = g.follow_redirects
+    if g.user_agent:
+        r.headers.setdefault(Header.USER_AGENT, g.user_agent)
+    for k, v in g.headers.items():
+        r.headers.setdefault(k, v)
+
+
+def get(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request(Method.GET, raw_url, *opts)
+
+
+def get_safe_r(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request_safe(Method.GET, raw_url, *opts)
+
+
+def post(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request(Method.POST, raw_url, *opts)
+
+
+def post_safe_r(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request_safe(Method.POST, raw_url, *opts)
+
+
+def put(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request(Method.PUT, raw_url, *opts)
+
+
+def put_safe_r(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request_safe(Method.PUT, raw_url, *opts)
+
+
+def delete(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request(Method.DELETE, raw_url, *opts)
+
+
+def delete_safe_r(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request_safe(Method.DELETE, raw_url, *opts)
+
+
+def patch(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request(Method.PATCH, raw_url, *opts)
+
+
+def patch_safe_r(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request_safe(Method.PATCH, raw_url, *opts)
+
+
+def head(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request(Method.HEAD, raw_url, *opts)
+
+
+def head_safe_r(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request_safe(Method.HEAD, raw_url, *opts)
+
+
+def options(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request(Method.OPTIONS, raw_url, *opts)
+
+
+def options_safe_r(raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request_safe(Method.OPTIONS, raw_url, *opts)
+
+
+def new_request(method: str, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request(method, raw_url, *opts)
+
+
+def new_safe_request(method: str, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    return _new_request_safe(method, raw_url, *opts)
+
+
+def new_isolated_request(method: str, raw_url: str, *opts: RequestOption) -> HTTPRequest:
+    r = _new_request(method, raw_url, *opts)
+    r.session = requests.Session()
+    return r
+
+
+def new_request_with_config(method: str, raw_url: str, cfg: GlobalConfig, opts: list[RequestOption] | None = None) -> HTTPRequest:
+    r = HTTPRequest()
+    r.method = method
+    r.raw_url = raw_url
+    with_global_config(cfg)(r)
+    if opts:
+        for opt in opts:
+            opt(r)
+    return r
+
+
+# ========== Shortcut Wrappers ==========
+
+
+def get_string_e(raw_url: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    r = get(raw_url, *opts)
+    return r.execute_string()
+
+
+def get_string_e_with_options(raw_url: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    return get_string_e(raw_url, *opts)
+
+
+def get_string_safe_e(raw_url: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    r = get_safe_r(raw_url, *opts)
+    return r.execute_string()
+
+
+def get_with_timeout_e(raw_url: str, timeout: float, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    r = get(raw_url, with_timeout(timeout), *opts)
+    return r.execute_string()
+
+
+def get_with_params_e(raw_url: str, params: dict[str, Any], *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    r = get(raw_url, *opts)
+    r.set_query_map(params)
+    return r.execute_string()
+
+
+def get_with_params_e_with_options(raw_url: str, params: dict[str, Any], *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    return get_with_params_e(raw_url, params, *opts)
+
+
+def post_form_e(raw_url: str, params: dict[str, Any], *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    r = post(raw_url, *opts)
+    r.set_form(params)
+    return r.execute_string()
+
+
+def post_form_e_with_options(raw_url: str, params: dict[str, Any], *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    return post_form_e(raw_url, params, *opts)
+
+
+def post_form_safe_e(raw_url: str, params: dict[str, Any], *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    r = post_safe_r(raw_url, *opts)
+    r.set_form(params)
+    return r.execute_string()
+
+
+def post_json_e(raw_url: str, json_str: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    r = post(raw_url, *opts)
+    r.set_body_json(json_str)
+    return r.execute_string()
+
+
+def post_json_e_with_options(raw_url: str, json_str: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    return post_json_e(raw_url, json_str, *opts)
+
+
+def post_json_safe_e(raw_url: str, json_str: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    r = post_safe_r(raw_url, *opts)
+    r.set_body_json(json_str)
+    return r.execute_string()
+
+
+def post_string_e(raw_url: str, body: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    r = post(raw_url, *opts)
+    r.set_body_string(body)
+    return r.execute_string()
+
+
+def post_string_e_with_options(raw_url: str, body: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    return post_string_e(raw_url, body, *opts)
+
+
+def post_string_safe_e(raw_url: str, body: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    r = post_safe_r(raw_url, *opts)
+    r.set_body_string(body)
+    return r.execute_string()
+
+
+# ========== Download Helpers ==========
+
+
+def download_string_e(raw_url: str, custom_charset: str = "", *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    r = get(raw_url, *opts)
+    if custom_charset:
+        r.set_charset(custom_charset)
+    return r.execute_string()
+
+
+def download_string_e_with_options(raw_url: str, custom_charset: str = "", *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    return download_string_e(raw_url, custom_charset, *opts)
+
+
+def download_string_safe_e(raw_url: str, custom_charset: str = "", *opts: RequestOption) -> tuple[str, HTTPError | None]:
+    r = get_safe_r(raw_url, *opts)
+    if custom_charset:
+        r.set_charset(custom_charset)
+    return r.execute_string()
+
+
+def download_bytes_e(raw_url: str, *opts: RequestOption) -> tuple[bytes, HTTPError | None]:
+    r = get(raw_url, *opts)
+    return r.execute_bytes()
+
+
+def download_bytes_e_with_options(raw_url: str, *opts: RequestOption) -> tuple[bytes, HTTPError | None]:
+    return download_bytes_e(raw_url, *opts)
+
+
+def download_bytes_safe_e(raw_url: str, *opts: RequestOption) -> tuple[bytes, HTTPError | None]:
+    r = get_safe_r(raw_url, *opts)
+    return r.execute_bytes()
+
+
+# ========== Save to File / Writer ==========
+
+SaveOption = Callable[["SaveConfig"], None]
+
+
+@dataclass
+class SaveConfig:
+    file_perm: int = 0o644
+    dir_perm: int = 0o755
+    overwrite: bool = True
+    create_parents: bool = True
+    default_filename: str = ""
+
+
+def with_save_file_perm(perm: int) -> SaveOption:
+    def _apply(c: SaveConfig) -> None:
+        c.file_perm = perm
+    return _apply
+
+
+def with_save_dir_perm(perm: int) -> SaveOption:
+    def _apply(c: SaveConfig) -> None:
+        c.dir_perm = perm
+    return _apply
+
+
+def with_save_overwrite(overwrite: bool) -> SaveOption:
+    def _apply(c: SaveConfig) -> None:
+        c.overwrite = overwrite
+    return _apply
+
+
+def with_save_create_parents(create: bool) -> SaveOption:
+    def _apply(c: SaveConfig) -> None:
+        c.create_parents = create
+    return _apply
+
+
+def with_save_default_filename(name: str) -> SaveOption:
+    def _apply(c: SaveConfig) -> None:
+        c.default_filename = name
+    return _apply
+
+
+def download(raw_url: str, w: Any, *opts: RequestOption) -> tuple[int, HTTPError | None]:
+    r = get(raw_url, *opts)
+    resp = r.execute()
+    if resp.err is not None:
+        return 0, resp.err
+    try:
+        n = resp.write_to(w)
+        return n, None
+    except IOError as e:
+        return 0, new_error(str(e), e)
+
+
+def download_with_options(raw_url: str, w: Any, *opts: RequestOption) -> tuple[int, HTTPError | None]:
+    return download(raw_url, w, *opts)
+
+
+def download_safe(raw_url: str, w: Any, *opts: RequestOption) -> tuple[int, HTTPError | None]:
+    r = get_safe_r(raw_url, *opts)
+    resp = r.execute()
+    if resp.err is not None:
+        return 0, resp.err
+    try:
+        n = resp.write_to(w)
+        return n, None
+    except IOError as e:
+        return 0, new_error(str(e), e)
+
+
+def download_file(raw_url: str, dest: str | Path, *save_opts: SaveOption) -> tuple[int, HTTPError | None]:
+    return _download_file_impl(raw_url, dest, list(save_opts), safe=False)
+
+
+def download_file_with_options(
+    raw_url: str, dest: str | Path, request_opts: list[RequestOption] | None = None, *save_opts: SaveOption,
+) -> tuple[int, HTTPError | None]:
+    return _download_file_impl(raw_url, dest, list(save_opts), request_opts=request_opts or [], safe=False)
+
+
+def download_file_safe(raw_url: str, dest: str | Path, *save_opts: SaveOption) -> tuple[int, HTTPError | None]:
+    return _download_file_impl(raw_url, dest, list(save_opts), safe=True)
+
+
+def download_file_safe_with_options(
+    raw_url: str, dest: str | Path, request_opts: list[RequestOption] | None = None, *save_opts: SaveOption,
+) -> tuple[int, HTTPError | None]:
+    return _download_file_impl(raw_url, dest, list(save_opts), request_opts=request_opts or [], safe=True)
+
+
+def _download_file_impl(
+    raw_url: str,
+    dest: str | Path,
+    save_opts: list[SaveOption],
+    request_opts: list[RequestOption] | None = None,
+    safe: bool = False,
+) -> tuple[int, HTTPError | None]:
+    cfg = SaveConfig()
+    for opt in save_opts:
+        opt(cfg)
+    dest = Path(dest)
+    if dest.is_dir() or (not dest.suffix and cfg.default_filename):
+        dest = dest / cfg.default_filename
+    if not cfg.overwrite and dest.exists():
+        return 0, new_error(f"file already exists: {dest}")
+    if cfg.create_parents:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+    if request_opts is None:
+        request_opts = []
+    if safe:
+        r = get_safe_r(raw_url, *request_opts)
+    else:
+        r = get(raw_url, *request_opts)
+    resp = r.execute()
+    if resp.err is not None:
+        return 0, resp.err
+    try:
+        n = resp.save_as(dest, overwrite=cfg.overwrite)
+        if cfg.file_perm:
+            os.chmod(dest, cfg.file_perm)
+        return n, None
+    except OSError as e:
+        return 0, new_error(str(e), e)
+
+
+# ========== UserAgent Parser ==========
+
+
+@dataclass
+class UserAgent:
+    is_mobile: bool = False
+    browser: str = ""
+    version: str = ""
+    os: str = ""
+    engine: str = ""
+    platform: str = ""
+    raw: str = ""
+
+
+def parse_user_agent(ua: str) -> UserAgent:
+    result = UserAgent(raw=ua)
+    ua_lower = ua.lower()
+    result.is_mobile = _is_mobile_ua(ua_lower)
+    result.os = _parse_os(ua_lower)
+    result.browser, result.version = _parse_browser(ua_lower)
+    result.engine = _parse_engine(ua_lower)
+    return result
+
+
+def _is_mobile_ua(ua: str) -> bool:
+    return any(k in ua for k in ("mobile", "android", "iphone", "ipad", "ipod", "blackberry", "windows phone"))
+
+
+def _parse_os(ua: str) -> str:
+    if "windows nt 10" in ua:
+        return "Windows 10"
+    if "windows nt 6.3" in ua:
+        return "Windows 8.1"
+    if "windows nt 6.2" in ua:
+        return "Windows 8"
+    if "windows nt 6.1" in ua:
+        return "Windows 7"
+    if "windows nt" in ua:
+        return "Windows"
+    if "mac os x" in ua or "macintosh" in ua:
+        return "macOS"
+    if "android" in ua:
+        m = re.search(r"android\s+([\d.]+)", ua)
+        return f"Android {m.group(1)}" if m else "Android"
+    if "iphone" in ua:
+        return "iOS (iPhone)"
+    if "ipad" in ua:
+        return "iOS (iPad)"
+    if "linux" in ua:
+        return "Linux"
+    return ""
+
+
+def _parse_browser(ua: str) -> tuple[str, str]:
+    browsers = [
+        ("edg/", "Edge"),
+        ("edge/", "Edge"),
+        ("opr/", "Opera"),
+        ("opera/", "Opera"),
+        ("chrome/", "Chrome"),
+        ("safari/", "Safari"),
+        ("firefox/", "Firefox"),
+        ("msie ", "IE"),
+        ("trident/", "IE"),
+    ]
+    for key, name in browsers:
+        if key in ua:
+            m = re.search(re.escape(key) + r"([\d.]+)", ua)
+            version = m.group(1) if m else ""
+            return name, version
+    return "", ""
+
+
+def _parse_engine(ua: str) -> str:
+    if "webkit" in ua:
+        return "WebKit"
+    if "gecko" in ua and "firefox" in ua:
+        return "Gecko"
+    if "trident" in ua:
+        return "Trident"
+    if "blink" in ua:
+        return "Blink"
+    return ""
+
+
+# ========== SimpleServer ==========
+
+
+class SimpleServer:
+    def __init__(self, addr: str, server: HTTPServer | None = None) -> None:
+        self._addr = addr
+        self._server = server
+        self._handlers: dict[str, Callable] = {}
+        self._root_dir: str = ""
+        self._static_handler: Callable | None = None
+        self._thread: threading.Thread | None = None
+        self._stop_event = threading.Event()
+        self._err_chan: list[Exception] = []
+
+    def add_action(self, path: str, handler: Callable) -> SimpleServer:
+        self._handlers[path] = handler
+        return self
+
+    def add_handler(self, path: str, handler: Callable) -> SimpleServer:
+        self._handlers[path] = handler
+        return self
+
+    def set_root(self, dir_path: str) -> SimpleServer:
+        self._root_dir = dir_path
+        return self
+
+    def set_root_with_options(self, dir_path: str, **opts: Any) -> SimpleServer:
+        self._root_dir = dir_path
+        return self
+
+    def start(self) -> None:
+        host, port_str = self._parse_addr()
+        port = int(port_str)
+
+        class _Handler(SimpleHTTPRequestHandler):
+            def do_GET(self: Any) -> None:
+                if self.path in self.server._handlers:
+                    self.server._handlers[self.path](self)
+                else:
+                    super().do_GET()
+
+            def do_POST(self: Any) -> None:
+                if self.path in self.server._handlers:
+                    self.server._handlers[self.path](self)
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+
+            def do_PUT(self: Any) -> None:
+                if self.path in self.server._handlers:
+                    self.server._handlers[self.path](self)
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+
+            def do_DELETE(self: Any) -> None:
+                if self.path in self.server._handlers:
+                    self.server._handlers[self.path](self)
+                else:
+                    self.send_response(404)
+                    self.end_headers()
+
+            def log_message(self: Any, fmt: str, *args: Any) -> None:
+                pass
+
+        server = HTTPServer((host, port), _Handler)
+        server._handlers = self._handlers
+        self._server = server
+        try:
+            server.serve_forever()
+        except Exception as e:
+            self._err_chan.append(e)
+
+    def start_async(self) -> threading.Thread:
+        self._thread = threading.Thread(target=self.start, daemon=True)
+        self._thread.start()
+        return self._thread
+
+    def stop(self, timeout: float = 5.0) -> None:
+        if self._server:
+            self._server.shutdown()
+        if self._thread:
+            self._thread.join(timeout=timeout)
+
+    def _parse_addr(self) -> tuple[str, str]:
+        if ":" in self._addr:
+            host, port = self._addr.rsplit(":", 1)
+            return host, port
+        return "0.0.0.0", self._addr
+
+
+def new_simple_server(port: int) -> SimpleServer:
+    return SimpleServer(str(port))
+
+
+def new_simple_server_with_options(port: int, **opts: Any) -> SimpleServer:
+    s = SimpleServer(str(port))
+    return s
+
+
+def new_simple_server_addr(addr: str) -> SimpleServer:
+    return SimpleServer(addr)
+
+
+def new_simple_server_addr_with_options(addr: str, **opts: Any) -> SimpleServer:
+    return SimpleServer(addr)
+
+
+def create_server(port: int) -> SimpleServer:
+    return SimpleServer(str(port))
+
+
+def create_server_with_options(port: int, **opts: Any) -> SimpleServer:
+    return SimpleServer(str(port))
+
+
+# ========== Scoped Global Config ==========
+
+
+def with_scoped_global_config(cfg: GlobalConfig, fn: Callable[[], None]) -> None:
+    old = snapshot_global_config()
+    _apply_cfg(cfg)
+    try:
+        fn()
+    finally:
+        _apply_cfg(old)
+
+
+def _apply_cfg(cfg: GlobalConfig) -> None:
+    global _global_config
+    set_global_timeout(cfg.timeout)
+    set_global_max_redirects(cfg.max_redirects)
+    set_global_max_response_bytes(cfg.max_response_bytes)
+    set_global_follow_redirects(cfg.follow_redirects)
+    set_user_agent(cfg.user_agent)
+    _global_config.headers = dict(cfg.headers)
+    _global_config.decode_url = cfg.decode_url
 
 
 def _request_safe(
@@ -492,58 +1709,6 @@ def get_user_agent() -> str:
 def set_user_agent(ua: str) -> None:
     global _DEFAULT_USER_AGENT
     _DEFAULT_USER_AGENT = ua
-
-
-# ========== HTTPResponse ==========
-
-
-class HTTPResponse:
-    def __init__(self, response: ResponseLike) -> None:
-        self._response = response
-
-    def bytes(self) -> bytes:
-        return self._response.content
-
-    def body(self) -> str:
-        return self._response.text
-
-    def status_code(self) -> int:
-        return self._response.status_code
-
-    def headers(self) -> dict[str, str]:
-        return dict(self._response.headers)
-
-    def content_type(self) -> str:
-        return self._response.headers.get("content-type", "")
-
-    def content_length(self) -> int:
-        val = self._response.headers.get("content-length", "0")
-        try:
-            return int(val)
-        except ValueError:
-            return 0
-
-    def cookies(self) -> dict[str, str]:
-        cookie_header = self._response.headers.get("set-cookie", "")
-        if not cookie_header:
-            return {}
-        result: dict[str, str] = {}
-        for part in cookie_header.split(";"):
-            part = part.strip()
-            if "=" in part:
-                k, v = part.split("=", 1)
-                result[k.strip()] = v.strip()
-        return result
-
-    def is_ok(self) -> bool:
-        return is_ok(self.status_code())
-
-    def close(self) -> None:
-        if hasattr(self._response, "close"):
-            self._response.close()
-
-    def raw(self) -> ResponseLike:
-        return self._response
 
 
 # ========== Global Config ==========
