@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import gzip
+import io
 import zipfile
 import zlib
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
+from typing import IO
 
 from kniferpy.verr import SecurityError, ValidationError
 
@@ -276,3 +279,227 @@ def unzlib(data: bytes, *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES) -> bytes:
 def unzlib_string(data: bytes, *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES) -> str:
     """Decompress zlib ``data`` and decode it as UTF-8 text."""
     return unzlib(data, max_bytes=max_bytes).decode("utf-8")
+
+
+# ── ZIP reader helpers ────────────────────────────────────────────────────────
+
+
+def open_zip(path: str | Path) -> zipfile.ZipFile:
+    """Open a ZIP file for reading."""
+    p = Path(path)
+    if not p.exists():
+        raise ValidationError(f"vzip: file not found: {path}", code="zip.not_found")
+    return zipfile.ZipFile(p, "r")
+
+
+def get_stream(zf: zipfile.ZipFile, name: str) -> IO[bytes]:
+    """Get a reader for a ZIP file entry."""
+    try:
+        return zf.open(name, "r")
+    except KeyError as exc:
+        raise ValidationError(f"vzip: entry not found: {name!r}", code="zip.no_entry") from exc
+
+
+def get(zip_file: str | Path, name: str) -> IO[bytes]:
+    """Open a named entry in a ZIP file for reading."""
+    with open_zip(zip_file) as zf:
+        return get_stream(zf, name)
+
+
+def get_bytes_with_options(
+    zip_file: str | Path,
+    name: str,
+    *,
+    max_bytes: int = DEFAULT_UNZIP_MAX_BYTES,
+) -> bytes:
+    """Return the uncompressed content of entry ``name`` in ``zip_file``."""
+    return get_bytes(zip_file, name, max_bytes=max_bytes)
+
+
+def read_zip(zip_file: str | Path, consumer: Callable[[zipfile.ZipInfo, IO[bytes]], None]) -> None:
+    """Walk every entry in a ZIP file and pass each to ``consumer``."""
+    with open_zip(zip_file) as zf:
+        for info in zf.infolist():
+            with zf.open(info, "r") as src:
+                consumer(info, src)
+
+
+def read_file(path: str | Path) -> bytes:
+    """Read a file from disk into bytes (for composing in-memory ZIP entries)."""
+    return Path(path).read_bytes()
+
+
+# ── ZIP writer helpers ────────────────────────────────────────────────────────
+
+
+def new_zip_writer(out: IO[bytes]) -> zipfile.ZipFile:
+    """Create a ZIP writer writing to ``out``."""
+    zf = zipfile.ZipFile(out, "w", compression=zipfile.ZIP_DEFLATED)
+    return zf
+
+
+def zip_to_writer(
+    out: IO[bytes],
+    src_files: list[str | Path],
+    *,
+    with_src_dir: bool = False,
+) -> None:
+    """Write source files into a writer as a ZIP."""
+    with new_zip_writer(out) as zf:
+        for src in src_files:
+            src_path = Path(src)
+            if not src_path.exists():
+                raise ValidationError(f"vzip: source not found: {src_path}", code="zip.no_source")
+            if src_path.is_dir():
+                base = src_path.parent if with_src_dir else src_path
+                for child in sorted(src_path.rglob("*")):
+                    if child.is_file():
+                        arcname = child.relative_to(base).as_posix()
+                        zf.write(child, _clean_entry_name(arcname))
+            else:
+                zf.write(src_path, _clean_entry_name(src_path.name))
+
+
+def zip_files_filter(
+    dest: str | Path,
+    src_files: list[str | Path],
+    *,
+    with_src_dir: bool = False,
+    file_filter: Callable[[Path], bool] | None = None,
+    overwrite: bool = True,
+) -> None:
+    """Create a ZIP with source path filtering."""
+    dest_path = Path(dest)
+    if dest_path.exists() and not overwrite:
+        raise ValidationError(f"vzip: destination exists: {dest_path}", code="zip.exists")
+    if dest_path.parent and not dest_path.parent.exists():
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(dest_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for src in src_files:
+            src_path = Path(src)
+            if not src_path.exists():
+                raise ValidationError(f"vzip: source not found: {src_path}", code="zip.no_source")
+            if src_path.is_dir():
+                base = src_path.parent if with_src_dir else src_path
+                for child in sorted(src_path.rglob("*")):
+                    if child.is_file() and (file_filter is None or file_filter(child)):
+                        arcname = child.relative_to(base).as_posix()
+                        zf.write(child, _clean_entry_name(arcname))
+            else:
+                if file_filter is None or file_filter(src_path):
+                    zf.write(src_path, _clean_entry_name(src_path.name))
+
+
+def zip_entries_to_writer(
+    out: IO[bytes],
+    entries: list[EntryData],
+) -> None:
+    """Write in-memory entries into a writer as ZIP."""
+    with new_zip_writer(out) as zf:
+        for entry in entries:
+            zf.writestr(_clean_entry_name(entry.name), entry.data)
+
+
+def zip_streams(
+    dest: str | Path,
+    streams: dict[str, IO[bytes]],
+    *,
+    overwrite: bool = True,
+) -> None:
+    """Create a ZIP from stream readers."""
+    dest_path = Path(dest)
+    if dest_path.exists() and not overwrite:
+        raise ValidationError(f"vzip: destination exists: {dest_path}", code="zip.exists")
+    if dest_path.parent and not dest_path.parent.exists():
+        dest_path.parent.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(dest_path, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, stream in streams.items():
+            zf.writestr(_clean_entry_name(name), stream.read())
+
+
+def append_to_zip(zip_path: str | Path, src_path: str | Path) -> None:
+    """Append a source path into a ZIP by rewriting."""
+    src = Path(src_path)
+    if not src.exists():
+        raise ValidationError(f"vzip: source not found: {src}", code="zip.no_source")
+    dest = Path(zip_path)
+    entries: list[tuple[str, bytes]] = []
+
+    if dest.exists():
+        with zipfile.ZipFile(dest, "r") as zf:
+            for info in zf.infolist():
+                entries.append((info.filename, zf.read(info.filename)))
+
+    if src.is_dir():
+        for child in sorted(src.rglob("*")):
+            if child.is_file():
+                entries.append((child.relative_to(src.parent).as_posix(), child.read_bytes()))
+    else:
+        entries.append((src.name, src.read_bytes()))
+
+    with zipfile.ZipFile(dest, "w", compression=zipfile.ZIP_DEFLATED) as zf:
+        for name, data in entries:
+            zf.writestr(_clean_entry_name(name), data)
+
+
+# ── Extraction variants ───────────────────────────────────────────────────────
+
+
+def unzip_to_limit(
+    zip_file: str | Path,
+    dest_dir: str | Path,
+    *,
+    limit: int = DEFAULT_UNZIP_MAX_BYTES,
+) -> None:
+    """Extract with uncompressed size limit (alias for unzip_to)."""
+    unzip_to(zip_file, dest_dir, limit=limit)
+
+
+def unzip_reader(
+    reader: IO[bytes],
+    dest_dir: str | Path,
+    *,
+    limit: int = DEFAULT_UNZIP_MAX_BYTES,
+) -> None:
+    """Extract from a ZIP reader into ``dest_dir``."""
+    dest = Path(dest_dir)
+    dest.mkdir(parents=True, exist_ok=True)
+    total = 0
+    with zipfile.ZipFile(reader, "r") as zf:
+        for info in zf.infolist():
+            target = _safe_target(dest, info.filename)
+            if info.is_dir():
+                target.mkdir(parents=True, exist_ok=True)
+                continue
+            if limit > 0:
+                total += info.file_size
+                if total > limit:
+                    raise SecurityError(
+                        f"vzip: archive exceeds max bytes: {limit}", code="zip.too_large"
+                    )
+            target.parent.mkdir(parents=True, exist_ok=True)
+            with zf.open(info, "r") as src, open(target, "wb") as out_f:
+                out_f.write(src.read())
+
+
+# ── gzip/zlib reader variants ─────────────────────────────────────────────────
+
+
+def gzip_reader(data: bytes) -> IO[bytes]:
+    """Decompress gzip data and return a reader."""
+    return io.BytesIO(gzip.decompress(data))
+
+
+def gunzip_reader(data: bytes) -> IO[bytes]:
+    """Decompress gzip data and return a reader (alias for gzip_reader)."""
+    return gzip_reader(data)
+
+
+def zlib_reader(data: bytes) -> IO[bytes]:
+    """Decompress zlib data and return a reader."""
+    return io.BytesIO(zlib.decompress(data))
+
+
+def unzlib_reader(data: bytes) -> IO[bytes]:
+    """Decompress zlib data and return a reader (alias for zlib_reader)."""
+    return zlib_reader(data)

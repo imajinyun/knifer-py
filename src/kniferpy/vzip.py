@@ -9,6 +9,7 @@ bounded to guard against zip bombs.
 from __future__ import annotations
 
 from pathlib import Path
+from typing import IO
 
 from kniferpy.internal import zipx
 from kniferpy.internal.zipx import DEFAULT_UNZIP_MAX_BYTES, EntryData
@@ -16,158 +17,94 @@ from kniferpy.internal.zipx import DEFAULT_UNZIP_MAX_BYTES, EntryData
 __all__ = [
     "DEFAULT_UNZIP_MAX_BYTES",
     "EntryData",
+    "append_to_zip",
+    "get",
     "get_bytes",
+    "get_bytes_with_options",
+    "get_stream",
+    "gunzip_reader",
     "gzip_bytes",
     "gzip_file",
+    "gzip_reader",
     "gzip_string",
     "list_file_names",
+    "new_zip_writer",
+    "open_zip",
     "read_entries",
+    "read_file",
+    "read_zip",
     "ungzip",
     "ungzip_string",
     "unzip",
+    "unzip_reader",
     "unzip_to",
+    "unzip_to_limit",
     "unzlib",
+    "unzlib_reader",
     "unzlib_string",
     "zip_archive",
     "zip_bytes",
     "zip_data",
     "zip_entries",
+    "zip_entries_to_writer",
     "zip_files",
+    "zip_files_filter",
+    "zip_streams",
     "zip_to",
+    "zip_to_writer",
     "zlib_bytes",
     "zlib_file",
+    "zlib_reader",
     "zlib_string",
 ]
 
+# ── ZIP creation ──────────────────────────────────────────────────────────────
 
-# --- ZIP archive creation ---------------------------------------------------
+zip_entries = zipx.zip_entries
+zip_bytes = zipx.zip_bytes
+zip_data = zipx.zip_data
+zip_files = zipx.zip_files
+zip_to = zipx.zip_to
+zip_archive = zipx.zip_archive
+zip_files_filter = zipx.zip_files_filter
+zip_to_writer = zipx.zip_to_writer
+zip_entries_to_writer = zipx.zip_entries_to_writer
+zip_streams = zipx.zip_streams
+append_to_zip = zipx.append_to_zip
+new_zip_writer = zipx.new_zip_writer
 
+# ── ZIP reading / extraction ──────────────────────────────────────────────────
 
-def zip_entries(zip_file: str | Path, entries: list[EntryData], *, overwrite: bool = True) -> None:
-    """Create (or overwrite) ``zip_file`` and add ``entries`` as deflated files."""
-    zipx.zip_entries(zip_file, entries, overwrite=overwrite)
+open_zip = zipx.open_zip
+get_stream = zipx.get_stream
+get = zipx.get
+get_bytes = zipx.get_bytes
+get_bytes_with_options = zipx.get_bytes_with_options
+read_zip = zipx.read_zip
+read_file = zipx.read_file
+read_entries = zipx.read_entries
+list_file_names = zipx.list_file_names
+unzip_to = zipx.unzip_to
+unzip_to_limit = zipx.unzip_to_limit
+unzip = zipx.unzip
+unzip_reader = zipx.unzip_reader
 
+# ── gzip ──────────────────────────────────────────────────────────────────────
 
-def zip_bytes(zip_file: str | Path, name: str, data: bytes, *, overwrite: bool = True) -> None:
-    """Create (or overwrite) ``zip_file`` and add a single byte entry."""
-    zipx.zip_bytes(zip_file, name, data, overwrite=overwrite)
+gzip_bytes = zipx.gzip_bytes
+gzip_string = zipx.gzip_string
+gzip_file = zipx.gzip_file
+ungzip = zipx.ungzip
+ungzip_string = zipx.ungzip_string
+gzip_reader = zipx.gzip_reader
+gunzip_reader = zipx.gunzip_reader
 
+# ── zlib ──────────────────────────────────────────────────────────────────────
 
-def zip_data(zip_file: str | Path, name: str, data: str, *, overwrite: bool = True) -> None:
-    """Create (or overwrite) ``zip_file`` and add a single UTF-8 text entry."""
-    zipx.zip_data(zip_file, name, data, overwrite=overwrite)
-
-
-def zip_files(
-    dest: str | Path,
-    src_files: list[str | Path],
-    *,
-    with_src_dir: bool = False,
-    overwrite: bool = True,
-) -> None:
-    """Create ``dest`` from source files or directories (directories walked)."""
-    zipx.zip_files(dest, src_files, with_src_dir=with_src_dir, overwrite=overwrite)
-
-
-def zip_to(src_path: str | Path, zip_path: str | Path, *, with_src_dir: bool = False) -> None:
-    """Create an archive at ``zip_path`` from ``src_path``."""
-    zipx.zip_to(src_path, zip_path, with_src_dir=with_src_dir)
-
-
-def zip_archive(src_path: str | Path) -> str:
-    """Create an archive next to ``src_path`` and return the archive path."""
-    return zipx.zip_archive(src_path)
-
-
-# --- ZIP archive extraction and reading -------------------------------------
-
-
-def unzip_to(
-    zip_file: str | Path,
-    dest_dir: str | Path,
-    *,
-    limit: int = DEFAULT_UNZIP_MAX_BYTES,
-) -> None:
-    """Extract ``zip_file`` into ``dest_dir`` (zip-slip safe, size bounded)."""
-    zipx.unzip_to(zip_file, dest_dir, limit=limit)
-
-
-def unzip(zip_file: str | Path, *, limit: int = DEFAULT_UNZIP_MAX_BYTES) -> str:
-    """Extract ``zip_file`` into a sibling directory named after the archive."""
-    return zipx.unzip(zip_file, limit=limit)
-
-
-def get_bytes(
-    zip_file: str | Path,
-    name: str,
-    *,
-    max_bytes: int = DEFAULT_UNZIP_MAX_BYTES,
-) -> bytes:
-    """Return the uncompressed content of entry ``name`` in ``zip_file``."""
-    return zipx.get_bytes(zip_file, name, max_bytes=max_bytes)
-
-
-def list_file_names(zip_file: str | Path, dir: str = "") -> list[str]:
-    """Return direct (non-recursive) file names under ``dir`` inside ``zip_file``."""
-    return zipx.list_file_names(zip_file, dir)
-
-
-def read_entries(zip_file: str | Path) -> list[str]:
-    """Return every entry name in ``zip_file`` in archive order."""
-    return zipx.read_entries(zip_file)
-
-
-# --- gzip -------------------------------------------------------------------
-
-
-def gzip_bytes(data: bytes, *, level: int = 6) -> bytes:
-    """Compress ``data`` using gzip."""
-    return zipx.gzip_bytes(data, level=level)
-
-
-def gzip_string(content: str, *, level: int = 6) -> bytes:
-    """Compress UTF-8 ``content`` using gzip."""
-    return zipx.gzip_string(content, level=level)
-
-
-def gzip_file(path: str | Path, *, level: int = 6) -> bytes:
-    """Compress the contents of ``path`` using gzip and return the bytes."""
-    return zipx.gzip_file(path, level=level)
-
-
-def ungzip(data: bytes, *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES) -> bytes:
-    """Decompress gzip ``data`` with a decompressed-size ``limit``."""
-    return zipx.ungzip(data, max_bytes=max_bytes)
-
-
-def ungzip_string(data: bytes, *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES) -> str:
-    """Decompress gzip ``data`` and decode it as UTF-8 text."""
-    return zipx.ungzip_string(data, max_bytes=max_bytes)
-
-
-# --- zlib -------------------------------------------------------------------
-
-
-def zlib_bytes(data: bytes, *, level: int = 6) -> bytes:
-    """Compress ``data`` using zlib at ``level``."""
-    return zipx.zlib_bytes(data, level=level)
-
-
-def zlib_string(content: str, *, level: int = 6) -> bytes:
-    """Compress UTF-8 ``content`` using zlib at ``level``."""
-    return zipx.zlib_string(content, level=level)
-
-
-def zlib_file(path: str | Path, *, level: int = 6) -> bytes:
-    """Compress the contents of ``path`` using zlib and return the bytes."""
-    return zipx.zlib_file(path, level=level)
-
-
-def unzlib(data: bytes, *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES) -> bytes:
-    """Decompress zlib ``data`` with a decompressed-size ``limit``."""
-    return zipx.unzlib(data, max_bytes=max_bytes)
-
-
-def unzlib_string(data: bytes, *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES) -> str:
-    """Decompress zlib ``data`` and decode it as UTF-8 text."""
-    return zipx.unzlib_string(data, max_bytes=max_bytes)
+zlib_bytes = zipx.zlib_bytes
+zlib_string = zipx.zlib_string
+zlib_file = zipx.zlib_file
+unzlib = zipx.unzlib
+unzlib_string = zipx.unzlib_string
+zlib_reader = zipx.zlib_reader
+unzlib_reader = zipx.unzlib_reader
