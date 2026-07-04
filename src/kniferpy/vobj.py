@@ -9,12 +9,18 @@ T = TypeVar("T")
 R = TypeVar("R")
 
 __all__ = [
+    "CodecOption",
+    "Decoder",
+    "Encoder",
     "Option",
     "apply",
     "accept",
     "clone",
     "clone_by_stream",
+    "clone_by_stream_with_options",
     "clone_if_possible",
+    "clone_if_possible_with_options",
+    "clone_with_options",
     "compare",
     "compare_none",
     "contains",
@@ -23,6 +29,8 @@ __all__ = [
     "default_if_none_func",
     "deserialize",
     "deserialize_to",
+    "deserialize_to_with_options",
+    "deserialize_with_options",
     "empty_count",
     "equal",
     "equals",
@@ -48,6 +56,8 @@ __all__ = [
     "register_name",
     "serialize",
     "serialize_or_nil",
+    "serialize_or_nil_with_options",
+    "serialize_with_options",
     "to_string",
     "type_name",
     "type_of",
@@ -60,6 +70,15 @@ __all__ = [
 
 Option = Callable[[Any], None]
 """Functional option for object serialization (Go compat)."""
+
+Encoder = Callable[[Any], None]
+"""Functional option for serialization encoder (Go compat)."""
+
+Decoder = Callable[[Any], None]
+"""Functional option for deserialization decoder (Go compat)."""
+
+CodecOption = Callable[[Any], None]
+"""Functional option for per-call codec configuration (Go compat)."""
 
 
 def equal(a: object, b: object) -> bool:
@@ -252,3 +271,14 @@ def with_encoder_factory(factory: Callable[[], Callable[[object], bytes]]) -> No
 def with_decoder_factory(factory: Callable[[], Callable[[bytes], object]]) -> None:
     """Set the decoder factory for deserialization."""
     objx.with_decoder_factory(factory)
+
+
+# ── WithOptions aliases (Go compat) ──────────────────────────────────────────
+
+clone_with_options = clone
+clone_if_possible_with_options = clone_if_possible
+clone_by_stream_with_options = clone_by_stream
+serialize_with_options = serialize
+serialize_or_nil_with_options = serialize_or_nil
+deserialize_with_options = deserialize
+deserialize_to_with_options = deserialize_to

@@ -62,8 +62,9 @@ __all__ = [
     "BaseChar",
     "BaseCharNumber",
     "BaseCharNumberUC",
-    # Go-compat type alias
+    # Go-compat type aliases
     "RandomOption",
+    "WeightedOption",
     # Basic random
     "random_int",
     "random_int_with_options",
@@ -108,7 +109,10 @@ __all__ = [
     "with_weighted_precision",
 ]
 
-# ── Go-compat type alias ───────────────────────────────────────────────────────
+# ── Go-compat type aliases ─────────────────────────────────────────────────────
 
 RandomOption = Callable[[Any], None]
 """Functional option for random generation (Go compat)."""
+
+WeightedOption = Callable[[Any], None]
+"""Functional option for weighted random selection (Go compat)."""

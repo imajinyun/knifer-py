@@ -105,6 +105,18 @@ class PageResult(Generic[T]):
             return True
         return self.page.number * self.page.size >= self.total
 
+    @property
+    def page_size(self) -> int:
+        """Return the page size (Go compat)."""
+        return self.page.size
+
+    @property
+    def total_page(self) -> int:
+        """Return the total number of pages (Go compat)."""
+        if self.page.size <= 0:
+            return 0
+        return (self.total + self.page.size - 1) // self.page.size
+
 
 @dataclass
 class Column:
@@ -167,6 +179,10 @@ class DBError(KniferError):
         if self.cause is not None:
             return f"{self.message}: {self.cause}"
         return self.message
+
+    def unwrap(self) -> BaseException | None:
+        """Return the wrapped cause error (Go compat)."""
+        return self.cause
 
 
 def new_db_error(format_str: str, *args: Any) -> DBError:
@@ -254,6 +270,10 @@ class SQLBuilder:
             parts.append(f"OFFSET {self._offset}")
 
         return " ".join(parts), args
+
+    def sql(self, dialect: Dialect) -> tuple[str, list[Any]]:
+        """Go-compat alias for to_sql()."""
+        return self.to_sql(dialect)
 
 
 # --- builder factories --------------------------------------------------------
@@ -513,6 +533,15 @@ class Wrapper:
             return ".".join(self.prefix + p + self.suffix for p in parts)
         return self.prefix + name + self.suffix
 
+    def unwrap(self, name: str) -> str:
+        """Remove identifier quoting (Go compat)."""
+        result = name
+        if name.startswith(self.prefix):
+            result = result[len(self.prefix):]
+        if name.endswith(self.suffix):
+            result = result[:-len(self.suffix)]
+        return result
+
 
 def new_wrapper(prefix: str, suffix: str | None = None) -> Wrapper:
     if suffix is None:
@@ -731,6 +760,15 @@ def build_like_value(pattern: str) -> str:
 
 def or_with(conds: Sequence[Condition]) -> Condition:
     return or_group(conds)
+
+
+# ── Go-compat aliases ─────────────────────────────────────────────────────────
+
+Query = SQLBuilder
+"""Type alias for query builder (Go compat)."""
+
+In = in_list
+"""Type alias for IN condition (Go compat)."""
 
 
 # --- query convenience ---------------------------------------------------------
