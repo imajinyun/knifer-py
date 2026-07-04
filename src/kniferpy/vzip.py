@@ -9,10 +9,20 @@ bounded to guard against zip bombs.
 from __future__ import annotations
 
 from pathlib import Path
-from typing import IO
+from typing import IO, Any, Callable
 
 from kniferpy.internal import zipx
 from kniferpy.internal.zipx import DEFAULT_UNZIP_MAX_BYTES, EntryData
+
+# ── Go-compat type aliases ─────────────────────────────────────────────────────
+
+Entry = EntryData  # Go: zipimpl.Entry
+StreamEntry = Any  # Go: zipimpl.StreamEntry
+ArchiveOption = Callable[[Any], None]  # Go: functional option pattern
+Writer = Any  # Go: zipimpl.Writer
+Reader = Any  # Go: zipimpl.Reader
+FileFilter = Callable[[str], bool]  # Go: zipimpl.FileFilter
+ZipError = type("ZipError", (Exception,), {})  # Go: zipimpl.ZipError
 
 __all__ = [
     "DEFAULT_UNZIP_MAX_BYTES",
@@ -61,6 +71,14 @@ __all__ = [
     "zlib_reader",
     "zlib_reader_from_stream",
     "zlib_string",
+    # Go-compat type aliases
+    "Entry",
+    "StreamEntry",
+    "ArchiveOption",
+    "Writer",
+    "Reader",
+    "FileFilter",
+    "ZipError",
 ]
 
 # ── ZIP creation ──────────────────────────────────────────────────────────────
