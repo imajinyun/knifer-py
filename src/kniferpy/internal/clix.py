@@ -361,3 +361,75 @@ def render_help(cmd: Command | None, *, mode: ColorMode = ColorMode.AUTO) -> str
                 buf.write(child.summary)
             buf.write("\n")
     return buf.getvalue()
+
+
+# ── FlagParser: standalone reusable flag parser ──────────────────────────────
+
+
+@dataclass(frozen=True, slots=True)
+class FlagParseResult:
+    """Result of a flag parse: unknown args and any error."""
+
+    args: list[str]
+    error: Exception | None = None
+
+
+class FlagParser:
+    """Standalone reusable flag parser wrapping argparse.ArgumentParser.
+
+    Provides deterministic error handling (no sys.exit on parse failure)
+    and a Go-compatible ``parse`` method that returns a ``FlagParseResult``.
+    """
+
+    __slots__ = ("_parser", "_name", "_output")
+
+    def __init__(
+        self,
+        name: str,
+        *,
+        output: TextIO | None = None,
+    ) -> None:
+        self._name = name
+        self._output = output
+        self._parser = argparse.ArgumentParser(
+            prog=name,
+            add_help=True,
+            exit_on_error=False,
+        )
+
+    def parse(self, args: list[str] | None = None) -> FlagParseResult:
+        """Parse ``args`` (or sys.argv[1:] if None) and return a result."""
+        if args is None:
+            args = sys.argv[1:]
+        try:
+            known, unknown = self._parser.parse_known_args(args)
+            return FlagParseResult(args=unknown)
+        except SystemExit as e:
+            return FlagParseResult(args=[], error=ValidationError(
+                str(e) or "flag parsing error", code="cli.flag_parse_error",
+            ))
+        except Exception as e:
+            return FlagParseResult(args=[], error=e)
+
+    def add_argument(self, *args: str, **kwargs: object) -> None:
+        """Add a command-line argument (delegates to argparse)."""
+        self._parser.add_argument(*args, **kwargs)
+
+    def add_flag(self, *flags: str, **kwargs: object) -> None:
+        """Add a boolean flag (delegates to argparse)."""
+        self._parser.add_argument(*flags, action="store_true", **kwargs)
+
+    def print_usage(self) -> None:
+        """Print usage to output (or stderr)."""
+        output = self._output or sys.stderr
+        self._parser.print_usage(file=output)
+
+    def print_help(self) -> None:
+        """Print help to output (or stderr)."""
+        output = self._output or sys.stderr
+        self._parser.print_help(file=output)
+
+
+def new_flag_parser(name: str, *, output: TextIO | None = None) -> FlagParser:
+    """Create a standalone flag parser."""
+    return FlagParser(name, output=output)

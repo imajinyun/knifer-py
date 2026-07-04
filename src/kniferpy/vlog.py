@@ -26,12 +26,40 @@ from datetime import datetime
 from typing import Callable, TextIO
 
 from kniferpy.internal import logx
-from kniferpy.internal.logx import ConsoleColorLog, ConsoleLog, Level
+from kniferpy.internal.logx import (
+    ColorFactory,
+    ConsoleColorLog,
+    ConsoleLog,
+    Level,
+    Log,
+    LogFactory,
+    LogLevel,
+    LogLevelAll,
+    LogLevelDebug,
+    LogLevelError,
+    LogLevelFatal,
+    LogLevelInfo,
+    LogLevelOff,
+    LogLevelTrace,
+    LogLevelWarn,
+)
 
 __all__ = [
+    "ColorFactory",
     "ConsoleColorLog",
     "ConsoleLog",
     "Level",
+    "Log",
+    "LogFactory",
+    "LogLevel",
+    "LogLevelAll",
+    "LogLevelDebug",
+    "LogLevelError",
+    "LogLevelFatal",
+    "LogLevelInfo",
+    "LogLevelOff",
+    "LogLevelTrace",
+    "LogLevelWarn",
     "debug",
     "debugf",
     "default_logger",
@@ -39,8 +67,10 @@ __all__ = [
     "errorf",
     "fatal",
     "fatalf",
+    "get_color_factory",
     "get_factory",
     "get_level",
+    "get_log_level",
     "info",
     "infof",
     "log_at",
@@ -50,8 +80,11 @@ __all__ = [
     "new_console_log",
     "new_isolated_logger",
     "render_message",
+    "set_color_factory",
     "set_level",
+    "set_log_color_factory",
     "set_log_factory",
+    "set_log_level",
     "trace",
     "tracef",
     "warn",
@@ -207,3 +240,19 @@ def default_logger() -> ConsoleLog:
 def new_isolated_logger(name: str) -> ConsoleLog:
     """Create an isolated logger with a new factory."""
     return logx.new_isolated_logger(name)
+
+
+def set_color_factory(factory: ColorFactory | None) -> None:
+    """Set an injectable color factory for the static logger."""
+    logx.set_color_factory(factory)
+
+
+def get_color_factory() -> ColorFactory | None:
+    """Return the current color factory."""
+    logx.get_color_factory()
+
+
+# Aliases for Go compat
+set_log_color_factory = logx.set_log_color_factory
+set_log_level = logx.set_log_level
+get_log_level = logx.get_log_level

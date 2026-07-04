@@ -11,6 +11,7 @@ from kniferpy.internal.cachex import (
     LRUCache,
     NoCache,
     Supplier,
+    SupplierE,
     TickerFactory,
     TimedCache,
     WeakCache,
@@ -20,20 +21,25 @@ K = TypeVar("K")
 V = TypeVar("V")
 
 __all__ = [
+    "Cache",
+    "CacheObj",
     "FIFOCache",
     "LFUCache",
     "LRUCache",
     "Listener",
     "NoCache",
     "Supplier",
+    "SupplierE",
     "TickerFactory",
     "TimedCache",
     "WeakCache",
     "new_fifo",
     "new_lfu",
     "new_lru",
+    "new_no",
     "new_no_cache",
     "new_timed",
+    "new_timed_scheduled",
     "new_weak",
 ]
 
@@ -96,3 +102,31 @@ def new_weak(
     clock: Callable[[], float] | None = None,
 ) -> WeakCache[K, V]:
     return cachex.new_weak(timeout, listener=listener, clock=clock)
+
+
+def new_timed_scheduled(
+    timeout: float,
+    schedule_prune_delay: float,
+    *,
+    listener: Callable[[K, V], None] | None = None,
+    clock: Callable[[], float] | None = None,
+    ticker_factory: TickerFactory | None = None,
+    runner: Callable[[Callable[[], None]], None] | None = None,
+) -> TimedCache[K, V]:
+    return cachex.new_timed_scheduled(
+        timeout,
+        schedule_prune_delay,
+        listener=listener,
+        clock=clock,
+        ticker_factory=ticker_factory,
+        runner=runner,
+    )
+
+
+def new_no() -> NoCache[K, V]:
+    return cachex.new_no()
+
+
+# Re-export types
+Cache = cachex.Cache
+CacheObj = cachex.CacheObj

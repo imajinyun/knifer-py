@@ -22,6 +22,8 @@ from kniferpy.internal.clix import (
     ColorMode,
     Command,
     ExecResult,
+    FlagParseResult,
+    FlagParser,
     Handler,
     Invocation,
     Runner,
@@ -33,11 +35,14 @@ __all__ = [
     "ColorMode",
     "Command",
     "ExecResult",
+    "FlagParseResult",
+    "FlagParser",
     "Handler",
     "Invocation",
     "Runner",
     "RunnerFunc",
     "colorize",
+    "new_flag_parser",
     "output",
     "render_help",
     "run",
@@ -47,3 +52,4 @@ colorize = clix.colorize
 output = clix.output
 render_help = clix.render_help
 run = clix.run
+new_flag_parser = clix.new_flag_parser

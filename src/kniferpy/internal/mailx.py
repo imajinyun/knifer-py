@@ -198,6 +198,46 @@ def _split_content_type(content_type: str) -> tuple[str, str]:
     return main.strip(), sub.strip()
 
 
+class Header:
+    """Ordered email header collection with inspection and mutation.
+
+    Headers are stored as (name, values) tuples. Duplicate names are allowed;
+    each ``Add`` call appends a new entry.
+    """
+
+    __slots__ = ("_entries",)
+
+    def __init__(self) -> None:
+        self._entries: list[tuple[str, tuple[str, ...]]] = []
+
+    def add(self, name: str, *values: str) -> None:
+        if _has_crlf(name) or any(_has_crlf(v) for v in values):
+            raise _invalid_header(name)
+        self._entries.append((name, values))
+
+    def set(self, name: str, *values: str) -> None:
+        if _has_crlf(name) or any(_has_crlf(v) for v in values):
+            raise _invalid_header(name)
+        # Remove existing entries with the same name, then add.
+        self._entries = [(n, v) for n, v in self._entries if n != name]
+        self._entries.append((name, values))
+
+    def values(self, name: str) -> list[str]:
+        result: list[str] = []
+        for n, v in self._entries:
+            if n == name:
+                result.extend(v)
+        return result
+
+    def to_tuples(self) -> tuple[tuple[str, tuple[str, ...]], ...]:
+        return tuple(self._entries)
+
+
+def new_header() -> Header:
+    """Create a new Header."""
+    return Header()
+
+
 @dataclass(frozen=True, slots=True)
 class Attachment:
     """A MIME file part loaded from bytes or lazily from a filesystem path."""
@@ -356,6 +396,12 @@ class Message:
 
     def to_bytes(self) -> bytes:
         return _render(self)
+
+    def write_to(self, writer) -> int:
+        """Write the rendered message to ``writer`` and return byte count."""
+        data = _render(self)
+        writer.write(data)
+        return len(data)
 
 
 def new_message(

@@ -9,15 +9,22 @@ than raising.
 from __future__ import annotations
 
 from kniferpy.internal import sysx
-from kniferpy.internal.sysx import HostInfo, OsInfo, RuntimeInfo, UserInfo
+from kniferpy.internal.sysx import HostInfo, OsInfo, PythonInfo, RuntimeInfo, UserInfo
 
 __all__ = [
     "HostInfo",
     "OsInfo",
+    "PythonInfo",
     "RuntimeInfo",
     "UserInfo",
+    "current_pid",
     "dump_system_info",
     "dump_system_info_to",
+    "env",
+    "env_bool",
+    "env_int",
+    "env_or_default",
+    "free_memory",
     "get",
     "get_bool",
     "get_cpu_cores",
@@ -32,22 +39,32 @@ __all__ = [
     "get_multistage_reverse_proxy_ip",
     "get_or_default",
     "get_os_info",
+    "get_python_info",
     "get_runtime_info",
     "get_total_memory",
     "get_total_thread_count",
     "get_user_info",
     "idn_to_ascii",
     "is_unknown",
+    "max_memory",
     "new_host_info",
     "new_os_info",
+    "new_python_info",
     "new_runtime_info",
     "new_user_info",
     "parse_cookies",
     "reset_info_cache",
+    "sys_host_info",
+    "sys_os_info",
+    "sys_python_info",
+    "sys_runtime_info",
+    "sys_user_info",
     "system_host_info",
     "system_os_info",
     "system_runtime_info",
     "system_user_info",
+    "total_goroutine_count",
+    "total_memory",
 ]
 
 
@@ -209,3 +226,83 @@ def system_user_info() -> UserInfo:
 def system_runtime_info() -> RuntimeInfo:
     """Return cached RuntimeInfo (singleton, cleared by reset_info_cache)."""
     return sysx.system_runtime_info()
+
+
+def env(key: str) -> str:
+    """Short alias for ``get(key, quiet=True)``."""
+    return sysx.env(key)
+
+
+def env_or_default(key: str, default: str) -> str:
+    """Short alias for ``get_or_default``."""
+    return sysx.env_or_default(key, default)
+
+
+def env_int(key: str, default: int = 0) -> int:
+    """Short alias for ``get_int``."""
+    return sysx.env_int(key, default)
+
+
+def env_bool(key: str, default: bool = False) -> bool:
+    """Short alias for ``get_bool``."""
+    return sysx.env_bool(key, default)
+
+
+def current_pid() -> int:
+    """Short alias for ``get_current_pid``."""
+    return sysx.current_pid()
+
+
+def total_memory() -> int:
+    """Short alias for ``get_total_memory``."""
+    return sysx.total_memory()
+
+
+def free_memory() -> int:
+    """Short alias for ``get_free_memory``."""
+    return sysx.free_memory()
+
+
+def max_memory() -> int:
+    """Short alias for ``get_max_memory``."""
+    return sysx.max_memory()
+
+
+def total_goroutine_count() -> int:
+    """Short alias for ``get_goroutine_count``."""
+    return sysx.total_goroutine_count()
+
+
+def new_python_info() -> PythonInfo:
+    """Create a fresh PythonInfo instance."""
+    return sysx.new_python_info()
+
+
+def get_python_info() -> PythonInfo:
+    """Return cached PythonInfo (singleton, cleared by reset_info_cache)."""
+    return sysx.get_python_info()
+
+
+def sys_host_info() -> HostInfo:
+    """Short alias for ``system_host_info``."""
+    return sysx.sys_host_info()
+
+
+def sys_os_info() -> OsInfo:
+    """Short alias for ``system_os_info``."""
+    return sysx.sys_os_info()
+
+
+def sys_user_info() -> UserInfo:
+    """Short alias for ``system_user_info``."""
+    return sysx.sys_user_info()
+
+
+def sys_runtime_info() -> RuntimeInfo:
+    """Short alias for ``system_runtime_info``."""
+    return sysx.sys_runtime_info()
+
+
+def sys_python_info() -> PythonInfo:
+    """Short alias for ``get_python_info``."""
+    return sysx.sys_python_info()

@@ -464,11 +464,12 @@ _cached_runtime_info: RuntimeInfo | None = None
 
 
 def reset_info_cache() -> None:
-    global _cached_os_info, _cached_host_info, _cached_user_info, _cached_runtime_info
+    global _cached_os_info, _cached_host_info, _cached_user_info, _cached_runtime_info, _cached_python_info
     _cached_os_info = None
     _cached_host_info = None
     _cached_user_info = None
     _cached_runtime_info = None
+    _cached_python_info = None
 
 
 def _cached_get_os_info() -> OsInfo:
@@ -541,3 +542,124 @@ def system_user_info() -> UserInfo:
 def system_runtime_info() -> RuntimeInfo:
     """Return cached RuntimeInfo (singleton, cleared by reset_info_cache)."""
     return _cached_get_runtime_info()
+
+
+# ── Short aliases (Go compat naming) ─────────────────────────────────────────
+
+def env(key: str) -> str:
+    """Short alias for ``get(key, quiet=True)``."""
+    return get(key, quiet=True)
+
+
+def env_or_default(key: str, default: str) -> str:
+    """Short alias for ``get_or_default``."""
+    return get_or_default(key, default)
+
+
+def env_int(key: str, default: int = 0) -> int:
+    """Short alias for ``get_int``."""
+    return get_int(key, default)
+
+
+def env_bool(key: str, default: bool = False) -> bool:
+    """Short alias for ``get_bool``."""
+    return get_bool(key, default)
+
+
+def current_pid() -> int:
+    """Short alias for ``get_current_pid``."""
+    return get_current_pid()
+
+
+def total_memory() -> int:
+    """Short alias for ``get_total_memory``."""
+    return get_total_memory()
+
+
+def free_memory() -> int:
+    """Short alias for ``get_free_memory``."""
+    return get_free_memory()
+
+
+def max_memory() -> int:
+    """Short alias for ``get_max_memory``."""
+    return get_max_memory()
+
+
+def total_goroutine_count() -> int:
+    """Short alias for ``get_goroutine_count``."""
+    return get_goroutine_count()
+
+
+# ── PythonInfo type (GoInfo equivalent) ──────────────────────────────────────
+
+@dataclass(frozen=True, slots=True)
+class PythonInfo:
+    """Python runtime metadata (knifer-go GoInfo equivalent)."""
+
+    version: str
+    implementation: str
+    compiler: str
+    prefix: str
+    executable: str
+    num_cpu: int
+
+    def __str__(self) -> str:
+        return (
+            f"Python Version:       {self.version}\n"
+            f"Python Implementation: {self.implementation}\n"
+            f"Python Compiler:       {self.compiler}\n"
+            f"Python Prefix:        {self.prefix}\n"
+            f"Python Executable:    {self.executable}\n"
+            f"Num CPU:             {self.num_cpu}\n"
+        )
+
+
+def new_python_info() -> PythonInfo:
+    """Create a fresh PythonInfo instance."""
+    return PythonInfo(
+        version=sys.version,
+        implementation=platform.python_implementation(),
+        compiler=platform.python_compiler(),
+        prefix=sys.prefix,
+        executable=sys.executable,
+        num_cpu=os.cpu_count() or 0,
+    )
+
+
+def get_python_info() -> PythonInfo:
+    """Return cached PythonInfo (singleton, cleared by reset_info_cache)."""
+    global _cached_python_info
+    if _cached_python_info is None:
+        _cached_python_info = new_python_info()
+    return _cached_python_info
+
+
+_cached_python_info: PythonInfo | None = None
+
+
+# ── Sys* short aliases ───────────────────────────────────────────────────────
+
+def sys_host_info() -> HostInfo:
+    """Short alias for ``system_host_info``."""
+    return system_host_info()
+
+
+def sys_os_info() -> OsInfo:
+    """Short alias for ``system_os_info``."""
+    return system_os_info()
+
+
+def sys_user_info() -> UserInfo:
+    """Short alias for ``system_user_info``."""
+    return system_user_info()
+
+
+def sys_runtime_info() -> RuntimeInfo:
+    """Short alias for ``system_runtime_info``."""
+    return system_runtime_info()
+
+
+def sys_python_info() -> PythonInfo:
+    """Short alias for ``get_python_info``."""
+    return get_python_info()

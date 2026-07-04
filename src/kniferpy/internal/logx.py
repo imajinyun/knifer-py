@@ -3,7 +3,7 @@ from __future__ import annotations
 import sys
 from datetime import datetime
 from enum import IntEnum
-from typing import Callable, TextIO
+from typing import Callable, Protocol, TextIO
 
 # Default timestamp format, the strftime analog of knifer-go's
 # "2006-01-02 15:04:05" layout.
@@ -32,6 +32,74 @@ class Level(IntEnum):
 
     def __str__(self) -> str:
         return self.name
+
+
+# LogLevel alias for Go compat
+LogLevel = Level
+
+# LogLevel constants for Go compat
+LogLevelAll = Level.ALL
+LogLevelTrace = Level.TRACE
+LogLevelDebug = Level.DEBUG
+LogLevelInfo = Level.INFO
+LogLevelWarn = Level.WARN
+LogLevelError = Level.ERROR
+LogLevelFatal = Level.FATAL
+LogLevelOff = Level.OFF
+
+
+# Injectable color factory: maps Level to ANSI escape code
+ColorFactory = Callable[[Level], str]
+
+
+class Log(Protocol):
+    """Protocol matching the knifer-go Log interface."""
+
+    def get_name(self) -> str: ...
+    def is_enabled(self, level: Level) -> bool: ...
+    def is_trace_enabled(self) -> bool: ...
+    def is_debug_enabled(self) -> bool: ...
+    def is_info_enabled(self) -> bool: ...
+    def is_warn_enabled(self) -> bool: ...
+    def is_error_enabled(self) -> bool: ...
+    def trace(self, *args: object) -> None: ...
+    def tracef(self, template: str, *args: object) -> None: ...
+    def debug(self, *args: object) -> None: ...
+    def debugf(self, template: str, *args: object) -> None: ...
+    def info(self, *args: object) -> None: ...
+    def infof(self, template: str, *args: object) -> None: ...
+    def warn(self, *args: object) -> None: ...
+    def warnf(self, template: str, *args: object) -> None: ...
+    def error(self, *args: object) -> None: ...
+    def errorf(self, template: str, *args: object) -> None: ...
+    def log(self, level: Level, template: str, *args: object) -> None: ...
+    def log_e(self, level: Level, err: BaseException | None, template: str, *args: object) -> None: ...
+
+
+class LogFactory(Protocol):
+    """Protocol for log factory injection (Go LogFactory equivalent)."""
+
+    def create_log(self, name: str) -> Log: ...
+
+
+# Injectable color factory for customizing per-level colors
+_color_factory: ColorFactory | None = None
+
+
+def set_color_factory(factory: ColorFactory | None) -> None:
+    """Set an injectable color factory for the static logger."""
+    global _color_factory
+    _color_factory = factory
+
+
+def get_color_factory() -> ColorFactory | None:
+    """Return the current color factory."""
+    return _color_factory
+
+
+#         set_log_color_factory = set_color_factory
+#         set_log_level = set_console_level
+#         get_log_level = get_console_level
 
 
 def _format_arg(value: object) -> str:
@@ -409,3 +477,9 @@ def default_logger() -> "ConsoleLog":
 
 def new_isolated_logger(name: str) -> "ConsoleLog":
     return ConsoleLog(name)
+
+
+# Aliases for Go compat
+set_log_color_factory = set_color_factory
+set_log_level = set_console_level
+get_log_level = get_console_level

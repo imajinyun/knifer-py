@@ -39,6 +39,7 @@ from kniferpy.internal.mailx import (
     Client,
     Config,
     Encoding,
+    Header,
     Message,
     TLSPolicy,
 )
@@ -56,6 +57,7 @@ __all__ = [
     "Client",
     "Config",
     "Encoding",
+    "Header",
     "Message",
     "TLSPolicy",
     "detect_content_type",
@@ -63,6 +65,7 @@ __all__ = [
     "new_attachment",
     "new_attachment_file",
     "new_attachment_reader",
+    "new_header",
     "new_inline",
     "new_inline_file",
     "new_inline_reader",
@@ -94,3 +97,4 @@ send_account_html = mailx.send_account_html
 send_account_text = mailx.send_account_text
 send_html = mailx.send_html
 send_text = mailx.send_text
+new_header = mailx.new_header

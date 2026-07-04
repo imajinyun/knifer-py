@@ -5,7 +5,8 @@ import time
 import weakref
 from collections import OrderedDict
 from collections.abc import Callable
-from typing import Generic, TypeVar
+from dataclasses import dataclass
+from typing import Generic, Protocol, TypeVar
 
 from kniferpy.verr import ValidationError
 
@@ -16,8 +17,35 @@ V = TypeVar("V")
 Listener = Callable[[K, V], None]
 # A supplier produces a value on a GetOrLoad miss.
 Supplier = Callable[[], V]
+# A supplier that may fail.
+SupplierE = Callable[[], tuple[V, Exception | None]]
 # A ticker factory creates a ticker channel and stopper for scheduled pruning.
 TickerFactory = Callable[[float], tuple["_Ticker", Callable[[], None]]]
+
+
+class Cache(Protocol[K, V]):
+    """Protocol for any cache type (FIFO, LRU, LFU, Timed, Weak, No)."""
+
+    def capacity(self) -> int: ...
+    def timeout(self) -> float: ...
+    def put(self, key: K, value: V) -> None: ...
+    def put_with_timeout(self, key: K, value: V, timeout: float) -> None: ...
+    def get(self, key: K, default: V | None = None) -> V | None: ...
+    def get_with_update(self, key: K, update_last_access: bool, default: V | None = None) -> V | None: ...
+    def get_or_load(self, key: K, supplier: Supplier[V] | None) -> V | None: ...
+    def get_or_load_with(self, key: K, supplier: Supplier[V] | None, update_last_access: bool, timeout: float) -> V | None: ...
+    def remove(self, key: K) -> None: ...
+    def contains_key(self, key: K) -> bool: ...
+    def size(self) -> int: ...
+    def is_empty(self) -> bool: ...
+    def is_full(self) -> bool: ...
+    def prune(self) -> int: ...
+    def clear(self) -> None: ...
+    def keys(self) -> list[K]: ...
+    def values(self) -> list[V]: ...
+    def set_listener(self, listener: Listener[K, V] | None) -> "Cache[K, V]": ...
+    def hit_count(self) -> int: ...
+    def miss_count(self) -> int: ...
 
 
 class _CacheObj(Generic[K, V]):
@@ -212,6 +240,9 @@ class _AbstractCache(Generic[K, V]):
     def get_or_load(self, key: K, supplier: Supplier[V] | None) -> V | None:
         return self.get_or_load_with(key, supplier, True, self._timeout)
 
+    def get_or_load_e(self, key: K, supplier: SupplierE[V] | None) -> tuple[V | None, Exception | None]:
+        return self.get_or_load_with_e(key, supplier, True, self._timeout)
+
     def get_or_load_with(
         self,
         key: K,
@@ -233,6 +264,31 @@ class _AbstractCache(Generic[K, V]):
             loaded = supplier()
             self.put_with_timeout(key, loaded, timeout)
             return loaded
+        finally:
+            self._release_load_lock(key, lock)
+
+    def get_or_load_with_e(
+        self,
+        key: K,
+        supplier: SupplierE[V] | None,
+        update_last_access: bool,
+        timeout: float,
+    ) -> tuple[V | None, Exception | None]:
+        value, ok = self._try_get(key, update_last_access)
+        if ok:
+            return value, None
+        if supplier is None:
+            return None, None
+        lock = self._acquire_load_lock(key)
+        try:
+            value, ok = self._try_get(key, update_last_access)
+            if ok:
+                return value, None
+            loaded, err = supplier()
+            if err is not None:
+                return None, err
+            self.put_with_timeout(key, loaded, timeout)
+            return loaded, None
         finally:
             self._release_load_lock(key, lock)
 
@@ -677,6 +733,34 @@ class TimedCache(Generic[K, V]):
             self._listener = listener
         return self
 
+    def get_or_load(self, key: K, supplier: Supplier[V] | None) -> V | None:
+        return self._get_or_load_with(key, supplier, self._timeout)
+
+    def get_or_load_e(self, key: K, supplier: SupplierE[V] | None) -> tuple[V | None, Exception | None]:
+        return self._get_or_load_with_e(key, supplier, self._timeout)
+
+    def _get_or_load_with(self, key: K, supplier: Supplier[V] | None, timeout: float) -> V | None:
+        value = self.get(key)
+        if value is not None:
+            return value
+        if supplier is None:
+            return None
+        loaded = supplier()
+        self.put_with_timeout(key, loaded, timeout)
+        return loaded
+
+    def _get_or_load_with_e(self, key: K, supplier: SupplierE[V] | None, timeout: float) -> tuple[V | None, Exception | None]:
+        value = self.get(key)
+        if value is not None:
+            return value, None
+        if supplier is None:
+            return None, None
+        loaded, err = supplier()
+        if err is not None:
+            return None, err
+        self.put_with_timeout(key, loaded, timeout)
+        return loaded, None
+
     def schedule_prune(self, delay: float) -> None:
         if delay <= 0:
             return
@@ -899,6 +983,34 @@ class WeakCache(Generic[K, V]):
             self._listener = listener
         return self
 
+    def get_or_load(self, key: K, supplier: Supplier[V] | None) -> V | None:
+        return self._get_or_load_with(key, supplier, self._timeout)
+
+    def get_or_load_e(self, key: K, supplier: SupplierE[V] | None) -> tuple[V | None, Exception | None]:
+        return self._get_or_load_with_e(key, supplier, self._timeout)
+
+    def _get_or_load_with(self, key: K, supplier: Supplier[V] | None, timeout: float) -> V | None:
+        value = self.get(key)
+        if value is not None:
+            return value
+        if supplier is None:
+            return None
+        loaded = supplier()
+        self.put_with_timeout(key, loaded, timeout)
+        return loaded
+
+    def _get_or_load_with_e(self, key: K, supplier: SupplierE[V] | None, timeout: float) -> tuple[V | None, Exception | None]:
+        value = self.get(key)
+        if value is not None:
+            return value, None
+        if supplier is None:
+            return None, None
+        loaded, err = supplier()
+        if err is not None:
+            return None, err
+        self.put_with_timeout(key, loaded, timeout)
+        return loaded, None
+
 
 # ----- factory helpers for timed/weak ----------------------------------------
 
@@ -927,3 +1039,47 @@ def new_weak(
     clock: Callable[[], float] | None = None,
 ) -> WeakCache[K, V]:
     return WeakCache(timeout, listener=listener, clock=clock)
+
+
+# ── CacheObj introspection type ──────────────────────────────────────────────
+
+@dataclass(frozen=True, slots=True)
+class CacheObj(Generic[K, V]):
+    """Introspection wrapper for a cache entry (Go CacheObj equivalent)."""
+
+    key: K
+    value: V
+    ttl: float
+    last_access: float
+    access_count: int
+
+    def expired_time(self) -> float | None:
+        if self.ttl <= 0:
+            return None
+        return self.last_access + self.ttl
+
+
+def new_timed_scheduled(
+    timeout: float,
+    schedule_prune_delay: float,
+    *,
+    listener: Listener[K, V] | None = None,
+    clock: Callable[[], float] | None = None,
+    ticker_factory: TickerFactory | None = None,
+    runner: Callable[[Callable[[], None]], None] | None = None,
+) -> TimedCache[K, V]:
+    """Create a timed cache and start scheduled pruning."""
+    c = new_timed(
+        timeout,
+        listener=listener,
+        clock=clock,
+        ticker_factory=ticker_factory,
+        runner=runner,
+    )
+    c.schedule_prune(schedule_prune_delay)
+    return c
+
+
+def new_no() -> NoCache[K, V]:
+    """Alias for new_no_cache (Go compat)."""
+    return NoCache()
