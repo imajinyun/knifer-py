@@ -57,6 +57,47 @@ from kniferpy.internal.errx import (
     wrap_error,
 )
 
+# ── Go-compat type aliases: functional option types ──────────────────────────
+
+# Stack trace option types
+StackTraceOption = Callable[[Any], None]
+"""Functional option for customizing GetStackTraceWithOptions."""
+
+StackOption = Callable[[Any], None]
+"""Functional option for customizing fallback stack capture in GetStackWithOptions."""
+
+# Callback types for stack trace customization
+CallersFunc = Callable[[int, list[int]], int]
+"""Callback for capturing call stack PCs (Go compat: runtime.Callers)."""
+
+FuncForPCFunc = Callable[[int], tuple[str, int, str, bool]]
+"""Callback for resolving a PC to file/line/function (Go compat: runtime.FuncForPC)."""
+
+DebugStackFunc = Callable[[], bytes]
+"""Callback for capturing a goroutine stack as fallback (Go compat: debug.Stack)."""
+
+# Init / Sentry option types
+InitOption = Callable[[Any], None]
+"""Functional option for InitWithOptions and NewIsolatedLogrusWithOptions."""
+
+# Exit option types
+ExitOption = Callable[[Any], None]
+"""Functional option for MustExitWithOptions."""
+
+# Collector option types
+CollectorOption = Callable[[Any], None]
+"""Functional option for NewCollectorWithOptions."""
+
+WaitOption = Callable[[Any], None]
+"""Functional option for WaitUntilWithOptions."""
+
+# Frame / StackTrace type aliases
+Frame = str
+"""A single stack frame (Go compat: uintptr -> string frame)."""
+
+StackTrace = list[str]
+"""A stack of frames from innermost to outermost (Go compat: []Frame)."""
+
 __all__ = [
     # Error codes
     "ERR_CODE_INTERNAL",
@@ -112,4 +153,18 @@ __all__ = [
     "must_exit_with_panic",
     "configure_default_log_func",
     "reset_default_log_func",
+    # Go-compat type aliases: stack trace
+    "StackTraceOption",
+    "StackOption",
+    "CallersFunc",
+    "FuncForPCFunc",
+    "DebugStackFunc",
+    # Go-compat type aliases: init / exit / collector
+    "InitOption",
+    "ExitOption",
+    "CollectorOption",
+    "WaitOption",
+    # Go-compat type aliases: frame / stack trace
+    "Frame",
+    "StackTrace",
 ]
