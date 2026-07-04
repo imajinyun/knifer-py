@@ -12,6 +12,8 @@ Supports:
 """
 from __future__ import annotations
 
+from typing import Any, Callable
+
 from kniferpy.internal.randx import (
     BaseChar,
     BaseCharNumber,
@@ -60,6 +62,8 @@ __all__ = [
     "BaseChar",
     "BaseCharNumber",
     "BaseCharNumberUC",
+    # Go-compat type alias
+    "RandomOption",
     # Basic random
     "random_int",
     "random_int_with_options",
@@ -103,3 +107,8 @@ __all__ = [
     "with_weighted_rand_source",
     "with_weighted_precision",
 ]
+
+# ── Go-compat type alias ───────────────────────────────────────────────────────
+
+RandomOption = Callable[[Any], None]
+"""Functional option for random generation (Go compat)."""

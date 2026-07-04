@@ -9,6 +9,8 @@ Supports:
 """
 from __future__ import annotations
 
+from typing import Any, Callable
+
 from kniferpy.internal.formx import (
     is_chinese,
     is_chinese_with_options,
@@ -31,6 +33,7 @@ from kniferpy.internal.formx import (
 )
 
 __all__ = [
+    "ValidatorOption",
     "is_email",
     "is_email_with_options",
     "is_mobile",
@@ -50,3 +53,8 @@ __all__ = [
     "with_chinese_matcher",
     "with_number_matcher",
 ]
+
+# ── Go-compat type alias ───────────────────────────────────────────────────────
+
+ValidatorOption = Callable[[Any], None]
+"""Functional option for form validation (Go compat)."""

@@ -8,7 +8,7 @@ default, so ``bad`` still matches ``b-a-d``.
 
 from __future__ import annotations
 
-from typing import Callable
+from typing import Any, Callable
 
 from kniferpy.internal import dfax
 from kniferpy.internal.dfax import (
@@ -32,6 +32,7 @@ __all__ = [
     "FoundWord",
     "Processor",
     "WordTree",
+    "WordTreeOption",
     "configure_async_runner",
     "contains",
     "contains_any",
@@ -55,6 +56,11 @@ __all__ = [
     "reset_async_runner",
     "set_char_filter",
 ]
+
+# ── Go-compat type alias ───────────────────────────────────────────────────────
+
+WordTreeOption = Callable[[Any], None]
+"""Functional option for word tree configuration (Go compat)."""
 
 
 def new_word_tree(*, char_filter: CharFilter | None = None) -> WordTree:

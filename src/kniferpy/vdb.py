@@ -5,6 +5,8 @@ Thin re-export veneer over internal/dbx.
 
 from __future__ import annotations
 
+from typing import Any, Callable
+
 from kniferpy.internal.dbx import (
     And,
     AscDirection,
@@ -100,12 +102,18 @@ from kniferpy.internal.dbx import (
     wrapper_for_dialect,
 )
 
+# ── Go-compat type alias ───────────────────────────────────────────────────────
+
+DBOption = Callable[[Any], None]
+"""Functional option for database configuration (Go compat)."""
+
 __all__ = [
     # Types
     "DB",
     "DBError",
     "Column",
     "Condition",
+    "DBOption",
     "Dialect",
     "Direction",
     "Entity",

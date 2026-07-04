@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar
+from typing import Any, TypeVar
 
 from kniferpy.internal import objx
 
@@ -9,6 +9,7 @@ T = TypeVar("T")
 R = TypeVar("R")
 
 __all__ = [
+    "Option",
     "apply",
     "accept",
     "clone",
@@ -54,6 +55,11 @@ __all__ = [
     "with_decoder_factory",
     "with_encoder_factory",
 ]
+
+# ── Go-compat type aliases ────────────────────────────────────────────────────
+
+Option = Callable[[Any], None]
+"""Functional option for object serialization (Go compat)."""
 
 
 def equal(a: object, b: object) -> bool:
