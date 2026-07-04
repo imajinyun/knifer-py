@@ -20,6 +20,179 @@ from kniferpy.internal.numx import (
     _with_random_reader,
 )
 
+__all__ = [
+    # Types
+    "DoubleOption",
+    "FormatOption",
+    "ParseOption",
+    "RandomNumberOption",
+    "RoundingMode",
+    # Constants
+    "RoundDown",
+    "RoundHalfEven",
+    "RoundHalfUp",
+    # Option builders
+    "WithDoubleFormatFloatFunc",
+    "WithDoubleParseFloatFunc",
+    "WithFormatFloatFunc",
+    "WithFormatIntFunc",
+    "WithParseFloatFunc",
+    "WithParseIntFunc",
+    "WithRandomReader",
+    # Arithmetic
+    "AbsFloat32",
+    "AbsFloat64",
+    "AbsInteger",
+    "AbsIntegerE",
+    "Add",
+    "AddStr",
+    "AvgNumber",
+    "CeilDiv",
+    "Div",
+    "DivWithMode",
+    "MaxFloat64",
+    "MaxFloat64s",
+    "MaxInteger",
+    "MaxIntegers",
+    "MinFloat64",
+    "MinFloat64s",
+    "MinInteger",
+    "MinIntegers",
+    "Mul",
+    "MulStr",
+    "Pow",
+    "PowWithMode",
+    "Sub",
+    "SubStr",
+    "SumNumber",
+    # Rounding
+    "Round",
+    "RoundDownFloat",
+    "RoundHalfEvenFloat",
+    "RoundMode",
+    "RoundStr",
+    "RoundStrWithOptions",
+    # Formatting
+    "DecimalFormat",
+    "DecimalFormatMoney",
+    "DecimalFormatMoneyWithOptions",
+    "DecimalFormatWithOptions",
+    "FormatPercent",
+    "FormatPercentWithOptions",
+    "ToStr",
+    "ToStrDefault",
+    "ToStrDefaultWithOptions",
+    "ToStrStrip",
+    "ToStrStripWithOptions",
+    "ToStrWithOptions",
+    # Validation
+    "IsDigits",
+    "IsDouble",
+    "IsDoubleWithOptions",
+    "IsEven",
+    "IsInteger",
+    "IsIntegerWithOptions",
+    "IsLong",
+    "IsLongWithOptions",
+    "IsNumber",
+    "IsNumberWithOptions",
+    "IsOdd",
+    "IsPowerOfTwo",
+    "IsPrimes",
+    "IsValid",
+    "IsValidFloat32",
+    "IsValidNumber",
+    # Parsing
+    "ParseDouble",
+    "ParseDoubleDefault",
+    "ParseDoubleDefaultWithOptions",
+    "ParseDoubleWithOptions",
+    "ParseFloat",
+    "ParseFloatDefault",
+    "ParseFloatDefaultWithOptions",
+    "ParseFloatWithOptions",
+    "ParseInt",
+    "ParseIntDefault",
+    "ParseIntDefaultWithOptions",
+    "ParseIntWithOptions",
+    "ParseLong",
+    "ParseLongDefault",
+    "ParseLongDefaultWithOptions",
+    "ParseLongWithOptions",
+    "ParseNumber",
+    "ParseNumberWithOptions",
+    # Random
+    "GenBySet",
+    "GenBySetWithOptions",
+    "GenRandomNumber",
+    "GenRandomNumberWithOptions",
+    "GenRandomNumberWithSeed",
+    "GenRandomNumberWithSeedWithOptions",
+    # Range
+    "AppendRange",
+    "Range",
+    "RangeClosed",
+    # Calculator
+    "Calculate",
+    "CalculateWithOptions",
+    # Binary
+    "BinaryToInt",
+    "BinaryToIntWithOptions",
+    "BinaryToLong",
+    "BinaryToLongWithOptions",
+    "FromUnsignedByteArray",
+    "FromUnsignedByteArrayRange",
+    "GetBinaryStr",
+    "GetBinaryStrWithOptions",
+    "ToBytes",
+    "ToInt",
+    "ToUnsignedByteArray",
+    "ToUnsignedByteArrayLen",
+    # Comparison
+    "Avg",
+    "Compare",
+    "Equals",
+    "EqualsBigDecimal",
+    "EqualsChar",
+    "EqualsExact",
+    "EqualsFloat32Exact",
+    "EqualsInt64",
+    "IsBeside",
+    "IsGreater",
+    "IsGreaterOrEqual",
+    "IsIn",
+    "IsLess",
+    "IsLessOrEqual",
+    "Max",
+    "Min",
+    "Sum",
+    # Factorial / Math
+    "Divisor",
+    "Factorial",
+    "FactorialBig",
+    "FactorialBigRange",
+    "FactorialRange",
+    "Multiple",
+    "ProcessMultiple",
+    "Sqrt",
+    # Conversion
+    "Count",
+    "NewBigInteger",
+    "Null2Zero",
+    "NullBigDecimalToZero",
+    "NullBigIntToZero",
+    "NullToZero",
+    "PartValue",
+    "PartValueWithMode",
+    "ToBigDecimal",
+    "ToBigDecimalWithOptions",
+    "ToBigInteger",
+    "ToDouble",
+    "ToDoubleWithOptions",
+    "Zero2One",
+]
+
+
 # ---------------------------------------------------------------------------
 # rounding mode
 # ---------------------------------------------------------------------------
@@ -566,3 +739,38 @@ def PartValueWithMode(total: int, part_count: int, plus_one_when_has_rem: bool) 
 
 def ToDouble(value: Any, opts: Sequence[DoubleOption] | None = None) -> float:
     return numx._to_double(value, opts)
+
+
+# ---------------------------------------------------------------------------
+# *WithOptions aliases (Go compat)
+# ---------------------------------------------------------------------------
+
+ParseIntWithOptions = ParseInt
+ParseLongWithOptions = ParseLong
+ParseFloatWithOptions = ParseFloat
+ParseDoubleWithOptions = ParseDouble
+ParseNumberWithOptions = ParseNumber
+ParseIntDefaultWithOptions = ParseIntDefault
+ParseLongDefaultWithOptions = ParseLongDefault
+ParseFloatDefaultWithOptions = ParseFloatDefault
+ParseDoubleDefaultWithOptions = ParseDoubleDefault
+IsNumberWithOptions = IsNumber
+IsIntegerWithOptions = IsInteger
+IsLongWithOptions = IsLong
+IsDoubleWithOptions = IsDouble
+GenRandomNumberWithOptions = GenRandomNumber
+GenRandomNumberWithSeedWithOptions = GenRandomNumberWithSeed
+GenBySetWithOptions = GenBySet
+CalculateWithOptions = Calculate
+GetBinaryStrWithOptions = GetBinaryStr
+BinaryToIntWithOptions = BinaryToInt
+BinaryToLongWithOptions = BinaryToLong
+DecimalFormatWithOptions = DecimalFormat
+DecimalFormatMoneyWithOptions = DecimalFormatMoney
+FormatPercentWithOptions = FormatPercent
+ToStrWithOptions = ToStr
+ToStrDefaultWithOptions = ToStrDefault
+ToStrStripWithOptions = ToStrStrip
+RoundStrWithOptions = RoundStr
+ToBigDecimalWithOptions = ToBigDecimal
+ToDoubleWithOptions = ToDouble
