@@ -462,6 +462,10 @@ class CronTask:
     pattern: Pattern
     task: Task
 
+    def set_pattern(self, p: Pattern) -> None:
+        """Update the cron expression (Go compat)."""
+        self.pattern = p
+
     def execute(self) -> None:
         self.task.execute()
 

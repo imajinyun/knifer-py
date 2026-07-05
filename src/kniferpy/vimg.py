@@ -132,8 +132,18 @@ from kniferpy.internal.imgx import (
 DecodeOption = Callable[[Any], None]
 """Functional option for barcode/QR code decoding (Go compat)."""
 
+# ── Go-compat type aliases for the captcha interface ───────────────────────────
+
+ICaptcha = AbstractCaptcha  # type: ignore[assignment]
+"""Go-compat type alias for the captcha interface."""
+
+Captcha = AbstractCaptcha  # type: ignore[assignment]
+"""Go-compat type alias for the captcha interface."""
+
 __all__ = [
     "AbstractCaptcha",
+    "Captcha",
+    "ICaptcha",
     "BarcodeFormat",
     "BarcodeOption",
     "BarcodeOutputFormat",

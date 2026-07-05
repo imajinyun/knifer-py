@@ -12,7 +12,7 @@ import ssl
 import tempfile
 import time
 from http.cookies import SimpleCookie
-from typing import Any
+from typing import Any, Callable
 
 from kniferpy.verr import ValidationError
 
@@ -1047,6 +1047,56 @@ def add_root_ca_bytes(ssl_context: ssl.SSLContext, ca_data: bytes) -> None:
         f.write(ca_data)
         f.flush()
         ssl_context.load_verify_locations(cafile=f.name)
+
+
+# ── Go-compat Root CA additions ─────────────────────────────────────────────
+
+
+def add_root_ca_file_with_options(builder: Any, path: str, **_opts: Any) -> None:
+    """Add a root CA file to a TLS config builder (Go compat)."""
+    builder.add_root_ca_file(path)
+
+
+def add_root_ca_reader(builder: Any, reader: Any) -> None:
+    """Add root CA from a reader to a TLS config builder (Go compat)."""
+    data = reader.read()
+    builder.add_root_ca_bytes(data)
+
+
+def add_root_ca_reader_with_options(builder: Any, reader: Any, **_opts: Any) -> None:
+    """Add root CA from a reader with options (Go compat)."""
+    add_root_ca_reader(builder, reader)
+
+
+def local_address_list_by_interface(
+    interface_filter: Callable[[Any], bool] | None = None,
+    address_filter: Callable[[Any], bool] | None = None,
+) -> list[str]:
+    """List IP addresses filtered by interface and address (Go compat)."""
+    result: list[str] = []
+    for interface, addrs in _get_interface_addresses():
+        if interface_filter is not None and not interface_filter(interface):
+            continue
+        for addr in addrs:
+            if address_filter is not None and not address_filter(addr):
+                continue
+            result.append(addr)
+    return result
+
+
+def _get_interface_addresses() -> list[tuple[Any, list[str]]]:
+    """Get network interface name/address pairs."""
+    import socket as _socket
+    hostname = _socket.gethostname()
+    ips: list[tuple[Any, list[str]]] = []
+    try:
+        for info in _socket.getaddrinfo(hostname, None):
+            name = info[0].name if hasattr(info[0], 'name') else ""
+            ip = info[4][0]
+            ips.append((name, [ip]))
+    except Exception:
+        pass
+    return ips
 
 
 # ========== WithOptions variants ==========

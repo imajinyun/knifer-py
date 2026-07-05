@@ -126,6 +126,9 @@ __all__ = [
     "tls_version",
     "new_cert_pool",
     "add_root_ca_bytes",
+    "add_root_ca_file_with_options",
+    "add_root_ca_reader",
+    "add_root_ca_reader_with_options",
     # DNS
     "get_dns_info",
     "get_dns_info_with_options",
@@ -298,6 +301,9 @@ create_tls_config = netx.create_tls_config
 tls_version = netx.tls_version
 new_cert_pool = netx.new_cert_pool
 add_root_ca_bytes = netx.add_root_ca_bytes
+add_root_ca_file_with_options = netx.add_root_ca_file_with_options
+add_root_ca_reader = netx.add_root_ca_reader
+add_root_ca_reader_with_options = netx.add_root_ca_reader_with_options
 
 # DNS
 get_dns_info = netx.get_dns_info
