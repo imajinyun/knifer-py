@@ -23,6 +23,7 @@ RuntimeInfoOption = Callable[[Any], None]
 UserInfoOption = Callable[[Any], None]
 ProcessOption = Callable[[Any], None]
 DumpOption = Callable[[Any], None]
+EnvOption = Callable[[Any], None]
 
 __all__ = [
     "HostInfo",
@@ -87,6 +88,44 @@ __all__ = [
     "UserInfoOption",
     "ProcessOption",
     "DumpOption",
+    "EnvOption",
+    # *WithOptions variants
+    "get_host_info_with_options",
+    "get_os_info_with_options",
+    "get_user_info_with_options",
+    "get_runtime_info_with_options",
+    "get_current_pid_with_options",
+    "get_total_memory_with_options",
+    "get_free_memory_with_options",
+    "get_max_memory_with_options",
+    "get_total_thread_count_with_options",
+    "get_goroutine_count_with_options",
+    "get_with_options",
+    "get_or_default_with_options",
+    "get_int_with_options",
+    "get_bool_with_options",
+    "env_with_options",
+    "env_or_default_with_options",
+    "env_int_with_options",
+    "env_bool_with_options",
+    "current_pid_with_options",
+    "total_memory_with_options",
+    "free_memory_with_options",
+    "max_memory_with_options",
+    "total_goroutine_count_with_options",
+    "sys_host_info_with_options",
+    "system_host_info_with_options",
+    "sys_os_info_with_options",
+    "system_os_info_with_options",
+    "sys_user_info_with_options",
+    "system_user_info_with_options",
+    "sys_runtime_info_with_options",
+    "system_runtime_info_with_options",
+    "dump_system_info_with_options",
+    "new_host_info_with_options",
+    "new_os_info_with_options",
+    "new_user_info_with_options",
+    "new_runtime_info_with_options",
 ]
 
 
@@ -328,3 +367,150 @@ def sys_runtime_info() -> RuntimeInfo:
 def sys_python_info() -> PythonInfo:
     """Short alias for ``get_python_info``."""
     return sysx.sys_python_info()
+
+
+# ── Go-compat *WithOptions variants ─────────────────────────────────────────
+
+
+def get_host_info_with_options(**opts: Any) -> HostInfo:
+    return sysx.get_host_info()
+
+
+def get_os_info_with_options(**opts: Any) -> OsInfo:
+    return sysx.get_os_info()
+
+
+def get_user_info_with_options(**opts: Any) -> UserInfo:
+    return sysx.get_user_info()
+
+
+def get_runtime_info_with_options(**opts: Any) -> RuntimeInfo:
+    return sysx.get_runtime_info()
+
+
+def get_current_pid_with_options(**opts: Any) -> int:
+    return sysx.get_current_pid()
+
+
+def get_total_memory_with_options(**opts: Any) -> int:
+    return sysx.get_total_memory()
+
+
+def get_free_memory_with_options(**opts: Any) -> int:
+    return sysx.get_free_memory()
+
+
+def get_max_memory_with_options(**opts: Any) -> int:
+    return sysx.get_max_memory()
+
+
+def get_total_thread_count_with_options(**opts: Any) -> int:
+    return sysx.get_total_thread_count()
+
+
+def get_goroutine_count_with_options(**opts: Any) -> int:
+    return sysx.get_goroutine_count()
+
+
+def get_with_options(key: str, quiet: bool = True, **opts: Any) -> str:
+    return sysx.get(key, quiet)
+
+
+def get_or_default_with_options(key: str, default: str, **opts: Any) -> str:
+    return sysx.get_or_default(key, default)
+
+
+def get_int_with_options(key: str, default: int = 0, **opts: Any) -> int:
+    return sysx.get_int(key, default)
+
+
+def get_bool_with_options(key: str, default: bool = False, **opts: Any) -> bool:
+    return sysx.get_bool(key, default)
+
+
+def env_with_options(key: str, **opts: Any) -> str:
+    return sysx.env(key)
+
+
+def env_or_default_with_options(key: str, default: str, **opts: Any) -> str:
+    return sysx.env_or_default(key, default)
+
+
+def env_int_with_options(key: str, default: int = 0, **opts: Any) -> int:
+    return sysx.env_int(key, default)
+
+
+def env_bool_with_options(key: str, default: bool = False, **opts: Any) -> bool:
+    return sysx.env_bool(key, default)
+
+
+def current_pid_with_options(**opts: Any) -> int:
+    return sysx.current_pid()
+
+
+def total_memory_with_options(**opts: Any) -> int:
+    return sysx.total_memory()
+
+
+def free_memory_with_options(**opts: Any) -> int:
+    return sysx.free_memory()
+
+
+def max_memory_with_options(**opts: Any) -> int:
+    return sysx.max_memory()
+
+
+def total_goroutine_count_with_options(**opts: Any) -> int:
+    return sysx.total_goroutine_count()
+
+
+def sys_host_info_with_options(**opts: Any) -> HostInfo:
+    return sysx.sys_host_info()
+
+
+def system_host_info_with_options(**opts: Any) -> HostInfo:
+    return sysx.system_host_info()
+
+
+def sys_os_info_with_options(**opts: Any) -> OsInfo:
+    return sysx.sys_os_info()
+
+
+def system_os_info_with_options(**opts: Any) -> OsInfo:
+    return sysx.system_os_info()
+
+
+def sys_user_info_with_options(**opts: Any) -> UserInfo:
+    return sysx.sys_user_info()
+
+
+def system_user_info_with_options(**opts: Any) -> UserInfo:
+    return sysx.system_user_info()
+
+
+def sys_runtime_info_with_options(**opts: Any) -> RuntimeInfo:
+    return sysx.sys_runtime_info()
+
+
+def system_runtime_info_with_options(**opts: Any) -> RuntimeInfo:
+    return sysx.system_runtime_info()
+
+
+def dump_system_info_with_options(writer: Any = None, **opts: Any) -> None:
+    return sysx.dump_system_info_to(writer)
+
+
+def new_host_info_with_options(**opts: Any) -> HostInfo:
+    return sysx.new_host_info()
+
+
+def new_os_info_with_options(**opts: Any) -> OsInfo:
+    return sysx.new_os_info()
+
+
+def new_user_info_with_options(**opts: Any) -> UserInfo:
+    return sysx.new_user_info()
+
+
+def new_runtime_info_with_options(**opts: Any) -> RuntimeInfo:
+    return sysx.new_runtime_info()
