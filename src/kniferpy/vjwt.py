@@ -14,7 +14,7 @@ from typing import Any
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
 from kniferpy.internal import jwtx
-from kniferpy.internal.jwtx import JWTBuilder
+from kniferpy.internal.jwtx import JWTBuilder, JWTSigner
 
 # ── Algorithm Constants ───────────────────────────────────────────────────────
 
@@ -65,6 +65,7 @@ def jwt_errorf(format_str: str, *args: Any) -> JWTError:
 
 __all__ = [
     "JWTBuilder",
+    "JWTSigner",
     "JWTError",
     "algorithm_name",
     "create_signer",
@@ -109,6 +110,35 @@ __all__ = [
     "verify",
     "verify_jwt",
     "of_validator",
+    # Go-compat signer constructors
+    "HS256",
+    "HS384",
+    "HS512",
+    "PS256",
+    "PS384",
+    "PS512",
+    "ES256",
+    "ES384",
+    "ES512",
+    "new_hmac_signer",
+    "new_hmac_signer_strict",
+    "must_hmac_signer",
+    "new_rsa_pss_signer",
+    "new_ecdsa_signer",
+    "create_signer_from_key",
+    "create_signer_from_key_strict",
+    "jwtsigner_hmac",
+    "jwtsigner_hs256",
+    "jwtsigner_ecdsa",
+    "jwtsigner_es256",
+    # Go-compat CreateToken/Verify with signer
+    "create_token_with_signer",
+    "create_token_with_headers_and_signer",
+    "create_jwt_token_with_signer",
+    "verify_with_signer",
+    "verify_jwt_with_signer",
+    "verify_strict_signer",
+    "validate_algorithm_with_signer",
     # Algorithm constants
     "JWTAlgHS256",
     "JWTAlgHS384",
@@ -209,3 +239,38 @@ create_token_with_headers_and_algorithm = jwtx.create_token_with_headers_and_alg
 verify = jwtx.verify
 verify_jwt = jwtx.verify_jwt
 of_validator = jwtx.of_validator
+
+# ── Go-compat signer constructors ────────────────────────────────────────────
+
+HS256 = jwtx.HS256
+HS384 = jwtx.HS384
+HS512 = jwtx.HS512
+PS256 = jwtx.PS256
+PS384 = jwtx.PS384
+PS512 = jwtx.PS512
+ES256 = jwtx.ES256
+ES384 = jwtx.ES384
+ES512 = jwtx.ES512
+
+new_hmac_signer = jwtx.new_hmac_signer
+new_hmac_signer_strict = jwtx.new_hmac_signer_strict
+must_hmac_signer = jwtx.must_hmac_signer
+new_rsa_pss_signer = jwtx.new_rsa_pss_signer
+new_ecdsa_signer = jwtx.new_ecdsa_signer
+create_signer_from_key = jwtx.create_signer_from_key
+create_signer_from_key_strict = jwtx.create_signer_from_key_strict
+
+jwtsigner_hmac = jwtx.jwtsigner_hmac
+jwtsigner_hs256 = jwtx.jwtsigner_hs256
+jwtsigner_ecdsa = jwtx.jwtsigner_ecdsa
+jwtsigner_es256 = jwtx.jwtsigner_es256
+
+# ── Go-compat CreateToken/Verify with signer ─────────────────────────────────
+
+create_token_with_signer = jwtx.create_token_with_signer
+create_token_with_headers_and_signer = jwtx.create_token_with_headers_and_signer
+create_jwt_token_with_signer = jwtx.create_jwt_token_with_signer
+verify_with_signer = jwtx.verify_with_signer
+verify_jwt_with_signer = jwtx.verify_jwt_with_signer
+verify_strict_signer = jwtx.verify_strict_signer
+validate_algorithm_with_signer = jwtx.validate_algorithm_with_signer

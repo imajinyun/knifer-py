@@ -1,13 +1,16 @@
 from __future__ import annotations
 
+import base64
+import hmac as _hmac
 import json
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import jwt
 from jwt.algorithms import NoneAlgorithm
 
-from cryptography.hazmat.primitives.asymmetric import ec, rsa
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa, utils
 from cryptography.hazmat.primitives import hashes
 
 from kniferpy.verr import CryptoError
@@ -511,3 +514,386 @@ def verify_jwt(token: str, key: str | bytes) -> bool:
 def of_validator(token: str) -> dict[str, Any]:
     """Parse a token and return claims for validation (Go compat)."""
     return parse_jwt(token)
+
+
+# ── JWTSigner abstraction ────────────────────────────────────────────────────
+
+
+class JWTSigner:
+    """A JWT signer that can sign and verify tokens using a specific algorithm.
+
+    This is the Python equivalent of Go's ``JWTSigner`` interface.
+    Concrete signers are created via the ``HS256()``, ``HS384()``, ``HS512()``,
+    ``PS256()``, ``PS384()``, ``PS512()``, ``ES256()``, ``ES384()``, ``ES512()``
+    factory functions, or via ``new_hmac_signer()``, ``new_rsa_pss_signer()``,
+    ``new_ecdsa_signer()`` with an explicit algorithm string.
+    """
+
+    def __init__(self, algorithm: str, sign_fn: Callable, verify_fn: Callable) -> None:
+        self._algorithm = algorithm
+        self._sign = sign_fn
+        self._verify = verify_fn
+
+    def algorithm(self) -> str:
+        """Return the JWT algorithm ID (e.g. ``HS256``)."""
+        return self._algorithm
+
+    def sign(self, header_b64: str, payload_b64: str) -> str:
+        """Sign the ``header_b64.payload_b64`` pair and return the base64-url signature."""
+        return self._sign(header_b64, payload_b64)
+
+    def verify(self, header_b64: str, payload_b64: str, sig_b64: str) -> bool:
+        """Verify that ``sig_b64`` is a valid signature for ``header_b64.payload_b64``."""
+        return self._verify(header_b64, payload_b64, sig_b64)
+
+
+# ── HMAC signer ──────────────────────────────────────────────────────────────
+
+
+def _hmac_sign(key: bytes, hash_name: str) -> Callable:
+    def sign(header_b64: str, payload_b64: str) -> str:
+        message = f"{header_b64}.{payload_b64}".encode("ascii")
+        sig = _hmac.new(key, message, hash_name).digest()
+        return base64.urlsafe_b64encode(sig).rstrip(b"=").decode("ascii")
+
+    return sign
+
+
+def _hmac_verify(key: bytes, hash_name: str) -> Callable:
+    def verify(header_b64: str, payload_b64: str, sig_b64: str) -> bool:
+        message = f"{header_b64}.{payload_b64}".encode("ascii")
+        expected = _hmac.new(key, message, hash_name).digest()
+        sig = base64.urlsafe_b64decode(sig_b64 + "==")
+        return _hmac.compare_digest(expected, sig)
+
+    return verify
+
+
+def new_hmac_signer(algorithm: str, key: bytes) -> JWTSigner:
+    """Create an HMAC signer for HS256, HS384, or HS512.
+
+    Returns (signer, None) on success, or (None, error) on bad algorithm.
+    """
+    if not isinstance(key, bytes):
+        key = key.encode("utf-8") if isinstance(key, str) else key
+    hash_map = {"HS256": "sha256", "HS384": "sha384", "HS512": "sha512"}
+    if algorithm.upper() not in hash_map:
+        raise CryptoError(f"unsupported HMAC algorithm: {algorithm}", code="jwt.unsupported_algorithm")
+    hash_name = hash_map[algorithm.upper()]
+    return JWTSigner(algorithm.upper(), _hmac_sign(key, hash_name), _hmac_verify(key, hash_name))
+
+
+def new_hmac_signer_strict(algorithm: str, key: bytes) -> JWTSigner:
+    """Create an HMAC signer and enforce the recommended minimum key length."""
+    min_bytes = min_hmac_key_bytes(algorithm)
+    if len(key) < min_bytes:
+        raise CryptoError(
+            f"{algorithm} requires at least {min_bytes} bytes, got {len(key)}",
+            code="jwt.weak_secret",
+        )
+    return new_hmac_signer(algorithm, key)
+
+
+def must_hmac_signer(algorithm: str, key: bytes) -> JWTSigner:
+    """Create an HMAC signer; raises on invalid algorithm."""
+    return new_hmac_signer(algorithm, key)
+
+
+def create_signer_from_key(algorithm_id: str, key: bytes) -> JWTSigner:
+    """Create an HMAC signer from algorithm ID."""
+    if algorithm_id.upper() == "NONE":
+        raise CryptoError("none algorithm is rejected", code="jwt.unsupported_algorithm")
+    return new_hmac_signer(algorithm_id, key)
+
+
+def create_signer_from_key_strict(algorithm_id: str, key: bytes) -> JWTSigner:
+    """Create an HMAC signer from algorithm ID with strict key length check."""
+    if algorithm_id.upper() == "NONE":
+        raise CryptoError("none algorithm is rejected", code="jwt.unsupported_algorithm")
+    return new_hmac_signer_strict(algorithm_id, key)
+
+
+# ── RSA-PSS signer ───────────────────────────────────────────────────────────
+
+
+def _rsa_pss_sign(priv: rsa.RSAPrivateKey, hash_alg: str) -> Callable:
+    hash_map = {"sha256": hashes.SHA256(), "sha384": hashes.SHA384(), "sha512": hashes.SHA512()}
+    chosen_hash = hash_map.get(hash_alg, hashes.SHA256())
+
+    def sign(header_b64: str, payload_b64: str) -> str:
+        message = f"{header_b64}.{payload_b64}".encode("ascii")
+        sig = priv.sign(
+            message,
+            padding.PSS(mgf=padding.MGF1(chosen_hash), salt_length=padding.PSS.MAX_LENGTH),
+            chosen_hash,
+        )
+        return base64.urlsafe_b64encode(sig).rstrip(b"=").decode("ascii")
+
+    return sign
+
+
+def _rsa_pss_verify(pub: rsa.RSAPublicKey, hash_alg: str) -> Callable:
+    hash_map = {"sha256": hashes.SHA256(), "sha384": hashes.SHA384(), "sha512": hashes.SHA512()}
+    chosen_hash = hash_map.get(hash_alg, hashes.SHA256())
+
+    def verify(header_b64: str, payload_b64: str, sig_b64: str) -> bool:
+        message = f"{header_b64}.{payload_b64}".encode("ascii")
+        try:
+            sig = base64.urlsafe_b64decode(sig_b64 + "==")
+            pub.verify(
+                sig,
+                message,
+                padding.PSS(mgf=padding.MGF1(chosen_hash), salt_length=padding.PSS.MAX_LENGTH),
+                chosen_hash,
+            )
+            return True
+        except Exception:
+            return False
+
+    return verify
+
+
+def new_rsa_pss_signer(
+    algorithm: str, priv: rsa.RSAPrivateKey, pub: rsa.RSAPublicKey
+) -> JWTSigner:
+    """Create an RSA-PSS signer for PS256, PS384, or PS512."""
+    hash_map = {"PS256": "sha256", "PS384": "sha384", "PS512": "sha512"}
+    if algorithm.upper() not in hash_map:
+        raise CryptoError(f"unsupported RSA-PSS algorithm: {algorithm}", code="jwt.unsupported_algorithm")
+    hash_name = hash_map[algorithm.upper()]
+    return JWTSigner(algorithm.upper(), _rsa_pss_sign(priv, hash_name), _rsa_pss_verify(pub, hash_name))
+
+
+# ── ECDSA signer ─────────────────────────────────────────────────────────────
+
+
+def _ecdsa_sign(priv: ec.EllipticCurvePrivateKey, hash_alg: str) -> Callable:
+    hash_map = {"sha256": hashes.SHA256(), "sha384": hashes.SHA384(), "sha512": hashes.SHA512()}
+    chosen_hash = hash_map.get(hash_alg, hashes.SHA256())
+
+    def sign(header_b64: str, payload_b64: str) -> str:
+        message = f"{header_b64}.{payload_b64}".encode("ascii")
+        sig_der = priv.sign(message, ec.ECDSA(chosen_hash))
+        r, s = _decode_der_ecdsa(sig_der)
+        sig_bytes = r.to_bytes(32, "big") + s.to_bytes(32, "big")
+        return base64.urlsafe_b64encode(sig_bytes).rstrip(b"=").decode("ascii")
+
+    return sign
+
+
+def _ecdsa_verify(pub: ec.EllipticCurvePublicKey, hash_alg: str) -> Callable:
+    hash_map = {"sha256": hashes.SHA256(), "sha384": hashes.SHA384(), "sha512": hashes.SHA512()}
+    chosen_hash = hash_map.get(hash_alg, hashes.SHA256())
+
+    def verify(header_b64: str, payload_b64: str, sig_b64: str) -> bool:
+        message = f"{header_b64}.{payload_b64}".encode("ascii")
+        try:
+            sig_bytes = base64.urlsafe_b64decode(sig_b64 + "==")
+            r = int.from_bytes(sig_bytes[:32], "big")
+            s = int.from_bytes(sig_bytes[32:], "big")
+            sig_der = _encode_der_ecdsa(r, s)
+            pub.verify(sig_der, message, ec.ECDSA(chosen_hash))
+            return True
+        except Exception:
+            return False
+
+    return verify
+
+
+def _decode_der_ecdsa(sig_der: bytes) -> tuple[int, int]:
+    """Decode a DER-encoded ECDSA signature into (r, s)."""
+    if sig_der[0] != 0x30:
+        raise ValueError("invalid DER signature")
+    offset = 2
+    if sig_der[offset] == 0x02:
+        offset += 1
+        r_len = sig_der[offset]
+        offset += 1
+        r = int.from_bytes(sig_der[offset : offset + r_len], "big")
+        offset += r_len
+    else:
+        raise ValueError("expected r integer")
+    if sig_der[offset] == 0x02:
+        offset += 1
+        s_len = sig_der[offset]
+        offset += 1
+        s = int.from_bytes(sig_der[offset : offset + s_len], "big")
+    else:
+        raise ValueError("expected s integer")
+    return r, s
+
+
+def _encode_der_ecdsa(r: int, s: int) -> bytes:
+    """Encode (r, s) into a DER-encoded ECDSA signature."""
+    r_bytes = r.to_bytes((r.bit_length() + 7) // 8, "big")
+    s_bytes = s.to_bytes((s.bit_length() + 7) // 8, "big")
+    if r_bytes[0] & 0x80:
+        r_bytes = b"\x00" + r_bytes
+    if s_bytes[0] & 0x80:
+        s_bytes = b"\x00" + s_bytes
+    inner = b"\x02" + bytes([len(r_bytes)]) + r_bytes + b"\x02" + bytes([len(s_bytes)]) + s_bytes
+    return b"\x30" + bytes([len(inner)]) + inner
+
+
+def new_ecdsa_signer(
+    algorithm: str, priv: ec.EllipticCurvePrivateKey, pub: ec.EllipticCurvePublicKey
+) -> JWTSigner:
+    """Create an ECDSA signer for ES256, ES384, or ES512."""
+    hash_map = {"ES256": "sha256", "ES384": "sha384", "ES512": "sha512"}
+    if algorithm.upper() not in hash_map:
+        raise CryptoError(f"unsupported ECDSA algorithm: {algorithm}", code="jwt.unsupported_algorithm")
+    hash_name = hash_map[algorithm.upper()]
+    return JWTSigner(algorithm.upper(), _ecdsa_sign(priv, hash_name), _ecdsa_verify(pub, hash_name))
+
+
+# ── Go-compat signer constructors ────────────────────────────────────────────
+
+
+def HS256(key: bytes) -> JWTSigner:
+    return new_hmac_signer("HS256", key)
+
+
+def HS384(key: bytes) -> JWTSigner:
+    return new_hmac_signer("HS384", key)
+
+
+def HS512(key: bytes) -> JWTSigner:
+    return new_hmac_signer("HS512", key)
+
+
+def PS256(priv: rsa.RSAPrivateKey, pub: rsa.RSAPublicKey) -> JWTSigner:
+    return new_rsa_pss_signer("PS256", priv, pub)
+
+
+def PS384(priv: rsa.RSAPrivateKey, pub: rsa.RSAPublicKey) -> JWTSigner:
+    return new_rsa_pss_signer("PS384", priv, pub)
+
+
+def PS512(priv: rsa.RSAPrivateKey, pub: rsa.RSAPublicKey) -> JWTSigner:
+    return new_rsa_pss_signer("PS512", priv, pub)
+
+
+def ES256(priv: ec.EllipticCurvePrivateKey, pub: ec.EllipticCurvePublicKey) -> JWTSigner:
+    return new_ecdsa_signer("ES256", priv, pub)
+
+
+def ES384(priv: ec.EllipticCurvePrivateKey, pub: ec.EllipticCurvePublicKey) -> JWTSigner:
+    return new_ecdsa_signer("ES384", priv, pub)
+
+
+def ES512(priv: ec.EllipticCurvePrivateKey, pub: ec.EllipticCurvePublicKey) -> JWTSigner:
+    return new_ecdsa_signer("ES512", priv, pub)
+
+
+# ── Go-compat JWT signer wrapper functions ───────────────────────────────────
+
+
+def jwtsigner_hmac(algorithm: str, key: bytes) -> JWTSigner:
+    return new_hmac_signer(algorithm, key)
+
+
+def jwtsigner_hs256(key: bytes) -> JWTSigner:
+    return HS256(key)
+
+
+def jwtsigner_ecdsa(
+    algorithm: str, priv: ec.EllipticCurvePrivateKey, pub: ec.EllipticCurvePublicKey
+) -> JWTSigner:
+    return new_ecdsa_signer(algorithm, priv, pub)
+
+
+def jwtsigner_es256(priv: ec.EllipticCurvePrivateKey, pub: ec.EllipticCurvePublicKey) -> JWTSigner:
+    return ES256(priv, pub)
+
+
+# ── Go-compat CreateToken/Verify with signer ─────────────────────────────────
+
+
+def create_token_with_signer(payload: dict[str, Any], signer: JWTSigner) -> str:
+    """Create a JWT token using a JWTSigner (Go compat)."""
+    import jwt as _jwt_module
+
+    header = {"alg": signer.algorithm(), "typ": "JWT"}
+    header_b64 = (
+        base64.urlsafe_b64encode(json.dumps(header, separators=(",", ":")).encode("ascii"))
+        .rstrip(b"=")
+        .decode("ascii")
+    )
+    payload_b64 = (
+        base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode("ascii"))
+        .rstrip(b"=")
+        .decode("ascii")
+    )
+    sig_b64 = signer.sign(header_b64, payload_b64)
+    return f"{header_b64}.{payload_b64}.{sig_b64}"
+
+
+def create_token_with_headers_and_signer(
+    headers: dict[str, Any], payload: dict[str, Any], signer: JWTSigner
+) -> str:
+    """Create a JWT token with custom headers and a JWTSigner (Go compat)."""
+    header = dict(headers)
+    header.setdefault("alg", signer.algorithm())
+    header.setdefault("typ", "JWT")
+    header_b64 = (
+        base64.urlsafe_b64encode(json.dumps(header, separators=(",", ":")).encode("ascii"))
+        .rstrip(b"=")
+        .decode("ascii")
+    )
+    payload_b64 = (
+        base64.urlsafe_b64encode(json.dumps(payload, separators=(",", ":")).encode("ascii"))
+        .rstrip(b"=")
+        .decode("ascii")
+    )
+    sig_b64 = signer.sign(header_b64, payload_b64)
+    return f"{header_b64}.{payload_b64}.{sig_b64}"
+
+
+def create_jwt_token_with_signer(payload: dict[str, Any], signer: JWTSigner) -> str:
+    """Create a JWT token using a JWTSigner (Go compat)."""
+    return create_token_with_signer(payload, signer)
+
+
+def verify_with_signer(token: str, signer: JWTSigner) -> bool:
+    """Verify a JWT token using a JWTSigner (Go compat)."""
+    parts = token.split(".")
+    if len(parts) != 3:
+        return False
+    return signer.verify(parts[0], parts[1], parts[2])
+
+
+def verify_jwt_with_signer(token: str, signer: JWTSigner) -> bool:
+    """Verify a JWT token using a JWTSigner (Go compat alias)."""
+    return verify_with_signer(token, signer)
+
+
+def verify_strict_signer(token: str, signer: JWTSigner) -> bool:
+    """Verify a JWT token using a JWTSigner, requiring algorithm match in header (Go compat)."""
+    parts = token.split(".")
+    if len(parts) != 3:
+        return False
+    try:
+        header_json = base64.urlsafe_b64decode(parts[0] + "==").decode("ascii")
+        header = json.loads(header_json)
+        if header.get("alg", "").upper() != signer.algorithm().upper():
+            return False
+    except Exception:
+        return False
+    return signer.verify(parts[0], parts[1], parts[2])
+
+
+def validate_algorithm_with_signer(token: str, signer: JWTSigner) -> None:
+    """Check whether the token's alg header matches the signer (Go compat)."""
+    parts = token.split(".")
+    if len(parts) != 3:
+        raise CryptoError("invalid token format", code="jwt.invalid_token")
+    try:
+        header_json = base64.urlsafe_b64decode(parts[0] + "==").decode("ascii")
+        header = json.loads(header_json)
+    except Exception as exc:
+        raise CryptoError("invalid token header", code="jwt.invalid_token") from exc
+    if header.get("alg", "").upper() != signer.algorithm().upper():
+        raise CryptoError(
+            f"algorithm mismatch: expected {signer.algorithm()}, got {header.get('alg')}",
+            code="jwt.algorithm_mismatch",
+        )
