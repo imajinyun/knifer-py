@@ -35,6 +35,7 @@ from kniferpy.verr import KniferError, ValidationError
 
 # ── Go-compat type aliases ────────────────────────────────────────────────────
 
+ExecRequest = Any  # Go: cli.ExecRequest
 ExecOption = Callable[[Any], None]
 ExecuteOption = Callable[[Any], None]
 FlagParserOption = Callable[[Any], None]
@@ -107,6 +108,7 @@ __all__ = [
     "output",
     "render_help",
     "run",
+    "ExecRequest",
 ]
 
 colorize = clix.colorize
