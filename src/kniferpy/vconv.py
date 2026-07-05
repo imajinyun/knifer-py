@@ -3,11 +3,15 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from kniferpy.internal import convx
+from kniferpy.verr import KniferError
+
+# ── Go-compat sentinel error ───────────────────────────────────────────────────
+
+ErrInvalidConversion = KniferError("cannot convert to requested type", code="knifer.conv.invalid")
 
 # ── Go-compat type alias ───────────────────────────────────────────────────────
 
 ConvOption = Callable[[Any], None]
-"""Functional option for type conversion (Go compat)."""
 
 
 to_str = convx.to_str
@@ -49,6 +53,7 @@ to_bytes_with_options = convx.to_bytes_with_options
 
 __all__ = [
     "ConvOption",
+    "ErrInvalidConversion",
     "to_str",
     "to_str_default",
     "to_str_e",

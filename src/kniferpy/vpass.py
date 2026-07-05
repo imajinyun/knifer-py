@@ -6,12 +6,28 @@ from kniferpy.internal.passx import Analysis, Strength
 __all__ = [
     "Analysis",
     "Strength",
+    # Go-compat standalone Strength constants
+    "StrengthUnknown",
+    "StrengthVeryWeak",
+    "StrengthWeak",
+    "StrengthMedium",
+    "StrengthStrong",
+    "StrengthVeryStrong",
     "analyze",
     "score",
     "strength_of",
     "is_strong",
     "is_weak",
 ]
+
+# ── Go-compat standalone Strength constants ────────────────────────────────────
+
+StrengthUnknown = Strength.UNKNOWN
+StrengthVeryWeak = Strength.VERY_WEAK
+StrengthWeak = Strength.WEAK
+StrengthMedium = Strength.MEDIUM
+StrengthStrong = Strength.STRONG
+StrengthVeryStrong = Strength.VERY_STRONG
 
 
 def analyze(password: str) -> Analysis:
