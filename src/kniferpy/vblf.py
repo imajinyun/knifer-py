@@ -47,7 +47,10 @@ BitSetBloomFilterOption = Callable[[Any], None]
 
 # ── Go-compat error type alias ─────────────────────────────────────────────────
 
-BloomFilterError = "BloomFilterError"  # Go compat: sentinel error type name
+from kniferpy.verr import ValidationError
+
+# create BloomFilterError as a proper error class (Go compat)
+BloomFilterError = type("BloomFilterError", (ValidationError,), {})
 
 __all__ = [
     "DEFAULT_MACHINE_NUM",

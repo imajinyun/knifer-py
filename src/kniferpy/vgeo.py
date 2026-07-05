@@ -2,9 +2,14 @@ from __future__ import annotations
 
 from kniferpy.internal import geox
 from kniferpy.internal.geox import Coord, CoordType
+from kniferpy.verr import ValidationError
+
+# ── Go-compat Error type ────────────────────────────────────────────────────
+
+GeoError = ValidationError  # Go: type Error = geoimpl.Error
 
 __all__ = [
-    "Coord",
+    "GeoError",
     "CoordType",
     "convert",
     "wgs84_to_gcj02",

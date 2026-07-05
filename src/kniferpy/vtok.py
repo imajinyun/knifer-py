@@ -12,6 +12,11 @@ from __future__ import annotations
 
 from kniferpy.internal.tokenizex import (
     Client,
+    ErrInputLimitExceeded,
+    ErrInvalidKeywordsRequest,
+    ErrInvalidTokenizeRequest,
+    ErrMissingProvider,
+    ErrTokenLimitExceeded,
     Keyword,
     KeywordsRequest,
     KeywordsResponse,
@@ -24,14 +29,21 @@ from kniferpy.internal.tokenizex import (
     bigram,
     filter_words,
     is_stop_word,
+    keywords,
     new_simple_provider,
     ngram,
     remove_stop_words,
+    tokenize,
     trigram,
 )
 
 __all__ = [
     "Client",
+    "ErrInputLimitExceeded",
+    "ErrInvalidKeywordsRequest",
+    "ErrInvalidTokenizeRequest",
+    "ErrMissingProvider",
+    "ErrTokenLimitExceeded",
     "Keyword",
     "KeywordsRequest",
     "KeywordsResponse",
@@ -44,8 +56,10 @@ __all__ = [
     "bigram",
     "filter_words",
     "is_stop_word",
+    "keywords",
     "new_simple_provider",
     "ngram",
     "remove_stop_words",
+    "tokenize",
     "trigram",
 ]

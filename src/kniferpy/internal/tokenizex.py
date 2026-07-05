@@ -18,6 +18,14 @@ from typing import Protocol, runtime_checkable
 
 from kniferpy.verr import KniferError, ValidationError
 
+# ── Go-compat sentinel error variables ──────────────────────────────────────
+
+ErrInvalidTokenizeRequest = KniferError("tok: invalid tokenize request", code="knifer.tok.invalid_tokenize_request")
+ErrInvalidKeywordsRequest = KniferError("tok: invalid keywords request", code="knifer.tok.invalid_keywords_request")
+ErrInputLimitExceeded = KniferError("tok: input limit exceeded", code="knifer.tok.input_limit_exceeded")
+ErrTokenLimitExceeded = KniferError("tok: token limit exceeded", code="knifer.tok.token_limit_exceeded")
+ErrMissingProvider = KniferError("tok: missing provider", code="knifer.tok.missing_provider")
+
 
 class Mode:
     """Provider-specific tokenization mode."""
@@ -87,6 +95,9 @@ class TokenizeResponse:
     tokens: list[Token] = dataclasses.field(default_factory=list)
     metadata: dict[str, str] = dataclasses.field(default_factory=dict)
 
+    def clone(self) -> TokenizeResponse:
+        return copy.copy(self)
+
 
 @dataclasses.dataclass(slots=True)
 class KeywordsRequest:
@@ -116,6 +127,9 @@ class KeywordsResponse:
     text: str = ""
     keywords: list[Keyword] = dataclasses.field(default_factory=list)
     metadata: dict[str, str] = dataclasses.field(default_factory=dict)
+
+    def clone(self) -> KeywordsResponse:
+        return copy.copy(self)
 
 
 @runtime_checkable
@@ -273,3 +287,18 @@ class SimpleProvider:
 
 def new_simple_provider() -> SimpleProvider:
     return SimpleProvider()
+
+
+# ── Go-compat standalone convenience functions ──────────────────────────────
+
+
+def tokenize(provider: Provider, request: TokenizeRequest) -> TokenizeResponse:
+    """Tokenize text via a provider (Go compat: Tokenize)."""
+    client = Client(provider)
+    return client.tokenize(request)
+
+
+def keywords(provider: Provider, request: KeywordsRequest) -> KeywordsResponse:
+    """Extract keywords via a provider (Go compat: Keywords)."""
+    client = Client(provider)
+    return client.keywords(request)

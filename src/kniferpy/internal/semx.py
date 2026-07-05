@@ -99,6 +99,14 @@ class Semaphore:
             self._cur -= n
             self._notify_locked()
 
+    def release_e(self, n: int = 1) -> ValidationError | None:
+        """Release ``n`` permits, returning an error instead of raising (Go compat)."""
+        try:
+            self.release(n)
+            return None
+        except ValidationError as e:
+            return e
+
     @contextmanager
     def guard(self, n: int = 1, *, timeout: float | None = None) -> Iterator[bool]:
         """Context manager that acquires ``n`` permits and always releases them.

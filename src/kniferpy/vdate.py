@@ -15,9 +15,14 @@ from kniferpy.internal.datex import (
     SolarDate,
     UTC_PATTERN,
 )
+from kniferpy.verr import ValidationError
+
+# ── Go-compat Error type ────────────────────────────────────────────────────
+
+DateError = ValidationError  # Go: type Error = dateimpl.DateError
 
 __all__ = [
-    "LunarDate",
+    "DateError",
     "SolarDate",
     "HTTP_PATTERN",
     "NORM_PATTERN",

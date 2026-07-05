@@ -76,6 +76,18 @@ def reset_default_log_func() -> None:
     _default_log_func = None
 
 
+# ── Go-compat EmptyFormatter ────────────────────────────────────────────────
+
+EmptyFormatter = type("EmptyFormatter", (), {})  # Go: empty formatter sentinel
+
+
+# ── Go-compat ResetStackFrameCache ──────────────────────────────────────────
+
+def reset_stack_frame_cache() -> None:
+    """Reset the stack frame cache (Go compat, no-op in Python)."""
+    pass
+
+
 # ---------------------------------------------------------------------------
 # Error types
 # ---------------------------------------------------------------------------

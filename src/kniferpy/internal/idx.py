@@ -100,6 +100,14 @@ class Snowflake:
         self._last_timestamp = -1
         self._lock = threading.Lock()
 
+    def worker_id(self) -> int:
+        """Return the worker ID (Go compat)."""
+        return self._worker_id
+
+    def datacenter_id(self) -> int:
+        """Return the datacenter ID (Go compat)."""
+        return self._datacenter_id
+
     @staticmethod
     def _now_ms() -> int:
         return int(time.time() * 1000)

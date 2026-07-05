@@ -28,6 +28,10 @@ class OsInfo:
     def is_mac(self) -> bool:
         return self.name == "Darwin"
 
+    def is_mac_os_x(self) -> bool:
+        """Check if OS is macOS (Go compat alias)."""
+        return self.is_mac()
+
     def is_windows(self) -> bool:
         return self.name == "Windows"
 

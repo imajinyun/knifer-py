@@ -87,6 +87,11 @@ extract_multi_and_del_pre_re = regexx.extract_multi_and_del_pre_re
 replace_all_re = regexx.replace_all_re
 replace_all_func_re = regexx.replace_all_func_re
 
+# Go-compat pre-compiled regex aliases
+index_of_re = regexx._index_of_re
+last_index_of_re = regexx._last_index_of_re
+get_all_groups_re = regexx._get_all_groups_re
+
 __all__ = [
     "MatchResult",
     "RE_CHINESE",
@@ -145,4 +150,7 @@ __all__ = [
     "extract_multi_and_del_pre_re",
     "replace_all_re",
     "replace_all_func_re",
+    "index_of_re",
+    "last_index_of_re",
+    "get_all_groups_re",
 ]

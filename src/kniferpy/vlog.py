@@ -44,7 +44,12 @@ from kniferpy.internal.logx import (
     LogLevelWarn,
 )
 
+# ── Go-compat type alias ─────────────────────────────────────────────────────
+
+AbstractLog = ConsoleLog  # Go: type AbstractLog = logx.AbstractLog
+
 __all__ = [
+    "AbstractLog",
     "ColorFactory",
     "ConsoleColorLog",
     "ConsoleLog",

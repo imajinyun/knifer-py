@@ -1,6 +1,16 @@
 from __future__ import annotations
 
 from kniferpy.internal import codecx
+from kniferpy.verr import ValidationError
+
+# ── Go-compat Error type ────────────────────────────────────────────────────────
+
+CodecError = ValidationError  # Go: type Error = codecimpl.Error
+
+# ── Go-compat type aliases ──────────────────────────────────────────────────────
+
+Base32Encoding = str  # Go: type Base32Encoding string
+Base58Alphabet = str  # Go: type Base58Alphabet string
 
 # ── Encoding constants ─────────────────────────────────────────────────────────
 
@@ -11,6 +21,11 @@ BASE58_BITCOIN_ALPHABET = "bitcoin"
 BASE58_FLICKR_ALPHABET = "flickr"
 
 __all__ = [
+    # Error type
+    "CodecError",
+    # Type aliases
+    "Base32Encoding",
+    "Base58Alphabet",
     # Constants
     "BASE32_HEX_ENCODING",
     "BASE32_STD_ENCODING",

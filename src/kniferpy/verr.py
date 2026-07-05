@@ -22,6 +22,7 @@ from kniferpy.internal.errx import (
     Collector,
     CryptoError,
     DecodeError,
+    EmptyFormatter,
     JSONError,
     KniferError,
     LogFunc,
@@ -54,6 +55,7 @@ from kniferpy.internal.errx import (
     recover,
     recover_without_error,
     reset_default_log_func,
+    reset_stack_frame_cache,
     wrap_error,
 )
 
@@ -99,6 +101,7 @@ StackTrace = list[str]
 """A stack of frames from innermost to outermost (Go compat: []Frame)."""
 
 __all__ = [
+    "EmptyFormatter",
     # Error codes
     "ERR_CODE_INTERNAL",
     "ERR_CODE_INVALID_INPUT",
@@ -153,6 +156,7 @@ __all__ = [
     "must_exit_with_panic",
     "configure_default_log_func",
     "reset_default_log_func",
+    "reset_stack_frame_cache",
     # Go-compat type aliases: stack trace
     "StackTraceOption",
     "StackOption",

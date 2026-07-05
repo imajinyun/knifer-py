@@ -1,8 +1,14 @@
 from __future__ import annotations
 
 from kniferpy.internal import hashx
+from kniferpy.verr import ValidationError
+
+# ── Go-compat Error type ────────────────────────────────────────────────────
+
+HashError = ValidationError  # Go: type Error = hashimpl.Error
 
 __all__ = [
+    "HashError",
     "additive_hash",
     "fnv_hash",
     "fnv_hash_string",
@@ -20,7 +26,13 @@ __all__ = [
     "tianl_hash",
     "java_default_hash",
     "ConsistentHash",
+    "new_consistent_hash",
 ]
+
+
+def new_consistent_hash(replicas: int = 100) -> hashx.ConsistentHash:
+    """Create a new ConsistentHash ring (Go compat: NewConsistentHash)."""
+    return hashx.ConsistentHash(replicas)
 
 
 def additive_hash(s: str, prime: int) -> int:
