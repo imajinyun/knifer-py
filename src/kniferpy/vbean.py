@@ -43,6 +43,8 @@ __all__ = [
     "fill_map",
     "merge",
     "merge_result",
+    "merge_with_options",
+    "merge_result_with_options",
     "new_options",
     "string_to_datetime_hook",
     "string_to_timedelta_hook",
@@ -98,6 +100,17 @@ def merge(dst: Any, *sources: Any, options: Options | None = None) -> None:
 
 def merge_result(dst: Any, *sources: Any, options: Options | None = None) -> Result:
     """Copy sources into ``dst`` left to right and report aggregate metadata."""
+    return beanx.merge_result(dst, *sources, options=options)
+
+
+# Go-compat *WithOptions aliases
+def merge_with_options(dst: Any, sources: list[Any], options: Options | None = None) -> None:
+    """Go-compat: ``MergeWithOptions(dst, sources, opts...)``."""
+    beanx.merge(dst, *sources, options=options)
+
+
+def merge_result_with_options(dst: Any, sources: list[Any], options: Options | None = None) -> Result:
+    """Go-compat: ``MergeResultWithOptions(dst, sources, opts...)``."""
     return beanx.merge_result(dst, *sources, options=options)
 
 
