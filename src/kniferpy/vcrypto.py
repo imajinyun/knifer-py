@@ -148,6 +148,49 @@ secure_bytes_with_options = cryptox.secure_bytes_with_options
 totp_now_with_options = cryptox.totp_now_with_options
 totp_verify_now_with_options = cryptox.totp_verify_now_with_options
 
+# ── Go-compat random_bytes ──────────────────────────────────────────────────
+
+random_bytes = cryptox.random_bytes
+random_bytes_with_options = cryptox.random_bytes_with_options
+
+# ── SM3 ─────────────────────────────────────────────────────────────────────
+
+sm3 = cryptox.sm3
+sm3_hex = cryptox.sm3_hex
+sm3_new = cryptox.sm3_new
+sm3_equal = cryptox.sm3_equal
+hmac_sm3_bytes = cryptox.hmac_sm3_bytes
+hmac_sm3_hex = cryptox.hmac_sm3_hex
+
+# ── SM4 ─────────────────────────────────────────────────────────────────────
+
+gen_sm4_key = cryptox.gen_sm4_key
+gen_sm4_key_with_options = cryptox.gen_sm4_key_with_options
+sm4_encrypt_ecb = cryptox.sm4_encrypt_ecb
+sm4_decrypt_ecb = cryptox.sm4_decrypt_ecb
+sm4_encrypt_cbc = cryptox.sm4_encrypt_cbc
+sm4_decrypt_cbc = cryptox.sm4_decrypt_cbc
+sm4_encrypt_gcm = cryptox.sm4_encrypt_gcm
+sm4_decrypt_gcm = cryptox.sm4_decrypt_gcm
+sm4_seal_gcm = cryptox.sm4_seal_gcm
+
+# ── SM2 ─────────────────────────────────────────────────────────────────────
+
+gen_sm2_key = cryptox.gen_sm2_key
+sm2_encrypt = cryptox.sm2_encrypt
+sm2_decrypt = cryptox.sm2_decrypt
+sm2_sign = cryptox.sm2_sign
+sm2_verify = cryptox.sm2_verify
+sm2_private_key_to_pem = cryptox.sm2_private_key_to_pem
+sm2_public_key_to_pem = cryptox.sm2_public_key_to_pem
+parse_sm2_private_key_pem = cryptox.parse_sm2_private_key_pem
+parse_sm2_public_key_pem = cryptox.parse_sm2_public_key_pem
+
+# ── Go-compat sign/verify with RSA options ──────────────────────────────────
+
+sign_with_rsa_options = cryptox.sign_with_rsa_options
+verify_with_rsa_options = cryptox.verify_with_rsa_options
+
 # ── __all__ ─────────────────────────────────────────────────────────────────
 
 __all__ = [
@@ -256,4 +299,37 @@ __all__ = [
     "validate_aes_gcm_nonce",
     "validate_sm4_key",
     "validate_sm4_iv",
+    # Go-compat random_bytes
+    "random_bytes",
+    "random_bytes_with_options",
+    # SM3
+    "sm3",
+    "sm3_hex",
+    "sm3_new",
+    "sm3_equal",
+    "hmac_sm3_bytes",
+    "hmac_sm3_hex",
+    # SM4
+    "gen_sm4_key",
+    "gen_sm4_key_with_options",
+    "sm4_encrypt_ecb",
+    "sm4_decrypt_ecb",
+    "sm4_encrypt_cbc",
+    "sm4_decrypt_cbc",
+    "sm4_encrypt_gcm",
+    "sm4_decrypt_gcm",
+    "sm4_seal_gcm",
+    # SM2
+    "gen_sm2_key",
+    "sm2_encrypt",
+    "sm2_decrypt",
+    "sm2_sign",
+    "sm2_verify",
+    "sm2_private_key_to_pem",
+    "sm2_public_key_to_pem",
+    "parse_sm2_private_key_pem",
+    "parse_sm2_public_key_pem",
+    # Go-compat sign/verify with RSA options
+    "sign_with_rsa_options",
+    "verify_with_rsa_options",
 ]

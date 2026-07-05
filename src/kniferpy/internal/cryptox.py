@@ -884,3 +884,319 @@ def gen_aes_key_with_options(size: int = 32, *, reader: Callable[[int], bytes] |
     if reader is not None:
         return reader(size)
     return secrets.token_bytes(size)
+
+
+# ── Go-compat random_bytes ───────────────────────────────────────────────────
+
+
+def random_bytes(length: int) -> bytes:
+    """Generate n cryptographically secure random bytes (Go compat)."""
+    return secrets.token_bytes(length)
+
+
+def random_bytes_with_options(length: int, *, reader: Callable[[int], bytes] | None = None) -> bytes:
+    """Generate n random bytes with optional custom reader (Go compat)."""
+    if reader is not None:
+        return reader(length)
+    return secrets.token_bytes(length)
+
+
+# ── SM3 (Chinese national cryptography standard) ─────────────────────────────
+
+
+def sm3(data: bytes) -> bytes:
+    """Return the SM3 digest bytes of data."""
+    from gmssl.sm3 import sm3_hash
+
+    return bytes.fromhex(sm3_hash(list(data)))
+
+
+def sm3_hex(data: bytes) -> str:
+    """Return the SM3 digest in lower-case hex form."""
+    from gmssl.sm3 import sm3_hash
+
+    return sm3_hash(list(data))
+
+
+def sm3_new() -> Any:
+    """Return a new SM3 hash object (Go compat)."""
+    from gmssl.sm3 import sm3_hash
+
+    return sm3_hash
+
+
+def sm3_equal(a: bytes, b: bytes) -> bool:
+    """Compare two SM3 digest values in constant time."""
+    return hmac.compare_digest(a, b)
+
+
+def hmac_sm3_bytes(key: bytes, data: bytes) -> bytes:
+    """Return HMAC-SM3 digest bytes."""
+    import hmac as _hmac
+
+    from gmssl.sm3 import sm3_hash
+
+    # Use a simple HMAC-SM3 implementation
+    block_size = 64
+    if len(key) > block_size:
+        key = bytes.fromhex(sm3_hash(list(key)))
+    if len(key) < block_size:
+        key = key + b"\x00" * (block_size - len(key))
+    o_key_pad = bytes(k ^ 0x5C for k in key)
+    i_key_pad = bytes(k ^ 0x36 for k in key)
+    inner = bytes.fromhex(sm3_hash(list(i_key_pad + data)))
+    return bytes.fromhex(sm3_hash(list(o_key_pad + inner)))
+
+
+def hmac_sm3_hex(key: bytes, data: bytes) -> str:
+    """Return HMAC-SM3 in lower-case hex form."""
+    return hmac_sm3_bytes(key, data).hex()
+
+
+# ── SM4 (Chinese national cryptography standard) ─────────────────────────────
+
+
+def _sm4_pkcs7_pad(data: bytes, block_size: int = 16) -> bytes:
+    pad_len = block_size - len(data) % block_size
+    return data + bytes([pad_len] * pad_len)
+
+
+def _sm4_pkcs7_unpad(data: bytes) -> bytes:
+    pad_len = data[-1]
+    if pad_len < 1 or pad_len > 16:
+        raise CryptoError("invalid PKCS#7 padding", code="crypto.invalid_padding")
+    return data[:-pad_len]
+
+
+def gen_sm4_key() -> bytes:
+    """Return a random 16-byte SM4 key."""
+    return secrets.token_bytes(16)
+
+
+def gen_sm4_key_with_options(*, reader: Callable[[int], bytes] | None = None) -> bytes:
+    """Return a random SM4 key with optional custom reader."""
+    if reader is not None:
+        return reader(16)
+    return secrets.token_bytes(16)
+
+
+def sm4_encrypt_ecb(plain: bytes, key: bytes) -> bytes:
+    """Encrypt plain data using SM4-ECB with PKCS#7 padding."""
+    from cryptography.hazmat.primitives.ciphers import Cipher
+    from cryptography.hazmat.primitives.ciphers.algorithms import SM4
+    from cryptography.hazmat.primitives.ciphers.modes import ECB
+
+    cipher = Cipher(SM4(key), ECB())
+    encryptor = cipher.encryptor()
+    padded = _sm4_pkcs7_pad(plain)
+    return encryptor.update(padded) + encryptor.finalize()
+
+
+def sm4_decrypt_ecb(cipher_text: bytes, key: bytes) -> bytes:
+    """Decrypt SM4-ECB data with PKCS#7 padding."""
+    from cryptography.hazmat.primitives.ciphers import Cipher
+    from cryptography.hazmat.primitives.ciphers.algorithms import SM4
+    from cryptography.hazmat.primitives.ciphers.modes import ECB
+
+    cipher = Cipher(SM4(key), ECB())
+    decryptor = cipher.decryptor()
+    padded = decryptor.update(cipher_text) + decryptor.finalize()
+    return _sm4_pkcs7_unpad(padded)
+
+
+def sm4_encrypt_cbc(plain: bytes, key: bytes, iv: bytes) -> bytes:
+    """Encrypt plain data using SM4-CBC with PKCS#7 padding."""
+    from cryptography.hazmat.primitives.ciphers import Cipher
+    from cryptography.hazmat.primitives.ciphers.algorithms import SM4
+    from cryptography.hazmat.primitives.ciphers.modes import CBC
+
+    validate_sm4_key(key)
+    validate_sm4_iv(iv)
+    cipher = Cipher(SM4(key), CBC(iv))
+    encryptor = cipher.encryptor()
+    padded = _sm4_pkcs7_pad(plain)
+    return encryptor.update(padded) + encryptor.finalize()
+
+
+def sm4_decrypt_cbc(cipher_text: bytes, key: bytes, iv: bytes) -> bytes:
+    """Decrypt SM4-CBC data with PKCS#7 padding."""
+    from cryptography.hazmat.primitives.ciphers import Cipher
+    from cryptography.hazmat.primitives.ciphers.algorithms import SM4
+    from cryptography.hazmat.primitives.ciphers.modes import CBC
+
+    validate_sm4_key(key)
+    validate_sm4_iv(iv)
+    cipher = Cipher(SM4(key), CBC(iv))
+    decryptor = cipher.decryptor()
+    padded = decryptor.update(cipher_text) + decryptor.finalize()
+    return _sm4_pkcs7_unpad(padded)
+
+
+def sm4_encrypt_gcm(plain: bytes, key: bytes, nonce: bytes, additional_data: bytes) -> bytes:
+    """Encrypt plain data using SM4-GCM."""
+    from cryptography.hazmat.primitives.ciphers import Cipher
+    from cryptography.hazmat.primitives.ciphers.algorithms import SM4
+    from cryptography.hazmat.primitives.ciphers.modes import GCM
+
+    validate_sm4_key(key)
+    validate_aes_gcm_nonce(nonce)
+    cipher = Cipher(SM4(key), GCM(nonce))
+    encryptor = cipher.encryptor()
+    encryptor.authenticate_additional_data(additional_data)
+    cipher_text = encryptor.update(plain) + encryptor.finalize()
+    return cipher_text + encryptor.tag
+
+
+def sm4_decrypt_gcm(cipher_text: bytes, key: bytes, nonce: bytes, additional_data: bytes) -> bytes:
+    """Decrypt SM4-GCM data."""
+    from cryptography.hazmat.primitives.ciphers import Cipher
+    from cryptography.hazmat.primitives.ciphers.algorithms import SM4
+    from cryptography.hazmat.primitives.ciphers.modes import GCM
+
+    validate_sm4_key(key)
+    validate_aes_gcm_nonce(nonce)
+    tag = cipher_text[-16:]
+    cipher_data = cipher_text[:-16]
+    cipher = Cipher(SM4(key), GCM(nonce, tag))
+    decryptor = cipher.decryptor()
+    decryptor.authenticate_additional_data(additional_data)
+    return decryptor.update(cipher_data) + decryptor.finalize()
+
+
+def sm4_seal_gcm(plain: bytes, key: bytes, additional_data: bytes) -> tuple[bytes, bytes]:
+    """Encrypt plain data using SM4-GCM and a freshly generated nonce."""
+    from cryptography.hazmat.primitives.ciphers import Cipher
+    from cryptography.hazmat.primitives.ciphers.algorithms import SM4
+    from cryptography.hazmat.primitives.ciphers.modes import GCM
+
+    validate_sm4_key(key)
+    nonce = secrets.token_bytes(12)
+    cipher = Cipher(SM4(key), GCM(nonce))
+    encryptor = cipher.encryptor()
+    encryptor.authenticate_additional_data(additional_data)
+    cipher_text = encryptor.update(plain) + encryptor.finalize()
+    return nonce, cipher_text + encryptor.tag
+
+
+# ── SM2 (Chinese national cryptography standard) ─────────────────────────────
+
+
+def gen_sm2_key() -> tuple[Any, Any]:
+    """Generate an SM2 private/public key pair."""
+    from gmssl.sm2 import CryptSM2
+
+    sm2_crypt = CryptSM2(private_key=None, public_key=None)
+    sm2_crypt.generate_key()
+    return sm2_crypt._private_key, sm2_crypt._public_key
+
+
+def sm2_encrypt(plain: bytes, pub_key: str) -> bytes:
+    """Encrypt plain data using SM2 public key encryption."""
+    from gmssl.sm2 import CryptSM2
+
+    sm2_crypt = CryptSM2(private_key=None, public_key=pub_key)
+    return sm2_crypt.encrypt(plain)
+
+
+def sm2_decrypt(cipher_text: bytes, priv_key: str) -> bytes:
+    """Decrypt SM2 ciphertext."""
+    from gmssl.sm2 import CryptSM2
+
+    sm2_crypt = CryptSM2(private_key=priv_key, public_key=None)
+    return sm2_crypt.decrypt(cipher_text)
+
+
+def sm2_sign(data: bytes, priv_key: str) -> bytes:
+    """Sign data using SM2 with the default user ID."""
+    from gmssl.sm2 import CryptSM2
+
+    sm2_crypt = CryptSM2(private_key=priv_key, public_key=None)
+    return sm2_crypt.sign_with_sm3(data)
+
+
+def sm2_verify(data: bytes, sig: bytes, pub_key: str) -> bool:
+    """Verify an SM2 signature using the default user ID."""
+    from gmssl.sm2 import CryptSM2
+
+    sm2_crypt = CryptSM2(private_key=None, public_key=pub_key)
+    return sm2_crypt.verify_with_sm3(sig, data)
+
+
+def sm2_private_key_to_pem(priv_key: Any) -> bytes:
+    """Encode an SM2 private key as PKCS#8 PEM."""
+    from gmssl.sm2 import CryptSM2
+    from gmssl.func import sm2_private_key_to_pem as _to_pem
+
+    return _to_pem(priv_key).encode()
+
+
+def sm2_public_key_to_pem(pub_key: Any) -> bytes:
+    """Encode an SM2 public key as PKIX PEM."""
+    from gmssl.func import sm2_public_key_to_pem as _to_pem
+
+    return _to_pem(pub_key).encode()
+
+
+def parse_sm2_private_key_pem(data: bytes) -> Any:
+    """Parse a PKCS#8 SM2 private key PEM."""
+    from gmssl.func import pem_to_sm2_private_key
+
+    return pem_to_sm2_private_key(data.decode())
+
+
+def parse_sm2_public_key_pem(data: bytes) -> Any:
+    """Parse a PKIX SM2 public key PEM."""
+    from gmssl.func import pem_to_sm2_public_key
+
+    return pem_to_sm2_public_key(data.decode())
+
+
+# ── Go-compat sign/verify with RSA options ───────────────────────────────────
+
+
+def sign_with_rsa_options(
+    data: bytes, priv: rsa.RSAPrivateKey, *, hash_alg: str = "sha256", pss: bool = False
+) -> bytes:
+    """Hash data and sign it with configurable RSA options (Go compat)."""
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import padding, utils
+
+    hash_map = {
+        "sha256": hashes.SHA256(),
+        "sha384": hashes.SHA384(),
+        "sha512": hashes.SHA512(),
+    }
+    chosen_hash = hash_map.get(hash_alg, hashes.SHA256())
+
+    if pss:
+        pad = padding.PSS(mgf=padding.MGF1(chosen_hash), salt_length=padding.PSS.MAX_LENGTH)
+    else:
+        pad = padding.PKCS1v15()
+
+    return priv.sign(data, pad, utils.Prehashed(chosen_hash))
+
+
+def verify_with_rsa_options(
+    data: bytes, sig: bytes, pub: rsa.RSAPublicKey, *, hash_alg: str = "sha256", pss: bool = False
+) -> bool:
+    """Hash data and verify an RSA signature with configurable options (Go compat)."""
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import padding, utils
+
+    hash_map = {
+        "sha256": hashes.SHA256(),
+        "sha384": hashes.SHA384(),
+        "sha512": hashes.SHA512(),
+    }
+    chosen_hash = hash_map.get(hash_alg, hashes.SHA256())
+
+    if pss:
+        pad = padding.PSS(mgf=padding.MGF1(chosen_hash), salt_length=padding.PSS.MAX_LENGTH)
+    else:
+        pad = padding.PKCS1v15()
+
+    try:
+        pub.verify(sig, data, pad, utils.Prehashed(chosen_hash))
+        return True
+    except Exception:
+        return False
