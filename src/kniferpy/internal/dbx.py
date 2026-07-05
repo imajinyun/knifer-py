@@ -661,6 +661,271 @@ class DB:
     def wrapper(self) -> Wrapper:
         return self._wrapper
 
+    def sql_db(self) -> Any:
+        """Return the underlying DB-API connection (Go compat)."""
+        return self._conn
+
+    def close(self) -> None:
+        """Close the underlying database connection."""
+        self._conn.close()
+
+    def ping(self) -> None:
+        """Ping the database."""
+        cursor = self._conn.execute("SELECT 1")
+        cursor.close()
+
+    def exec(self, query: str, *args: Any) -> Any:
+        """Execute SQL and return cursor."""
+        cursor = self._conn.execute(query, args or ())
+        return cursor
+
+    def exec_named(self, query: str, args: dict[str, Any]) -> Any:
+        """Execute named-parameter SQL."""
+        named = parse_named(query, args, self._dialect)
+        return self.exec(named.sql, *named.args)
+
+    def exec_batch(self, query: str, *batches: Sequence[Any]) -> list[Any]:
+        """Execute the same SQL with multiple argument sets."""
+        results = []
+        for batch in batches:
+            results.append(self._conn.execute(query, batch))
+        return results
+
+    def query_entities(self, query: str, *args: Any) -> list[dict]:
+        """Execute SQL and scan rows into dicts."""
+        cursor = self._conn.execute(query, args or ())
+        return scan_rows(cursor)
+
+    def query_named(self, query: str, args: dict[str, Any]) -> list[dict]:
+        """Execute named-parameter SQL and scan rows into dicts."""
+        named = parse_named(query, args, self._dialect)
+        return self.query_entities(named.sql, *named.args)
+
+    def query_one(self, query: str, *args: Any) -> tuple[dict | None, bool]:
+        """Execute SQL and return first row."""
+        cursor = self._conn.execute(query, args or ())
+        return scan_one(cursor)
+
+    def query_scalar(self, query: str, *args: Any) -> tuple[Any, bool]:
+        """Execute SQL and return first column from first row."""
+        cursor = self._conn.execute(query, args or ())
+        if cursor is None:
+            return None, False
+        try:
+            row = cursor.fetchone()
+            if row is None:
+                return None, False
+            return row[0], True
+        finally:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+
+    def insert(self, entity: Entity) -> Any:
+        """Insert entity values."""
+        b = insert(entity)
+        sql, args = b.to_sql(self._dialect)
+        return self._conn.execute(sql, args)
+
+    def insert_get_id(self, entity: Entity) -> int:
+        """Insert entity and return last row id."""
+        cursor = self.insert(entity)
+        return cursor.lastrowid
+
+    def upsert(self, entity: Entity, conflict_fields: list[str], *update_fields: str) -> Any:
+        """Insert or update entity on conflict."""
+        b = insert(entity)
+        sql, args = b.to_sql(self._dialect)
+        if self._dialect == Dialect.MYSQL:
+            upsert_sql = _build_mysql_upsert(sql, entity, conflict_fields, update_fields, self._wrapper)
+        elif self._dialect in (Dialect.POSTGRES, Dialect.SQLITE):
+            upsert_sql = _build_pg_upsert(sql, entity, conflict_fields, update_fields, self._wrapper)
+        else:
+            raise DBError(f"upsert is not implemented for dialect {self._dialect}")
+        return self._conn.execute(upsert_sql, args)
+
+    def update(self, entity: Entity, *conds: Condition) -> Any:
+        """Update rows matching conditions."""
+        table = getattr(entity, "__table__", "unknown")
+        b = update(table)
+        for f, v in entity.fields.items():
+            b = set_field(b, f, v)
+        for c in conds:
+            b = add_condition(b, c)
+        sql, args = b.to_sql(self._dialect)
+        return self._conn.execute(sql, args)
+
+    def update_all(self, entity: Entity) -> Any:
+        """Update all rows in entity's table."""
+        table = getattr(entity, "__table__", "unknown")
+        b = update(table)
+        for f, v in entity.fields.items():
+            b = set_field(b, f, v)
+        sql, args = b.to_sql(self._dialect)
+        return self._conn.execute(sql, args)
+
+    def delete(self, table: str, *conds: Condition) -> Any:
+        """Delete rows matching conditions."""
+        if not conds:
+            raise DBError("DELETE without conditions is unsafe; use delete_all to affect every row")
+        b = delete(table)
+        for c in conds:
+            b = add_condition(b, c)
+        sql, args = b.to_sql(self._dialect)
+        return self._conn.execute(sql, args)
+
+    def delete_all(self, table: str) -> Any:
+        """Delete all rows from table."""
+        b = delete(table)
+        sql, args = b.to_sql(self._dialect)
+        return self._conn.execute(sql, args)
+
+    def delete_entity(self, entity: Entity) -> Any:
+        """Delete rows using entity values as equality conditions."""
+        conds = conditions_from_entity(entity)
+        return self.delete(getattr(entity, "__table__", "unknown"), *conds)
+
+    def get(self, table: str, field: str, value: Any) -> tuple[dict | None, bool]:
+        """Find one row by field equality."""
+        b = select(["*"])
+        b = from_tables(b, [table])
+        b = add_condition(b, eq(field, value))
+        sql, args = b.to_sql(self._dialect)
+        return self.query_one(sql, *args)
+
+    def find(self, query: SQLBuilder) -> list[dict]:
+        """Run a query and return rows."""
+        b = select(["*"])
+        if query._from:
+            b._from = query._from
+        if query._conditions:
+            b._conditions = query._conditions
+        if query._where:
+            b._where = query._where
+        if query._order_by:
+            b._order_by = query._order_by
+        if query._limit is not None:
+            b._limit = query._limit
+        if query._offset is not None:
+            b._offset = query._offset
+        if query._select:
+            b._select = query._select
+        sql, args = b.to_sql(self._dialect)
+        return self.query_entities(sql, *args)
+
+    def find_all(self, table: str) -> list[dict]:
+        """Return all rows from table."""
+        b = select(["*"])
+        b = from_tables(b, [table])
+        return self.find(b)
+
+    def find_by(self, table: str, field: str, value: Any) -> list[dict]:
+        """Return rows where field equals value."""
+        b = select(["*"])
+        b = from_tables(b, [table])
+        b = add_condition(b, eq(field, value))
+        return self.find(b)
+
+    def find_like(self, table: str, field: str, value: Any, mode: str = "") -> list[dict]:
+        """Return rows where field matches LIKE pattern."""
+        pattern = build_like_value(str(value))
+        b = select(["*"])
+        b = from_tables(b, [table])
+        b = add_condition(b, like(field, pattern))
+        return self.find(b)
+
+    def count(self, table: str, *conds: Condition) -> int:
+        """Count rows in table matching conditions."""
+        b = select(["COUNT(*)"])
+        b = from_tables(b, [table])
+        for c in conds:
+            b = add_condition(b, c)
+        sql, args = b.to_sql(self._dialect)
+        result, found = self.query_scalar(sql, *args)
+        return int(result) if found else 0
+
+    def page(self, query: SQLBuilder, page: Page) -> PageResult:
+        """Run a paged query and count query."""
+        b = select(["*"])
+        if query._from:
+            b = from_tables(b, query._from)
+        if query._conditions:
+            b._conditions = query._conditions
+        if query._where:
+            b._where = query._where
+        if page.orders:
+            for o in page.orders:
+                b = order_by(b, o)
+        b = limit(b, page.size)
+        b = offset(b, page.offset)
+
+        items = self.find(b)
+
+        tables = query._from if query._from else []
+        count_b = select(["COUNT(*)"])
+        if tables:
+            count_b = from_tables(count_b, tables)
+        if query._conditions:
+            count_b._conditions = query._conditions
+        count_sql, count_args = count_b.to_sql(self._dialect)
+        result, found = self.query_scalar(count_sql, *count_args)
+        total = int(result) if found else 0
+
+        return new_page_result(page, total, items)
+
+    def tx(self, fn: Callable[[Session], Any]) -> Any:
+        """Run fn inside a transaction."""
+        try:
+            self._conn.execute("BEGIN")
+            session = Session(_db=self, _conn=self._conn)
+            result = fn(session)
+            self._conn.commit()
+            return result
+        except Exception:
+            self._conn.rollback()
+            raise
+
+    def list_tables(self) -> list[str]:
+        """List user tables."""
+        if self._dialect == Dialect.SQLITE:
+            cursor = self._conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+            )
+            return [row[0] for row in cursor.fetchall()]
+        raise DBError(f"list_tables is not implemented for dialect {self._dialect}")
+
+    def list_columns(self, table: str) -> list[Column]:
+        """List columns for table."""
+        if self._dialect == Dialect.SQLITE:
+            cursor = self._conn.execute(f"PRAGMA table_info({self._wrapper.wrap(table)})")
+            columns = []
+            for row in cursor.fetchall():
+                columns.append(Column(
+                    name=row[1],
+                    data_type=row[2],
+                    nullable=not row[3],
+                    auto_increment=False,
+                    primary_key=row[5] > 0,
+                ))
+            return columns
+        raise DBError(f"list_columns is not implemented for dialect {self._dialect}")
+
+    def table_meta(self, table: str) -> Table:
+        """Return table metadata with columns and primary keys."""
+        cols = self.list_columns(table)
+        return Table(name=table, columns=cols)
+
+    def column_names(self, table: str) -> list[str]:
+        """Return column names for table."""
+        cols = self.list_columns(table)
+        return [c.name for c in cols]
+
+    def primary_keys(self, table: str) -> list[str]:
+        """Return primary key column names for table."""
+        cols = self.list_columns(table)
+        return [c.name for c in cols if c.primary_key]
+
 
 @dataclass
 class Session:
@@ -700,6 +965,106 @@ class Session:
 
     def close(self) -> None:
         self._conn.close()
+
+    def exec(self, query: str, *args: Any) -> Any:
+        """Execute SQL in the transaction (Go compat)."""
+        return self._conn.execute(query, args or ())
+
+    def exec_named(self, query: str, args: dict[str, Any]) -> Any:
+        """Execute named-parameter SQL in the transaction."""
+        named = parse_named(query, args, self._db.dialect)
+        return self.exec(named.sql, *named.args)
+
+    def exec_batch(self, query: str, *batches: Sequence[Any]) -> list[Any]:
+        """Execute the same SQL with multiple argument sets."""
+        results = []
+        for batch in batches:
+            results.append(self._conn.execute(query, batch))
+        return results
+
+    def query_entities(self, query: str, *args: Any) -> list[dict]:
+        """Execute SQL and scan rows into dicts."""
+        cursor = self._conn.execute(query, args or ())
+        return scan_rows(cursor)
+
+    def query_one_entity(self, query: str, *args: Any) -> tuple[dict | None, bool]:
+        """Execute SQL and return first row."""
+        cursor = self._conn.execute(query, args or ())
+        return scan_one(cursor)
+
+    def query_scalar(self, query: str, *args: Any) -> tuple[Any, bool]:
+        """Execute SQL and return first column from first row."""
+        cursor = self._conn.execute(query, args or ())
+        if cursor is None:
+            return None, False
+        try:
+            row = cursor.fetchone()
+            if row is None:
+                return None, False
+            return row[0], True
+        finally:
+            try:
+                cursor.close()
+            except Exception:
+                pass
+
+    def insert(self, entity: Entity) -> Any:
+        """Insert entity in the transaction."""
+        return self._db.insert(entity)
+
+    def upsert(self, entity: Entity, conflict_fields: list[str], *update_fields: str) -> Any:
+        """Insert or update entity in the transaction."""
+        return self._db.upsert(entity, conflict_fields, *update_fields)
+
+    def update(self, entity: Entity, *conds: Condition) -> Any:
+        """Update rows in the transaction."""
+        return self._db.update(entity, *conds)
+
+    def update_all(self, entity: Entity) -> Any:
+        """Update all rows in the transaction."""
+        return self._db.update_all(entity)
+
+    def delete(self, table: str, *conds: Condition) -> Any:
+        """Delete rows in the transaction."""
+        return self._db.delete(table, *conds)
+
+    def delete_all(self, table: str) -> Any:
+        """Delete all rows in the transaction."""
+        return self._db.delete_all(table)
+
+    def savepoint(self, name: str) -> None:
+        """Create a savepoint."""
+        self._conn.execute(f"SAVEPOINT {self._db.wrapper.wrap(name)}")
+
+    def rollback_to(self, name: str) -> None:
+        """Roll back to a savepoint."""
+        self._conn.execute(f"ROLLBACK TO SAVEPOINT {self._db.wrapper.wrap(name)}")
+
+
+# ── internal helpers for DB CRUD ────────────────────────────────────────────
+
+
+def _build_mysql_upsert(insert_sql: str, entity: Entity, conflict_fields: list[str], update_fields: tuple[str, ...], wrapper: Wrapper) -> str:
+    """Build MySQL ON DUPLICATE KEY UPDATE clause."""
+    fields = sorted(entity.fields.keys()) if hasattr(entity, "fields") and entity.fields else []
+    if not update_fields:
+        update_fields = tuple(f for f in fields if f not in conflict_fields)
+    if not update_fields:
+        return insert_sql
+    sets = [f"{wrapper.wrap(f)} = VALUES({wrapper.wrap(f)})" for f in update_fields]
+    return f"{insert_sql} ON DUPLICATE KEY UPDATE {', '.join(sets)}"
+
+
+def _build_pg_upsert(insert_sql: str, entity: Entity, conflict_fields: list[str], update_fields: tuple[str, ...], wrapper: Wrapper) -> str:
+    """Build PostgreSQL/SQLite ON CONFLICT DO UPDATE clause."""
+    fields = sorted(entity.fields.keys()) if hasattr(entity, "fields") and entity.fields else []
+    if not update_fields:
+        update_fields = tuple(f for f in fields if f not in conflict_fields)
+    if not update_fields:
+        return f"{insert_sql} ON CONFLICT ({', '.join(wrapper.wrap(f) for f in conflict_fields)}) DO NOTHING"
+    conflict = ", ".join(wrapper.wrap(f) for f in conflict_fields)
+    sets = [f"{wrapper.wrap(f)} = excluded.{wrapper.wrap(f)}" for f in update_fields]
+    return f"{insert_sql} ON CONFLICT ({conflict}) DO UPDATE SET {', '.join(sets)}"
 
 
 # --- util ----------------------------------------------------------------------
