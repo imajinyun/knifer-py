@@ -34,6 +34,8 @@ from kniferpy.internal.errx import (
     WithStack,
     WithStackTrace,
     Wrapper,
+    Init,
+    Wrap,
     capture_exception,
     code_of,
     configure_default_log_func,
@@ -41,6 +43,7 @@ from kniferpy.internal.errx import (
     error_is,
     errorf,
     get_stack,
+    get_stack_from_error,
     get_stack_trace,
     get_stack_trace_with_options,
     get_stack_with_skip,
@@ -102,6 +105,8 @@ StackTrace = list[str]
 
 __all__ = [
     "EmptyFormatter",
+    "Init",
+    "Wrap",
     # Error codes
     "ERR_CODE_INTERNAL",
     "ERR_CODE_INVALID_INPUT",
@@ -132,6 +137,7 @@ __all__ = [
     "err_code_name",
     # Stack trace
     "get_stack",
+    "get_stack_from_error",
     "get_stack_trace",
     "get_stack_with_skip",
     "get_stack_trace_with_options",

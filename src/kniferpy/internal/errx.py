@@ -98,12 +98,24 @@ class KniferError(Exception):
     message: str
     code: str = "knifer.error"
     context: dict[str, Any] = field(default_factory=dict)
+    cause: BaseException | None = None
+    multierror: list[BaseException] | None = None
 
     def __str__(self) -> str:
         return self.message
 
     def error_code(self) -> str:
         return self.code
+
+    def unwrap(self) -> BaseException | None:
+        return self.cause
+
+    def add(self, err: BaseException) -> KniferError:
+        """Add a sub-error to the multierror chain."""
+        if self.multierror is None:
+            self.multierror = []
+        self.multierror.append(err)
+        return self
 
 
 class ValidationError(KniferError):
@@ -196,6 +208,10 @@ class PanicError(KniferError):
     def __str__(self) -> str:
         return f"{self.message}\n{self.stack_trace}"
 
+    def stack(self) -> str:
+        """Return the stack trace (Go compat: WithStack interface)."""
+        return self.stack_trace
+
     def error_code(self) -> str:
         return self.code
 
@@ -206,6 +222,16 @@ class PanicError(KniferError):
 def get_stack(skip: int = 2) -> str:
     """Capture the current call stack as a string."""
     return "".join(traceback.format_stack(limit=10)[:-skip] if skip else traceback.format_stack(limit=10))
+
+
+def get_stack_from_error(err: BaseException, skip: int = 2) -> str:
+    """Extract the stack from an error that implements WithStack, or fall back to the current stack."""
+    if isinstance(err, WithStack):
+        return err.stack()
+    if isinstance(err, PanicError):
+        return err.stack()
+    # Fall back to current stack
+    return get_stack(skip)
 
 
 def get_stack_trace(skip: int = 2, depth: int = 50) -> list[str]:
@@ -416,14 +442,31 @@ def capture_exception(error: BaseException | None = None) -> str | None:
 
 
 def error_is(err: BaseException, target: type[BaseException] | str) -> bool:
-    """Check if err is or contains an instance of target, or matches a code."""
+    """Check if err is or contains an instance of target, or matches a code.
+
+    Walks KniferError cause chains and multierror members.
+    """
     if isinstance(target, str):
         code, found = code_of(err)
-        return found and code == target
+        if found and code == target:
+            return True
+        # Walk multierror members
+        if isinstance(err, KniferError):
+            for sub in err.multierror or []:
+                sub_code, sub_found = code_of(sub)
+                if sub_found and sub_code == target:
+                    return True
+        return False
     if isinstance(err, target):
         return True
     if isinstance(err, PanicError):
         return isinstance(err.cause, target) if err.cause else False
+    if isinstance(err, KniferError):
+        if err.cause and isinstance(err.cause, target):
+            return True
+        for sub in err.multierror or []:
+            if isinstance(sub, target):
+                return True
     return False
 
 
@@ -536,3 +579,17 @@ def must_exit_with_panic(err: BaseException | None) -> None:
     log_func = _get_default_log_func()
     log_func("error", str(err), get_stack(3))
     raise PanicError(str(err), cause=err if isinstance(err, BaseException) else None)
+
+
+# ── Go-compat Init / Wrap aliases ────────────────────────────────────────────
+
+
+def Init(dsn: str) -> None:
+    """Initialize Sentry with the given DSN (Go compat)."""
+    init_sentry(dsn)
+
+
+def Wrap(err: BaseException, code: str = "knifer.error", message: str = "") -> KniferError:
+    """Wrap an error with a code and optional message (Go compat)."""
+    msg = message or str(err)
+    return wrap_error(code, msg, err)
