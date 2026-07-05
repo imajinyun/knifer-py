@@ -16,6 +16,8 @@ import requests
 from requests.adapters import HTTPAdapter
 from requests.cookies import RequestsCookieJar
 
+from kniferpy.verr import ValidationError
+
 T = TypeVar('T')
 
 
@@ -187,6 +189,40 @@ class HTTPResponse:
             except ValueError:
                 pass
         return 0
+
+    # ── Go-compat methods ────────────────────────────────────────────────────
+
+    def write_to(self, writer):
+        """Write the response body to a writer and return bytes written (Go compat)."""
+        return writer.write(self.body)
+
+    def save_as(self, dest, **opts):
+        """Save the response body to a file and return bytes written (Go compat)."""
+        path = dest
+        if opts.get('default_filename'):
+            path = os.path.join(dest, opts['default_filename'])
+        if not path:
+            raise ValidationError('destination path is required', code='knifer.resty.save_as')
+        parent = os.path.dirname(os.path.abspath(path))
+        if opts.get('create_parents', True) and parent:
+            os.makedirs(parent, exist_ok=True)
+        if not opts.get('overwrite', True) and os.path.exists(path):
+            raise ValidationError(f'file already exists: {path}', code='knifer.resty.save_as')
+        with open(path, 'wb') as f:
+            return f.write(self.body)
+
+    def close(self):
+        """Close the underlying raw response (Go compat)."""
+        if self.raw_response is not None:
+            self.raw_response.close()
+
+    def result(self):
+        """Return the decoded response result (Go compat)."""
+        return self.json_result
+
+    def error_result(self):
+        """Return the decoded error response result (Go compat)."""
+        return self.err
 
 
 @dataclass

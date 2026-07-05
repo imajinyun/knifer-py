@@ -429,6 +429,38 @@ class FlagParser:
         output = self._output or sys.stderr
         self._parser.print_help(file=output)
 
+    # ── Go-compat typed flag registration ────────────────────────────────────
+
+    def string(self, name: str, value: str, usage: str) -> str:
+        """Register a string flag and return the default value (Go compat)."""
+        self._parser.add_argument(f"--{name}", default=value, type=str, help=usage)
+        return value
+
+    def int(self, name: str, value: int, usage: str) -> int:
+        """Register an int flag and return the default value (Go compat)."""
+        self._parser.add_argument(f"--{name}", default=value, type=int, help=usage)
+        return value
+
+    def bool(self, name: str, value: bool, usage: str) -> bool:
+        """Register a bool flag and return the default value (Go compat)."""
+        if value:
+            self._parser.add_argument(f"--{name}", default=value, type=bool, help=usage)
+        else:
+            self._parser.add_argument(f"--{name}", action="store_true", help=usage)
+        return value
+
+    def duration(self, name: str, value: str, usage: str) -> str:
+        """Register a duration flag and return the default value (Go compat).
+
+        Duration values are stored as ISO 8601 strings (e.g. ``"1h30m"``).
+        """
+        self._parser.add_argument(f"--{name}", default=value, type=str, help=usage)
+        return value
+
+    def usage(self) -> None:
+        """Print defaults to configured output (Go compat)."""
+        self.print_help()
+
 
 def new_flag_parser(name: str, *, output: TextIO | None = None) -> FlagParser:
     """Create a standalone flag parser."""

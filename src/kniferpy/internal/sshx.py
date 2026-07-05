@@ -232,3 +232,31 @@ def _validate_remote_path(path: str, code: str) -> None:
 def _validate_limit(max_bytes: int, code: str) -> None:
     if max_bytes < 0:
         raise ValidationError(message="max bytes must be non-negative", code=code)
+
+
+# ── Go-compat standalone convenience functions ──────────────────────────────
+
+
+def new(provider: Provider | None = None) -> Client:
+    """Create a new SSH client (Go compat)."""
+    return Client(provider=provider)
+
+
+def run(provider: Provider, request: CommandRequest) -> CommandResponse:
+    """Run a command via the provider (Go compat)."""
+    return Client(provider=provider).run(request)
+
+
+def list(provider: Provider, request: ListRequest) -> ListResponse:
+    """List directory entries via the provider (Go compat)."""
+    return Client(provider=provider).list(request)
+
+
+def download(provider: Provider, request: DownloadRequest) -> DownloadResponse:
+    """Download a file via the provider (Go compat)."""
+    return Client(provider=provider).download(request)
+
+
+def upload(provider: Provider, request: UploadRequest) -> UploadResponse:
+    """Upload a file via the provider (Go compat)."""
+    return Client(provider=provider).upload(request)

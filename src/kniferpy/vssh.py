@@ -28,6 +28,11 @@ from kniferpy.internal.sshx import (
     Provider,
     UploadRequest,
     UploadResponse,
+    download as _download,
+    list as _list,
+    new as _new,
+    run as _run,
+    upload as _upload,
 )
 from kniferpy.verr import KniferError, ValidationError
 
@@ -47,6 +52,14 @@ ErrInvalidUploadRequest = ValidationError(message="malformed upload request", co
 ErrOutputLimitExceeded = KniferError(message="output limit exceeded", code="knifer.ssh.output_limit_exceeded")
 ErrTransferLimitExceeded = KniferError(message="transfer limit exceeded", code="knifer.ssh.transfer_limit_exceeded")
 ErrMissingProvider = KniferError(message="missing provider", code="knifer.ssh.missing_provider")
+
+# ── Go-compat standalone convenience functions ─────────────────────────────────
+
+new = _new
+run = _run
+list = _list  # noqa: A001
+download = _download
+upload = _upload
 
 __all__ = [
     "Client",
@@ -74,4 +87,10 @@ __all__ = [
     "ErrOutputLimitExceeded",
     "ErrTransferLimitExceeded",
     "ErrMissingProvider",
+    # Go-compat standalone functions
+    "new",
+    "run",
+    "list",
+    "download",
+    "upload",
 ]
