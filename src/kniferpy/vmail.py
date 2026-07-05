@@ -25,6 +25,8 @@ sentinels.
 
 from __future__ import annotations
 
+from typing import Any, Callable
+
 from kniferpy.internal import mailx
 from kniferpy.internal.mailx import (
     CHARSET_ASCII,
@@ -42,11 +44,61 @@ from kniferpy.internal.mailx import (
     Header,
     Message,
     TLSPolicy,
+    _attachment_too_large,
+    _invalid_address,
+    _invalid_header,
+    _missing_body,
+    _missing_from,
+    _missing_recipient,
+    _plain_auth,
+    _tls_required,
+    detect_content_type,
+    new_address,
+    new_attachment,
+    new_attachment_file,
+    new_attachment_reader,
+    new_header,
+    new_inline,
+    new_inline_file,
+    new_inline_reader,
+    new_message,
+    parse_address,
+    parse_address_list,
+    quick_send,
+    send,
+    send_account_html,
+    send_account_text,
+    send_html,
+    send_text,
 )
 
-# ── Go-compat type aliases ─────────────────────────────────────────────────────
+# ── Go-compat sentinel errors ──────────────────────────────────────────────────
 
-from typing import Any, Callable, Protocol, runtime_checkable
+ErrInvalidAddress = _invalid_address()
+ErrInvalidHeader = _invalid_header()
+ErrMissingFrom = _missing_from()
+ErrMissingRecipient = _missing_recipient()
+ErrMissingBody = _missing_body()
+ErrTLSRequired = _tls_required()
+ErrPlainAuth = _plain_auth()
+ErrAttachmentTooLarge = _attachment_too_large()
+
+# ── Go-compat standalone Encoding constants ────────────────────────────────────
+
+EncodingBase64 = Encoding.BASE64
+EncodingQuotedPrintable = Encoding.QUOTED_PRINTABLE
+Encoding7Bit = Encoding.SEVEN_BIT
+Encoding8Bit = Encoding.EIGHT_BIT
+
+# ── Go-compat standalone TLSPolicy constants ───────────────────────────────────
+
+TLSPolicyUnknown = TLSPolicy.UNKNOWN
+TLSMandatoryStartTLS = TLSPolicy.MANDATORY_STARTTLS
+TLSImplicit = TLSPolicy.IMPLICIT
+TLSOpportunisticStartTLS = TLSPolicy.OPPORTUNISTIC_STARTTLS
+TLSNone = TLSPolicy.NONE
+
+# ── Go-compat type aliases ─────────────────────────────────────────────────────
 
 BoundaryGenerator = Callable[[], str]
 Charset = str
@@ -59,6 +111,12 @@ SenderProvider = Callable[..., Any]
 DialContextFunc = Callable[..., Any]
 ClientOption = Callable[[Any], None]
 SendCloser = Any
+
+# ── Go-compat new_client constructor ───────────────────────────────────────────
+
+def new_client(host: str, port: int, **kwargs: Any) -> Client:
+    """Create an SMTP client (Go compat)."""
+    return Client(Config(host=host, port=port, **kwargs))
 
 __all__ = [
     "CHARSET_ASCII",
@@ -81,6 +139,7 @@ __all__ = [
     "new_attachment",
     "new_attachment_file",
     "new_attachment_reader",
+    "new_client",
     "new_header",
     "new_inline",
     "new_inline_file",
@@ -94,6 +153,26 @@ __all__ = [
     "send_account_text",
     "send_html",
     "send_text",
+    # Go-compat sentinel errors
+    "ErrInvalidAddress",
+    "ErrInvalidHeader",
+    "ErrMissingFrom",
+    "ErrMissingRecipient",
+    "ErrMissingBody",
+    "ErrTLSRequired",
+    "ErrPlainAuth",
+    "ErrAttachmentTooLarge",
+    # Go-compat standalone Encoding constants
+    "EncodingBase64",
+    "EncodingQuotedPrintable",
+    "Encoding7Bit",
+    "Encoding8Bit",
+    # Go-compat standalone TLSPolicy constants
+    "TLSPolicyUnknown",
+    "TLSMandatoryStartTLS",
+    "TLSImplicit",
+    "TLSOpportunisticStartTLS",
+    "TLSNone",
     # Go-compat type aliases
     "BoundaryGenerator",
     "Charset",
@@ -107,22 +186,3 @@ __all__ = [
     "ClientOption",
     "SendCloser",
 ]
-
-detect_content_type = mailx.detect_content_type
-new_address = mailx.new_address
-new_attachment = mailx.new_attachment
-new_attachment_file = mailx.new_attachment_file
-new_attachment_reader = mailx.new_attachment_reader
-new_inline = mailx.new_inline
-new_inline_file = mailx.new_inline_file
-new_inline_reader = mailx.new_inline_reader
-new_message = mailx.new_message
-parse_address = mailx.parse_address
-parse_address_list = mailx.parse_address_list
-quick_send = mailx.quick_send
-send = mailx.send
-send_account_html = mailx.send_account_html
-send_account_text = mailx.send_account_text
-send_html = mailx.send_html
-send_text = mailx.send_text
-new_header = mailx.new_header

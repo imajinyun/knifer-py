@@ -50,10 +50,25 @@ from kniferpy.internal.confx import (
     watch_with_options,
 )
 
-# ── Go-compat type alias ───────────────────────────────────────────────────────
+# ── Go-compat type aliases ───────────────────────────────────────────────────────
 
 LoadOption = Callable[[Any], None]
-"""Functional option for configuration loading (Go compat)."""
+DecryptFunc = Callable[[Any], None]
+ExpandOption = Callable[[Any], None]
+ValueOption = Callable[[Any], None]
+BindOption = Callable[[Any], None]
+DecodeHookFunc = Callable[[Any], None]
+SchemaOption = Callable[[Any], None]
+ParseOption = Callable[[Any], None]
+WatchOptions = Callable[[Any], None]
+WatchTicker = Callable[[Any], None]
+WatchTickerFactory = Callable[[Any], None]
+
+# ── Go-compat *WithOptions aliases ─────────────────────────────────────────────
+
+load_remote_with_options = load_remote
+load_remote_safe_with_options = load_remote_safe
+load_profile_with_options = load_profile
 
 __all__ = [
     # Types
@@ -64,6 +79,17 @@ __all__ = [
     "LoadOption",
     "Schema",
     "WatchEvent",
+    # Go-compat type aliases
+    "DecryptFunc",
+    "ExpandOption",
+    "ValueOption",
+    "BindOption",
+    "DecodeHookFunc",
+    "SchemaOption",
+    "ParseOption",
+    "WatchOptions",
+    "WatchTicker",
+    "WatchTickerFactory",
     # Type constants
     "TypeString",
     "TypeBool",
@@ -93,6 +119,10 @@ __all__ = [
     "merge",
     "watch",
     "watch_with_options",
+    # Go-compat *WithOptions aliases
+    "load_remote_with_options",
+    "load_remote_safe_with_options",
+    "load_profile_with_options",
     # Binding
     "bind",
     "bind_with_options",

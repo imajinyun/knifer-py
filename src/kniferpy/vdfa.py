@@ -30,37 +30,52 @@ __all__ = [
     "DEFAULT_SEPARATOR",
     "CharFilter",
     "FoundWord",
+    "MatcherOption",
     "Processor",
     "WordTree",
     "WordTreeOption",
     "configure_async_runner",
     "contains",
     "contains_any",
+    "contains_any_with_options",
+    "contains_with_options",
     "default_processor",
     "filter",
     "filter_any",
+    "filter_any_with_options",
     "filter_mode",
+    "filter_mode_with_options",
+    "filter_with_options",
     "get_found_all",
     "get_found_all_any",
+    "get_found_all_any_with_options",
     "get_found_all_mode",
+    "get_found_all_mode_with_options",
+    "get_found_all_with_options",
     "get_found_first",
     "get_found_first_any",
+    "get_found_first_any_with_options",
+    "get_found_first_with_options",
     "init",
     "init_async",
     "init_string",
     "init_string_async",
+    "init_string_async_with_options",
+    "init_string_with_options",
+    "init_with_options",
     "is_inited",
     "is_not_stop_char",
     "is_stop_char",
     "new_word_tree",
+    "new_word_tree_with_options",
     "reset_async_runner",
     "set_char_filter",
 ]
 
-# ── Go-compat type alias ───────────────────────────────────────────────────────
+# ── Go-compat type aliases ───────────────────────────────────────────────────────
 
 WordTreeOption = Callable[[Any], None]
-"""Functional option for word tree configuration (Go compat)."""
+MatcherOption = Callable[[Any], None]
 
 
 def new_word_tree(*, char_filter: CharFilter | None = None) -> WordTree:
@@ -160,3 +175,21 @@ def init_string_async(
     char_filter: CharFilter | None = None,
 ) -> None:
     return dfax.init_string_async(words, separator, char_filter=char_filter)
+
+
+# ── Go-compat *WithOptions aliases ──────────────────────────────────────────────
+
+contains_with_options = contains
+contains_any_with_options = contains_any
+get_found_first_with_options = get_found_first
+get_found_first_any_with_options = get_found_first_any
+get_found_all_with_options = get_found_all
+get_found_all_mode_with_options = get_found_all_mode
+get_found_all_any_with_options = get_found_all_any
+filter_with_options = filter
+filter_mode_with_options = filter_mode
+filter_any_with_options = filter_any
+init_with_options = init
+init_string_with_options = init_string
+init_string_async_with_options = init_string_async
+new_word_tree_with_options = new_word_tree

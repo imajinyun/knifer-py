@@ -15,10 +15,14 @@ from kniferpy.internal.jsonx import (
 )
 from kniferpy.verr import JSONError
 
-# ── Go-compat type alias ───────────────────────────────────────────────────────
+# ── Go-compat type aliases ───────────────────────────────────────────────────────
 
 JSONOption = Callable[[Any], None]
-"""Functional option for JSON parsing/serialization (Go compat)."""
+EncodeOption = Callable[[Any], None]
+BeanOption = Callable[[Any], None]
+FormatOption = Callable[[Any], None]
+ParseOption = Callable[[Any], None]
+ValidOption = Callable[[Any], None]
 
 # Parse
 parse = jsonx.loads
@@ -132,8 +136,13 @@ __all__ = [
     "to_str",
     "to_pretty_str_with_config",
     "quote",
-    # Go-compat type alias
+    # Go-compat type aliases
     "JSONOption",
+    "EncodeOption",
+    "BeanOption",
+    "FormatOption",
+    "ParseOption",
+    "ValidOption",
     # Path access
     "get_path",
     "put_by_path",
