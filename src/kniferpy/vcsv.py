@@ -15,6 +15,10 @@ from kniferpy.internal.csvx import (
     write_structs,
 )
 
+# ── Go-compat type alias ────────────────────────────────────────────────────
+
+Error = CSVError  # type: ignore[assignment]
+
 __all__ = [
     "CSVError",
     "Option",
@@ -37,6 +41,8 @@ __all__ = [
     "structs_to_records",
     "write_structs",
     "write_string_structs",
+    # Go-compat type alias
+    "Error",
 ]
 
 

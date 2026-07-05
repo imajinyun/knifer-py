@@ -17,6 +17,21 @@ from kniferpy.internal.filex import (
     FileType,
     UNKNOWN_FILE_TYPE,
 )
+from kniferpy.verr import KniferError
+
+# ── Go-compat type aliases ─────────────────────────────────────────────────────
+
+WriteOption = Callable[[Any], None]
+DirOption = Callable[[Any], None]
+ReadOption = Callable[[Any], None]
+StatOption = Callable[[Any], None]
+DeleteOption = Callable[[Any], None]
+OpenFunc = Callable[..., Any]
+OpenFileFunc = Callable[..., Any]
+StatFunc = Callable[..., Any]
+MkdirAllFunc = Callable[..., Any]
+RemoveAllFunc = Callable[..., Any]
+Error = KniferError  # Go: fileimpl.FileError
 
 __all__ = [
     "DEFAULT_MAX_BYTES",
@@ -82,6 +97,13 @@ __all__ = [
     "is_audio",
     "is_archive",
     "is_document",
+    # Go-compat type aliases
+    "OpenFunc",
+    "OpenFileFunc",
+    "StatFunc",
+    "MkdirAllFunc",
+    "RemoveAllFunc",
+    "Error",
 ]
 
 DEFAULT_MAX_BYTES = filex.DEFAULT_MAX_BYTES

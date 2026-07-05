@@ -40,6 +40,7 @@ Writer = Any  # Go: zipimpl.Writer
 Reader = Any  # Go: zipimpl.Reader
 FileFilter = Callable[[str], bool]  # Go: zipimpl.FileFilter
 ZipError = type("ZipError", (Exception,), {})  # Go: zipimpl.ZipError
+TempFile = Callable[..., Any]  # Go: zipimpl.TempFile
 
 __all__ = [
     "DEFAULT_UNZIP_MAX_BYTES",
@@ -97,6 +98,7 @@ __all__ = [
     "Reader",
     "FileFilter",
     "ZipError",
+    "TempFile",
     # Go-compat file operation func types
     "OpenFunc",
     "ReadFileFunc",

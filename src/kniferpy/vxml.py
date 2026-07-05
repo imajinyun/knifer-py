@@ -30,6 +30,9 @@ TransformOption = Callable[[Any], None]
 FormatOption = Callable[[Any], None]
 SAXOption = Callable[[Any], None]
 CleanOption = Callable[[Any], None]
+ParseOption = Callable[[Any], None]  # Go: parse option type
+BeanOption = Callable[[Any], None]  # Go: bean marshal/unmarshal option type
+TokenHandler = Callable[..., None]  # Go: SAX token handler type
 
 # Constants
 CONTENT_KEY = CONTENT_KEY
@@ -196,6 +199,9 @@ __all__ = [
     "FormatOption",
     "SAXOption",
     "CleanOption",
+    "ParseOption",
+    "BeanOption",
+    "TokenHandler",
 ]
 
 # SAX parsing

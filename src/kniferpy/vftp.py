@@ -36,6 +36,10 @@ from kniferpy.internal.ftpx import (
     upload_file,
 )
 
+# ── Go-compat standalone constructors ────────────────────────────────────────
+
+new = Client  # type: ignore[assignment]
+
 # ── Go-compat EntryType constants ───────────────────────────────────────────
 
 EntryTypeUnknown = EntryType.UNKNOWN
@@ -64,4 +68,6 @@ __all__ = [
     "list_dir",
     "download_file",
     "upload_file",
+    # Go-compat standalone constructor
+    "new",
 ]
