@@ -263,7 +263,7 @@ class Wrapper:
 
     def __init__(self, fn: Callable[[], Any]) -> None:
         self._fn = fn
-        self._log_func: LogFunc = _get_default_log_func
+        self._log_func: LogFunc = _get_default_log_func()
         self._info_format: str = ""
         self._warn_format: str = ""
         self._error_format: str = ""
@@ -327,7 +327,7 @@ class Collector:
     def __init__(self) -> None:
         self._errors: list[BaseException] = []
         self._lock = threading.Lock()
-        self._log_func: LogFunc = _get_default_log_func
+        self._log_func: LogFunc = _get_default_log_func()
         self._runner: Callable[[Callable[[], None]], None] | None = None
 
     def with_log_func(self, log_func: LogFunc) -> Collector:

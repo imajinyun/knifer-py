@@ -1,6 +1,12 @@
+import io
+import socket
+import ssl
+import uuid
+
 import pytest
 
 from kniferpy import vnet
+from kniferpy.internal import netx
 from kniferpy.verr import ValidationError
 
 
@@ -59,6 +65,8 @@ def test_wildcard_matching() -> None:
     assert not vnet.matches_wildcard("192.168.*.*", "10.0.0.1")
     assert not vnet.matches_wildcard("192.168.*", "192.168.1.5")
     assert not vnet.matches_wildcard("192.168.1.5", "::1")
+    assert not vnet.matches_wildcard("192.168.bad.*", "192.168.1.5")
+    assert not vnet.matches_wildcard("192.168.999.*", "192.168.1.5")
 
 
 def test_hide_ip_part() -> None:
@@ -72,6 +80,121 @@ def test_valid_port() -> None:
     assert vnet.is_valid_port(65535)
     assert not vnet.is_valid_port(-1)
     assert not vnet.is_valid_port(65536)
+
+
+def test_ipv4_ipv6_error_paths() -> None:
+    assert netx._parse("bad") is None
+    assert netx._network("bad") is None
+    with pytest.raises(ValidationError) as ipv6_exc:
+        vnet.int_to_ipv6(-1)
+    with pytest.raises(ValidationError) as ipv6_high_exc:
+        vnet.int_to_ipv6(netx.IPV6_MAX + 1)
+    with pytest.raises(ValidationError) as cidr_exc:
+        vnet.last_ip("bad")
+    with pytest.raises(ValidationError) as count_exc:
+        vnet.address_count("bad")
+    assert ipv6_exc.value.code == "knifer.net.ipv6_out_of_range"
+    assert ipv6_high_exc.value.code == "knifer.net.ipv6_out_of_range"
+    assert cidr_exc.value.code == "knifer.net.invalid_cidr"
+    assert count_exc.value.code == "knifer.net.invalid_cidr"
+
+
+def test_subnet_math_success_and_errors() -> None:
+    assert vnet.mask_bit_by_mask("255.255.255.0") == 24
+    assert vnet.mask_bit_by_mask_with_options("255.255.0.0") == 16
+    assert vnet.count_by_mask_bit(30) == 2
+    assert vnet.count_by_mask_bit(30, is_all=True) == 4
+    assert vnet.mask_by_mask_bit(24) == "255.255.255.0"
+    assert vnet.mask_by_ip_range("192.168.1.0", "192.168.1.255") == "255.255.255.0"
+    assert vnet.mask_by_ip_range_with_options("192.168.1.1", "192.168.1.1") == (
+        "255.255.255.255"
+    )
+    assert vnet.count_by_ip_range("192.168.1.1", "192.168.1.3") == 3
+    assert vnet.count_by_ip_range_with_options("192.168.1.1", "192.168.1.3") == 3
+    assert vnet.format_ip_block("192.168.1.1", "255.255.255.0") == "192.168.1.1/24"
+    assert vnet.format_ip_block_with_options("192.168.1.1", "255.255.255.0") == (
+        "192.168.1.1/24"
+    )
+    assert vnet.begin_ip("192.168.1.42", 24) == "192.168.1.0"
+    assert vnet.begin_ip_with_options("192.168.1.42", 24) == "192.168.1.0"
+    assert vnet.begin_ip_long("192.168.1.42", 24) == vnet.ipv4_to_long("192.168.1.0")
+    assert vnet.begin_ip_long_with_options("192.168.1.42", 24) == vnet.ipv4_to_long(
+        "192.168.1.0"
+    )
+    assert vnet.end_ip("192.168.1.42", 24) == "192.168.1.255"
+    assert vnet.end_ip_with_options("192.168.1.42", 24) == "192.168.1.255"
+    assert vnet.end_ip_long("192.168.1.42", 24) == vnet.ipv4_to_long("192.168.1.255")
+    assert vnet.end_ip_long_with_options("192.168.1.42", 24) == vnet.ipv4_to_long(
+        "192.168.1.255"
+    )
+    assert vnet.is_mask_valid("255.255.255.0")
+    assert not vnet.is_mask_valid("255.0.255.0")
+    assert vnet.is_mask_valid_with_options("255.255.0.0")
+    assert vnet.is_mask_bit_valid(0)
+    assert vnet.is_mask_bit_valid(32)
+    assert not vnet.is_mask_bit_valid(33)
+    assert vnet.list_ips("192.168.1.0/30") == ["192.168.1.1", "192.168.1.2"]
+    assert vnet.list_ips_with_options("192.168.1.0/30", is_all=True) == [
+        "192.168.1.0",
+        "192.168.1.1",
+        "192.168.1.2",
+        "192.168.1.3",
+    ]
+    assert vnet.list_ip_cidr("192.168.1.42", 30) == ["192.168.1.41", "192.168.1.42"]
+    assert vnet.list_ip_cidr_with_options("192.168.1.42", 30, is_all=True)[0] == (
+        "192.168.1.40"
+    )
+    assert vnet.list_ip_range("192.168.1.1", "192.168.1.3") == [
+        "192.168.1.1",
+        "192.168.1.2",
+        "192.168.1.3",
+    ]
+    assert vnet.list_ip_range_with_options("192.168.1.1", "192.168.1.2") == [
+        "192.168.1.1",
+        "192.168.1.2",
+    ]
+
+    for func, args in (
+        (vnet.mask_bit_by_mask, ("255.0.255.0",)),
+        (vnet.count_by_mask_bit, (33,)),
+        (vnet.mask_by_mask_bit, (-1,)),
+        (vnet.mask_by_ip_range, ("bad", "192.168.1.1")),
+        (vnet.count_by_ip_range, ("bad", "192.168.1.1")),
+        (vnet.format_ip_block, ("bad", "255.255.255.0")),
+        (vnet.begin_ip, ("bad", 24)),
+        (vnet.begin_ip, ("192.168.1.1", 33)),
+        (vnet.end_ip, ("bad", 24)),
+        (vnet.end_ip, ("192.168.1.1", 33)),
+        (vnet.list_ips, ("bad",)),
+        (vnet.list_ip_cidr, ("bad", 24)),
+        (vnet.list_ip_range, ("192.168.1.3", "192.168.1.1")),
+    ):
+        with pytest.raises(ValidationError):
+            func(*args)
+
+
+def test_constants_and_with_options_aliases() -> None:
+    assert vnet.LOCAL_IP == "127.0.0.1"
+    assert vnet.IP_SPLIT_MARK == "-"
+    assert vnet.IP_MASK_SPLIT_MARK == "/"
+    assert vnet.IP_MASK_MAX == 32
+    assert vnet.PORT_RANGE_MIN == 1024
+    assert vnet.PORT_RANGE_MAX == 65535
+    assert vnet.SSL == "SSL"
+    assert vnet.TLSv12 == "TLSv1.2"
+    assert vnet.TLSv13 == "TLSv1.3"
+    assert vnet.is_ip_with_options("127.0.0.1")
+    assert vnet.is_ipv4_with_options("127.0.0.1")
+    assert vnet.is_ipv6_with_options("::1")
+    assert vnet.is_inner_ip_with_options("127.0.0.1")
+    assert vnet.ipv4_to_long_with_options("1.2.3.4") == 0x01020304
+    assert vnet.ipv4_to_long_default_with_options("bad", 9) == 9
+    assert vnet.ipv6_to_int_with_options("::1") == 1
+    assert vnet.ipv6_to_big_int("::1") == 1
+    assert vnet.ipv6_to_big_int_with_options("::1") == 1
+    assert vnet.big_int_to_ipv6(1) == "::1"
+    assert vnet.is_in_range_with_options("192.168.1.1", "192.168.1.0/24")
+    assert vnet.matches_wildcard_with_options("192.168.*.*", "192.168.1.1")
 
 
 # ---------------------------------------------------------------------------
@@ -94,6 +217,34 @@ class TestTLS:
     def test_tls_version_mapping(self) -> None:
         assert vnet.tls_version("TLSv1.2") > 0
         assert vnet.tls_version("TLSv1.3") > 0
+        assert vnet.tls_version("unknown") == ssl.PROTOCOL_TLS
+
+    def test_tls_builder_server_name_and_unknown_versions(self) -> None:
+        builder = vnet.new_tls_config_builder()
+        assert builder.set_min_version("unknown") is builder
+        assert builder.set_max_version("unknown") is builder
+        assert builder.set_server_name("example.com") is builder
+        assert builder.build().check_hostname is True
+        assert vnet.new_cert_pool() is not None
+
+    def test_add_root_ca_helpers_call_builder(self) -> None:
+        class Builder:
+            def __init__(self) -> None:
+                self.files: list[str] = []
+                self.data: list[bytes] = []
+
+            def add_root_ca_file(self, path: str) -> None:
+                self.files.append(path)
+
+            def add_root_ca_bytes(self, data: bytes) -> None:
+                self.data.append(data)
+
+        builder = Builder()
+        vnet.add_root_ca_file_with_options(builder, "/tmp/ca.pem")
+        vnet.add_root_ca_reader(builder, io.BytesIO(b"ca"))
+        vnet.add_root_ca_reader_with_options(builder, io.BytesIO(b"ca2"))
+        assert builder.files == ["/tmp/ca.pem"]
+        assert builder.data == [b"ca", b"ca2"]
 
 
 # ---------------------------------------------------------------------------
@@ -118,6 +269,30 @@ class TestDNS:
     def test_idn_to_ascii(self) -> None:
         assert vnet.idn_to_ascii("example.com") == "example.com"
 
+    def test_dns_with_monkeypatched_getaddrinfo(self, monkeypatch) -> None:
+        answers = [
+            (socket.AF_INET, None, None, None, ("127.0.0.1", 0)),
+            (socket.AF_INET6, None, None, None, ("::1", 0)),
+        ]
+
+        monkeypatch.setattr(socket, "getaddrinfo", lambda *args, **kwargs: answers)
+        assert vnet.get_dns_info("localhost", ["A", "AAAA", "MX", "TXT"]) == {
+            "A": ["127.0.0.1"],
+            "AAAA": ["::1"],
+            "MX": [],
+            "TXT": [],
+        }
+        assert vnet.get_dns_info_with_options("localhost", ["A"]) == {"A": ["127.0.0.1"]}
+        assert vnet.get_ip_by_host("localhost") == ["127.0.0.1", "::1"]
+        assert vnet.get_ip_by_host_with_options("localhost") == ["127.0.0.1", "::1"]
+
+        def raise_gaierror(*args, **kwargs):
+            raise socket.gaierror()
+
+        monkeypatch.setattr(socket, "getaddrinfo", raise_gaierror)
+        assert vnet.get_ip_by_host("bad") == []
+        assert vnet.get_dns_info("bad", ["A"]) == {"A": []}
+
 
 # ---------------------------------------------------------------------------
 # TCP Ping / Connect
@@ -134,6 +309,167 @@ class TestPingConnect:
     def test_is_connected_none(self) -> None:
         assert not vnet.is_connected(None)
 
+    def test_connect_ping_netcat_with_monkeypatched_socket(self, monkeypatch) -> None:
+        sent: list[bytes] = []
+
+        class FakeSocket:
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return None
+
+            def sendall(self, data: bytes) -> None:
+                sent.append(data)
+
+            def getpeername(self):
+                return ("127.0.0.1", 8080)
+
+        fake = FakeSocket()
+        monkeypatch.setattr(socket, "create_connection", lambda *args, **kwargs: fake)
+
+        assert vnet.ping("127.0.0.1", 80)
+        assert vnet.ping_with_options("127.0.0.1", 80)
+        assert vnet.is_open_with_options("127.0.0.1", 80)
+        assert vnet.connect("127.0.0.1", 80) is fake
+        assert vnet.connect_with_options("127.0.0.1", 80) is fake
+        assert vnet.is_connected(fake) is True
+        vnet.netcat("127.0.0.1", 80, b"hello")
+        vnet.netcat_with_options("127.0.0.1", 80, b"world")
+        assert sent == [b"hello", b"world"]
+        assert vnet.get_remote_address(fake) == "127.0.0.1:8080"
+
+        def fail_connection(*args, **kwargs):
+            raise OSError("closed")
+
+        monkeypatch.setattr(socket, "create_connection", fail_connection)
+        assert not vnet.ping("127.0.0.1", 80)
+        assert vnet.connect("127.0.0.1", 80) is None
+        with pytest.raises(ValidationError) as exc_info:
+            vnet.netcat("127.0.0.1", 80, b"boom")
+        assert exc_info.value.code == "knifer.net.netcat_failed"
+
+    def test_is_connected_and_remote_address_error_paths(self) -> None:
+        class BrokenSocket:
+            def getpeername(self):
+                raise OSError("not connected")
+
+        assert not vnet.is_connected(BrokenSocket())
+        assert vnet.get_remote_address(BrokenSocket()) == ""
+
+
+def test_port_helpers_with_monkeypatched_socket(monkeypatch) -> None:
+    busy = {1001}
+
+    class FakeSocket:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def bind(self, addr):
+            host, port = addr
+            if port in busy:
+                raise OSError("busy")
+
+    monkeypatch.setattr(socket, "socket", lambda *args, **kwargs: FakeSocket())
+
+    assert not vnet.is_usable_local_port(-1)
+    assert vnet.is_usable_local_port(1000)
+    assert not vnet.is_usable_local_port(1001)
+    assert vnet.is_usable_local_port_with_options(1000)
+    assert vnet.get_usable_local_port_from(1000) == 1000
+    assert vnet.get_usable_local_port_from_with_options(1000) == 1000
+    assert vnet.get_usable_local_port_in_range(1001, 1002) == 1002
+    assert vnet.get_usable_local_port_in_range_with_options(1001, 1002) == 1002
+    assert vnet.get_usable_local_ports(2, 1000, 1002) == [1000, 1002]
+    assert vnet.get_usable_local_ports_with_options(1, 1000, 1000) == [1000]
+    with pytest.raises(ValidationError):
+        vnet.get_usable_local_port_in_range(1001, 1001)
+    with pytest.raises(ValidationError):
+        vnet.get_usable_local_ports(3, 1000, 1002)
+
+    generator = vnet.new_local_port_generator(vnet.PORT_RANGE_MAX)
+    assert generator.gen() == vnet.PORT_RANGE_MAX
+    assert generator.gen() == vnet.PORT_RANGE_MIN
+    assert vnet.new_local_port_generator_with_options(2000).gen() == 2000
+
+
+def test_address_and_local_interface_helpers(monkeypatch) -> None:
+    answers = [
+        (socket.AF_INET, None, None, None, ("10.0.0.2", 0)),
+        (socket.AF_INET6, None, None, None, ("fe80::1", 0)),
+        (socket.AF_INET6, None, None, None, ("2001:db8::1", 0)),
+    ]
+    monkeypatch.setattr(socket, "gethostname", lambda: "host")
+    monkeypatch.setattr(socket, "getaddrinfo", lambda *args, **kwargs: answers)
+
+    assert vnet.build_inet_socket_address("example.com:8443", 443) == ("example.com", 8443)
+    assert vnet.build_inet_socket_address("example.com", 443) == ("example.com", 443)
+    assert vnet.build_inet_socket_address_with_options("example.com:8443", 443) == (
+        "example.com",
+        8443,
+    )
+    assert vnet.create_address("example.com", 443) == ("example.com", 443)
+    assert vnet.create_address_with_options("example.com", 443) == ("example.com", 443)
+    assert vnet.get_network_interface("lo") is None
+    assert vnet.get_network_interface_with_options("lo") is None
+    assert vnet.get_network_interfaces() == {}
+    assert vnet.get_network_interfaces_with_options() == {}
+    assert "10.0.0.2" in vnet.local_ipv4s()
+    assert "2001:db8::1" in vnet.local_ipv6s()
+    assert "127.0.0.1" in vnet.local_ips()
+    assert vnet.local_ipv4s_with_options()
+    assert vnet.local_ipv6s_with_options()
+    assert vnet.local_ips_with_options()
+    assert vnet.to_ip_list(["b", "a", "a"]) == ["a", "b"]
+    assert vnet.local_address_list(lambda ip: ip == "127.0.0.1") == ["127.0.0.1"]
+    assert vnet.local_address_list_with_options(lambda ip: ip == "127.0.0.1") == ["127.0.0.1"]
+    assert vnet.get_localhost_str() == "127.0.0.1"
+    assert vnet.get_localhost() == "127.0.0.1"
+    assert vnet.get_localhost_str_with_options() == "127.0.0.1"
+    assert vnet.get_localhost_with_options() == "127.0.0.1"
+    assert vnet.get_local_host_name() == "host"
+    assert vnet.get_local_host_name_with_options() == "host"
+
+
+def test_mac_and_hardware_helpers(monkeypatch) -> None:
+    monkeypatch.setattr(uuid, "getnode", lambda: 0x001122334455)
+    assert vnet.get_local_mac_address() == "00-11-22-33-44-55"
+    assert vnet.get_local_mac_address_with_options(":") == "00:11:22:33:44:55"
+    assert vnet.get_mac_address("127.0.0.1") == "00-11-22-33-44-55"
+    assert vnet.get_mac_address_with_options("127.0.0.1", ":") == "00:11:22:33:44:55"
+    assert vnet.get_hardware_address("127.0.0.1") == "00:11:22:33:44:55"
+    assert vnet.get_hardware_address_with_options("127.0.0.1") == "00:11:22:33:44:55"
+    assert vnet.get_local_hardware_address() == "00:11:22:33:44:55"
+    assert vnet.get_local_hardware_address_with_options() == "00:11:22:33:44:55"
+
+
+def test_misc_cookie_proxy_and_interface_address_helpers(monkeypatch) -> None:
+    assert vnet.is_unknown("unknown")
+    assert vnet.is_unknown(" N/A ")
+    assert not vnet.is_unknown("127.0.0.1")
+    assert vnet.parse_cookies("a=1; empty=; bad; b=2") == {"a": "1", "empty": "", "b": "2"}
+    assert vnet.get_multistage_reverse_proxy_ip({"X-Forwarded-For": "1.1.1.1, 2.2.2.2"}) == (
+        "1.1.1.1"
+    )
+    assert vnet.get_multistage_reverse_proxy_ip(
+        {"X-Forwarded-For": "unknown", "X-Real-IP": "3.3.3.3"}
+    ) == "3.3.3.3"
+    assert vnet.get_multistage_reverse_proxy_ip({}) == ""
+
+    monkeypatch.setattr(
+        netx,
+        "_get_interface_addresses",
+        lambda: [("lo", ["127.0.0.1"]), ("eth0", ["10.0.0.1"])],
+    )
+    assert vnet.local_address_list_by_interface() == ["127.0.0.1", "10.0.0.1"]
+    assert vnet.local_address_list_by_interface(lambda iface: iface == "eth0") == ["10.0.0.1"]
+    assert vnet.local_address_list_by_interface(None, lambda addr: addr.startswith("127.")) == [
+        "127.0.0.1"
+    ]
+
 
 # ---------------------------------------------------------------------------
 # Multipart
@@ -142,19 +478,18 @@ class TestPingConnect:
 
 class TestMultipart:
     def test_parse_multipart_form_text_fields(self) -> None:
-        boundary = "----TestBoundary"
         body = (
-            f"------TestBoundary\r\n"
-            f'Content-Disposition: form-data; name="field1"\r\n'
-            f"\r\n"
-            f"value1\r\n"
-            f"------TestBoundary\r\n"
-            f'Content-Disposition: form-data; name="field2"\r\n'
-            f"\r\n"
-            f"value2\r\n"
-            f"------TestBoundary--\r\n"
-        ).encode("utf-8")
-        content_type = f"multipart/form-data; boundary=----TestBoundary"
+            b"------TestBoundary\r\n"
+            b'Content-Disposition: form-data; name="field1"\r\n'
+            b"\r\n"
+            b"value1\r\n"
+            b"------TestBoundary\r\n"
+            b'Content-Disposition: form-data; name="field2"\r\n'
+            b"\r\n"
+            b"value2\r\n"
+            b"------TestBoundary--\r\n"
+        )
+        content_type = "multipart/form-data; boundary=----TestBoundary"
 
         form = vnet.parse_multipart_form(body, content_type)
         assert form.is_loaded()
@@ -163,16 +498,15 @@ class TestMultipart:
         assert form.get_param("missing") == ""
 
     def test_parse_multipart_form_file(self) -> None:
-        boundary = "----TestBoundary"
         body = (
-            f"------TestBoundary\r\n"
-            f'Content-Disposition: form-data; name="file"; filename="test.txt"\r\n'
-            f"Content-Type: text/plain\r\n"
-            f"\r\n"
-            f"hello world\r\n"
-            f"------TestBoundary--\r\n"
-        ).encode("utf-8")
-        content_type = f"multipart/form-data; boundary=----TestBoundary"
+            b"------TestBoundary\r\n"
+            b'Content-Disposition: form-data; name="file"; filename="test.txt"\r\n'
+            b"Content-Type: text/plain\r\n"
+            b"\r\n"
+            b"hello world\r\n"
+            b"------TestBoundary--\r\n"
+        )
+        content_type = "multipart/form-data; boundary=----TestBoundary"
 
         form = vnet.parse_multipart_form(body, content_type)
         file_entry = form.get_file("file")
