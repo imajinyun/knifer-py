@@ -449,3 +449,65 @@ class JWTBuilder:
 
 def new_jwt_builder() -> JWTBuilder:
     return JWTBuilder()
+
+
+# ── Go-compat generic token creation ─────────────────────────────────────────
+
+
+def create_token(payload: dict[str, Any], key: str | bytes) -> str:
+    """Create an HS256 token from payload and HMAC key (Go compat)."""
+    return sign_hs256(payload, key)
+
+
+def create_jwt_token(payload: dict[str, Any], key: str | bytes) -> str:
+    """Create an HS256 token from payload and HMAC key (Go compat alias)."""
+    return sign_hs256(payload, key)
+
+
+def create_token_with_headers(headers: dict[str, Any], payload: dict[str, Any], key: str | bytes) -> str:
+    """Create an HS256 token with custom headers (Go compat)."""
+    return _sign_hmac(payload, key, "HS256", headers=headers)
+
+
+def create_token_with_algorithm(payload: dict[str, Any], key: str | bytes, algorithm: str) -> str:
+    """Create a token with an explicit HMAC algorithm (Go compat)."""
+    return _sign_hmac(payload, key, algorithm)
+
+
+def create_token_with_headers_and_algorithm(
+    headers: dict[str, Any], payload: dict[str, Any], key: str | bytes, algorithm: str
+) -> str:
+    """Create a token with custom headers and HMAC algorithm (Go compat)."""
+    return _sign_hmac(payload, key, algorithm, headers=headers)
+
+
+# ── Go-compat generic verification ───────────────────────────────────────────
+
+
+def verify(token: str, key: str | bytes) -> bool:
+    """Verify a JWT with an HMAC key using the token's header algorithm (Go compat)."""
+    try:
+        header = _get_header(token)
+        alg = header.get("alg", "HS256")
+        match alg.upper():
+            case "HS256":
+                _verify_hmac(token, key, "HS256")
+            case "HS384":
+                _verify_hmac(token, key, "HS384")
+            case "HS512":
+                _verify_hmac(token, key, "HS512")
+            case _:
+                _verify_hmac(token, key, "HS256")
+        return True
+    except CryptoError:
+        return False
+
+
+def verify_jwt(token: str, key: str | bytes) -> bool:
+    """Verify a JWT with an HMAC key (Go compat alias)."""
+    return verify(token, key)
+
+
+def of_validator(token: str) -> dict[str, Any]:
+    """Parse a token and return claims for validation (Go compat)."""
+    return parse_jwt(token)

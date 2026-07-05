@@ -99,6 +99,16 @@ __all__ = [
     "verify_ps384",
     "verify_ps512",
     "verify_strict",
+    # Go-compat generic creation
+    "create_token",
+    "create_jwt_token",
+    "create_token_with_headers",
+    "create_token_with_algorithm",
+    "create_token_with_headers_and_algorithm",
+    # Go-compat generic verification
+    "verify",
+    "verify_jwt",
+    "of_validator",
     # Algorithm constants
     "JWTAlgHS256",
     "JWTAlgHS384",
@@ -185,3 +195,17 @@ generate_rsa_key = jwtx.generate_rsa_key
 # ── Builder ───────────────────────────────────────────────────────────────────
 
 new_jwt_builder = jwtx.new_jwt_builder
+
+# ── Go-compat generic token creation ─────────────────────────────────────────
+
+create_token = jwtx.create_token
+create_jwt_token = jwtx.create_jwt_token
+create_token_with_headers = jwtx.create_token_with_headers
+create_token_with_algorithm = jwtx.create_token_with_algorithm
+create_token_with_headers_and_algorithm = jwtx.create_token_with_headers_and_algorithm
+
+# ── Go-compat generic verification ───────────────────────────────────────────
+
+verify = jwtx.verify
+verify_jwt = jwtx.verify_jwt
+of_validator = jwtx.of_validator
