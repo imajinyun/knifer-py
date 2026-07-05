@@ -21,12 +21,26 @@ from kniferpy.internal.ftpx import (
     DownloadResponse,
     Entry,
     EntryType,
+    ErrInvalidDownloadRequest,
+    ErrInvalidListRequest,
+    ErrInvalidUploadRequest,
+    ErrMissingProvider,
+    ErrTransferLimitExceeded,
     ListRequest,
     ListResponse,
     Provider,
     UploadRequest,
     UploadResponse,
+    download_file,
+    list_dir,
+    upload_file,
 )
+
+# ── Go-compat EntryType constants ───────────────────────────────────────────
+
+EntryTypeUnknown = EntryType.UNKNOWN
+EntryTypeFile = EntryType.FILE
+EntryTypeDirectory = EntryType.DIRECTORY
 
 __all__ = [
     "Client",
@@ -34,9 +48,20 @@ __all__ = [
     "DownloadResponse",
     "Entry",
     "EntryType",
+    "EntryTypeUnknown",
+    "EntryTypeFile",
+    "EntryTypeDirectory",
+    "ErrInvalidDownloadRequest",
+    "ErrInvalidListRequest",
+    "ErrInvalidUploadRequest",
+    "ErrMissingProvider",
+    "ErrTransferLimitExceeded",
     "ListRequest",
     "ListResponse",
     "Provider",
     "UploadRequest",
     "UploadResponse",
+    "list_dir",
+    "download_file",
+    "upload_file",
 ]

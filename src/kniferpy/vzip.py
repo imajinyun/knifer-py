@@ -12,7 +12,24 @@ from pathlib import Path
 from typing import IO, Any, Callable
 
 from kniferpy.internal import zipx
-from kniferpy.internal.zipx import DEFAULT_UNZIP_MAX_BYTES, EntryData
+from kniferpy.internal.zipx import (
+    DEFAULT_UNZIP_MAX_BYTES,
+    EntryData,
+    CreateTempFunc,
+    EvalSymlinksFunc,
+    LstatFunc,
+    MkdirAllFunc,
+    OpenFileFunc,
+    OpenFunc,
+    OpenZipReaderFunc,
+    ReadDirFunc,
+    ReadFileFunc,
+    ReadlinkFunc,
+    RemoveFunc,
+    RenameFunc,
+    StatFunc,
+    gunzip,
+)
 
 # ── Go-compat type aliases ─────────────────────────────────────────────────────
 
@@ -32,6 +49,7 @@ __all__ = [
     "get_bytes",
     "get_bytes_with_options",
     "get_stream",
+    "gunzip",
     "gunzip_reader",
     "gzip_bytes",
     "gzip_file",
@@ -79,6 +97,20 @@ __all__ = [
     "Reader",
     "FileFilter",
     "ZipError",
+    # Go-compat file operation func types
+    "OpenFunc",
+    "ReadFileFunc",
+    "OpenFileFunc",
+    "EvalSymlinksFunc",
+    "StatFunc",
+    "LstatFunc",
+    "ReadDirFunc",
+    "ReadlinkFunc",
+    "MkdirAllFunc",
+    "RemoveFunc",
+    "RenameFunc",
+    "OpenZipReaderFunc",
+    "CreateTempFunc",
 ]
 
 # ── ZIP creation ──────────────────────────────────────────────────────────────
@@ -118,6 +150,7 @@ gzip_bytes = zipx.gzip_bytes
 gzip_string = zipx.gzip_string
 gzip_file = zipx.gzip_file
 ungzip = zipx.ungzip
+gunzip = zipx.gunzip
 ungzip_string = zipx.ungzip_string
 gzip_reader = zipx.gzip_reader
 gunzip_reader = zipx.gunzip_reader

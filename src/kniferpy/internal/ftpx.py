@@ -19,6 +19,14 @@ from typing import Protocol
 
 from kniferpy.verr import KniferError, ValidationError
 
+# ── Go-compat sentinel error variables ──────────────────────────────────────
+
+ErrInvalidListRequest = KniferError("ftp: invalid list request", code="knifer.ftp.invalid_list_request")
+ErrInvalidDownloadRequest = KniferError("ftp: invalid download request", code="knifer.ftp.invalid_download_request")
+ErrInvalidUploadRequest = KniferError("ftp: invalid upload request", code="knifer.ftp.invalid_upload_request")
+ErrTransferLimitExceeded = KniferError("ftp: transfer limit exceeded", code="knifer.ftp.transfer_limit_exceeded")
+ErrMissingProvider = KniferError("ftp: missing provider", code="knifer.ftp.missing_provider")
+
 
 class EntryType:
     UNKNOWN = "unknown"
@@ -160,3 +168,24 @@ def _validate_remote_path(path: str, code: str) -> None:
 def _validate_limit(max_bytes: int, code: str) -> None:
     if max_bytes < 0:
         raise ValidationError(message="max bytes must be non-negative", code=code)
+
+
+# ── Go-compat standalone convenience functions ──────────────────────────────
+
+
+def list_dir(provider: Provider, request: ListRequest) -> ListResponse:
+    """List directory entries via a provider (Go compat: List)."""
+    client = Client(provider)
+    return client.list(request)
+
+
+def download_file(provider: Provider, request: DownloadRequest) -> DownloadResponse:
+    """Download a file via a provider (Go compat: Download)."""
+    client = Client(provider)
+    return client.download(request)
+
+
+def upload_file(provider: Provider, request: UploadRequest) -> UploadResponse:
+    """Upload a file via a provider (Go compat: Upload)."""
+    client = Client(provider)
+    return client.upload(request)

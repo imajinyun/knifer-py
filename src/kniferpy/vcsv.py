@@ -3,11 +3,25 @@ from __future__ import annotations
 from collections.abc import Sequence
 
 from kniferpy.internal import csvx
-from kniferpy.internal.csvx import Record, Row
+from kniferpy.internal.csvx import (
+    CSVError,
+    Option,
+    ReadOption,
+    Record,
+    Row,
+    WriteOption,
+    structs_to_records,
+    write_string_structs,
+    write_structs,
+)
 
 __all__ = [
+    "CSVError",
+    "Option",
+    "ReadOption",
     "Record",
     "Row",
+    "WriteOption",
     "read_string",
     "read_string_maps",
     "write_string",
@@ -20,6 +34,9 @@ __all__ = [
     "write_maps",
     "for_each",
     "for_each_map",
+    "structs_to_records",
+    "write_structs",
+    "write_string_structs",
 ]
 
 

@@ -7,9 +7,25 @@ import zlib
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path, PurePosixPath
-from typing import IO
+from typing import IO, Any
 
 from kniferpy.verr import SecurityError, ValidationError
+
+# ── Go-compat file operation func type aliases ──────────────────────────────
+
+OpenFunc = Callable[[str], IO[bytes]]
+ReadFileFunc = Callable[[str], bytes]
+OpenFileFunc = Callable[[str, int, int], IO[bytes]]  # path, flag, mode
+EvalSymlinksFunc = Callable[[str], str]
+StatFunc = Callable[[str], Any]
+LstatFunc = Callable[[str], Any]
+ReadDirFunc = Callable[[str], list[Any]]
+ReadlinkFunc = Callable[[str], str]
+MkdirAllFunc = Callable[[str, int], None]
+RemoveFunc = Callable[[str], None]
+RenameFunc = Callable[[str, str], None]
+OpenZipReaderFunc = Callable[[str], zipfile.ZipFile]
+CreateTempFunc = Callable[[str, str], tuple[str, IO[bytes]]]  # dir, pattern -> (path, file)
 
 # Cap uncompressed extraction size to guard against zip bombs, mirroring
 # knifer-go's DefaultUnzipMaxBytes (1 GiB).
@@ -243,6 +259,11 @@ def ungzip(data: bytes, *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES) -> bytes:
     if max_bytes > 0 and len(out) > max_bytes:
         raise SecurityError(f"vzip: gzip data exceeds max bytes: {max_bytes}", code="zip.too_large")
     return out
+
+
+def gunzip(data: bytes) -> bytes:
+    """Decompress gzip data (Go compat alias for ungzip)."""
+    return ungzip(data)
 
 
 def ungzip_string(data: bytes, *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES) -> str:

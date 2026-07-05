@@ -219,6 +219,27 @@ class FileType:
     category: str = ""
 
 
+class FileCategory:
+    """File category constants (Go compat)."""
+    UNKNOWN = "unknown"
+    IMAGE = "image"
+    VIDEO = "video"
+    AUDIO = "audio"
+    ARCHIVE = "archive"
+    DOCUMENT = "document"
+    FONT = "font"
+    EXECUTABLE = "executable"
+
+
+FileCategoryUnknown = FileCategory.UNKNOWN
+FileCategoryImage = FileCategory.IMAGE
+FileCategoryVideo = FileCategory.VIDEO
+FileCategoryAudio = FileCategory.AUDIO
+FileCategoryArchive = FileCategory.ARCHIVE
+FileCategoryDocument = FileCategory.DOCUMENT
+FileCategoryFont = FileCategory.FONT
+FileCategoryExecutable = FileCategory.EXECUTABLE
+
 UNKNOWN_FILE_TYPE = FileType()
 
 
@@ -252,6 +273,20 @@ def detect_file_type_from_path(path: str | Path) -> FileType:
     except OSError:
         return UNKNOWN_FILE_TYPE
     return detect_file_type(head)
+
+
+def detect_file_type_from_reader(reader) -> FileType:
+    """Detect file type from a reader (Go compat: DetectFileType(io.Reader))."""
+    from io import IOBase
+    if isinstance(reader, IOBase):
+        try:
+            data = reader.read(560)
+            if hasattr(reader, 'seek'):
+                reader.seek(0)
+            return detect_file_type(data)
+        except Exception:
+            return UNKNOWN_FILE_TYPE
+    return UNKNOWN_FILE_TYPE
 
 
 def is_image(ft: FileType) -> bool:

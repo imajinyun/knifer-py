@@ -1,13 +1,28 @@
 from __future__ import annotations
 
 import csv
+import dataclasses
 import io
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+from typing import Any
 
 from kniferpy.verr import ValidationError
 
 Record = list[str]
 Row = dict[str, str]
+
+# ── Go-compat type aliases ──────────────────────────────────────────────────
+
+Option = Callable[[Any], None]
+ReadOption = Option
+WriteOption = Option
+
+# ── Go-compat CSVError ──────────────────────────────────────────────────────
+
+
+class CSVError(ValidationError):
+    """CSV-specific error with optional code and cause (Go compat)."""
+    pass
 
 
 def read_string(
@@ -161,3 +176,49 @@ def for_each_map(
     rows = read_maps(path, delimiter, trim_leading_space, encoding)
     for row in rows:
         callback(row)
+
+
+# ── Go-compat struct-based CSV functions ────────────────────────────────────
+
+
+def _struct_fields(obj: Any) -> list[tuple[str, Any]]:
+    """Extract fields from a dataclass or plain object, respecting csv tags."""
+    fields: list[tuple[str, Any]] = []
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        for f in dataclasses.fields(obj):
+            tag = f.metadata.get("csv", f.name) if hasattr(f, "metadata") else f.name
+            if tag == "-":
+                continue
+            fields.append((tag, getattr(obj, f.name)))
+    elif hasattr(obj, "__dict__"):
+        for k, v in obj.__dict__.items():
+            if not k.startswith("_"):
+                fields.append((k, v))
+    return fields
+
+
+def structs_to_records(values: Any) -> list[Record]:
+    """Convert a list of dataclass/struct objects to CSV records (Go compat)."""
+    if not values:
+        return []
+    fields = _struct_fields(values[0])
+    headers = [f[0] for f in fields]
+    records: list[Record] = [headers]
+    for item in values:
+        item_fields = _struct_fields(item)
+        record = [str(item_fields[i][1]) if i < len(item_fields) else "" for i in range(len(headers))]
+        records.append(record)
+    return records
+
+
+def write_structs(writer: Any, values: Any, **opts: Any) -> None:
+    """Write struct values as CSV to a writer (Go compat)."""
+    records = structs_to_records(values)
+    text = write_string(records, **opts)
+    writer.write(text)
+
+
+def write_string_structs(values: Any, **opts: Any) -> str:
+    """Write struct values as CSV string (Go compat)."""
+    records = structs_to_records(values)
+    return write_string(records, **opts)

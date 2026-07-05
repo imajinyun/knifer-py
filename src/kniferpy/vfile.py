@@ -4,11 +4,32 @@ from pathlib import Path
 from typing import Any, Callable
 
 from kniferpy.internal import filex
-from kniferpy.internal.filex import FileType, UNKNOWN_FILE_TYPE
+from kniferpy.internal.filex import (
+    FileCategory,
+    FileCategoryArchive,
+    FileCategoryAudio,
+    FileCategoryDocument,
+    FileCategoryExecutable,
+    FileCategoryFont,
+    FileCategoryImage,
+    FileCategoryUnknown,
+    FileCategoryVideo,
+    FileType,
+    UNKNOWN_FILE_TYPE,
+)
 
 __all__ = [
     "DEFAULT_MAX_BYTES",
     "UNKNOWN_FILE_TYPE",
+    "FileCategory",
+    "FileCategoryUnknown",
+    "FileCategoryImage",
+    "FileCategoryVideo",
+    "FileCategoryAudio",
+    "FileCategoryArchive",
+    "FileCategoryDocument",
+    "FileCategoryFont",
+    "FileCategoryExecutable",
     "FileType",
     "WriteOption",
     "DirOption",
@@ -55,6 +76,7 @@ __all__ = [
     "extension",
     "detect_file_type",
     "detect_file_type_from_path",
+    "detect_file_type_from_reader",
     "is_image",
     "is_video",
     "is_audio",
@@ -174,6 +196,10 @@ def extension(path: str | Path) -> str:
 
 def detect_file_type(data: bytes) -> FileType:
     return filex.detect_file_type(data)
+
+
+def detect_file_type_from_reader(reader) -> FileType:
+    return filex.detect_file_type_from_reader(reader)
 
 
 def detect_file_type_from_path(path: str | Path) -> FileType:

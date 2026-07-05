@@ -3,8 +3,45 @@ from __future__ import annotations
 from kniferpy.internal import maskx
 from kniferpy.internal.maskx import MaskType
 
+# ── Go-compat standalone constant aliases ────────────────────────────────────
+
+UserID = MaskType.USER_ID
+ChineseNameType = MaskType.CHINESE_NAME
+IDCard = MaskType.ID_CARD
+FixedPhoneType = MaskType.FIXED_PHONE
+MobilePhoneType = MaskType.MOBILE_PHONE
+AddressType = MaskType.ADDRESS
+EmailType = MaskType.EMAIL
+PasswordType = MaskType.PASSWORD
+CarLicenseType = MaskType.CAR_LICENSE
+BankCardType = MaskType.BANK_CARD
+IPv4Type = MaskType.IPV4
+IPv6Type = MaskType.IPV6
+PassportType = MaskType.PASSPORT
+CreditCodeType = MaskType.CREDIT_CODE
+FirstMaskType = MaskType.FIRST_MASK
+ClearToNullType = MaskType.CLEAR_TO_NULL
+ClearToEmptyType = MaskType.CLEAR_TO_EMPTY
+
 __all__ = [
     "MaskType",
+    "UserID",
+    "ChineseNameType",
+    "IDCard",
+    "FixedPhoneType",
+    "MobilePhoneType",
+    "AddressType",
+    "EmailType",
+    "PasswordType",
+    "CarLicenseType",
+    "BankCardType",
+    "IPv4Type",
+    "IPv6Type",
+    "PassportType",
+    "CreditCodeType",
+    "FirstMaskType",
+    "ClearToNullType",
+    "ClearToEmptyType",
     "address",
     "bank_card",
     "car_license",
