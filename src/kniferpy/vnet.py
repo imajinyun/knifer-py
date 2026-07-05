@@ -68,6 +68,10 @@ __all__ = [
     "ipv6_to_int",
     "ipv6_to_int_with_options",
     "int_to_ipv6",
+    # Go-compat names
+    "ipv6_to_big_int",
+    "ipv6_to_big_int_with_options",
+    "big_int_to_ipv6",
     # IP range
     "is_in_range",
     "is_in_range_with_options",
@@ -179,6 +183,7 @@ __all__ = [
     "get_hardware_address_with_options",
     "get_local_hardware_address",
     "get_local_hardware_address_with_options",
+    "local_address_list_by_interface",
     # Misc
     "is_unknown",
     "parse_cookies",
@@ -239,6 +244,11 @@ long_to_ipv4 = netx.long_to_ipv4
 ipv6_to_int = netx.ipv6_to_int
 ipv6_to_int_with_options = netx.ipv6_to_int_with_options
 int_to_ipv6 = netx.int_to_ipv6
+
+# Go-compat names
+ipv6_to_big_int = netx.ipv6_to_int
+ipv6_to_big_int_with_options = netx.ipv6_to_int_with_options
+big_int_to_ipv6 = netx.int_to_ipv6
 
 # IP range
 is_in_range = netx.is_in_range
@@ -358,6 +368,9 @@ get_hardware_address = netx.get_hardware_address
 get_hardware_address_with_options = netx.get_hardware_address_with_options
 get_local_hardware_address = netx.get_local_hardware_address
 get_local_hardware_address_with_options = netx.get_local_hardware_address_with_options
+
+# Go-compat: local_address_list_by_interface
+local_address_list_by_interface = netx.local_address_list_by_interface
 
 # Misc
 is_unknown = netx.is_unknown
