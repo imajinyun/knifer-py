@@ -23,6 +23,7 @@ from kniferpy.verr import CryptoError, ValidationError
 ErrInvalidKey = CryptoError
 ErrInvalidIV = CryptoError
 ErrInvalidCipherText = CryptoError
+ErrInvalidSM2Signature = CryptoError
 ErrInvalidOTP = CryptoError
 ErrInvalidPasswordHash = CryptoError
 ErrInvalidJWK = CryptoError
@@ -704,6 +705,22 @@ def validate_aes_iv(iv: bytes) -> None:
 
 def validate_aes_gcm_nonce(nonce: bytes) -> None:
     _validate_aes_nonce(nonce)
+
+
+def validate_sm4_key(key: bytes) -> None:
+    if len(key) != 16:
+        raise CryptoError(
+            f"SM4 key must be 16 bytes, got {len(key)}",
+            code="crypto.invalid_key",
+        )
+
+
+def validate_sm4_iv(iv: bytes) -> None:
+    if len(iv) != 16:
+        raise CryptoError(
+            f"SM4 IV must be 16 bytes, got {len(iv)}",
+            code="crypto.invalid_iv",
+        )
 
 
 # ── Generic PBKDF2 (any hash) ────────────────────────────────────────────────

@@ -1561,6 +1561,23 @@ def parse_content_type(header: str) -> tuple[str, dict[str, str]]:
     return media_type, params
 
 
+# ========== Default Transport Provider ==========
+
+_default_transport_provider: Callable[[], requests.Session | None] | None = None
+
+
+def configure_default_transport_provider(provider: Callable[[], requests.Session | None] | None) -> None:
+    """Set a custom transport provider for default HTTP sessions (Go compat)."""
+    global _default_transport_provider
+    _default_transport_provider = provider
+
+
+def reset_default_transport() -> None:
+    """Reset the default transport provider to None (Go compat)."""
+    global _default_transport_provider
+    _default_transport_provider = None
+
+
 # ========== Cookie ==========
 
 

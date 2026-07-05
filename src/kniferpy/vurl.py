@@ -19,12 +19,21 @@ NormalizeOption = Callable[[Any], None]
 """Functional option for URL normalization (Go compat)."""
 
 __all__ = [
+    "ClasspathURLPrefix",
     "FileURLPrefix",
+    "JarURLPrefix",
     "JarURLSeparator",
     "URLBuilder",
     "URLProtocolFile",
     "URLProtocolJar",
+    "URLProtocolVFS",
+    "URLProtocolVFSFile",
+    "URLProtocolVFSZip",
+    "URLProtocolWSJar",
     "URLProtocolZip",
+    "WarURLPrefix",
+    "WarURLSeparator",
+    "DefaultMaxBytes",
     "NormalizeOption",
     "add_query",
     "append_query",
@@ -192,8 +201,17 @@ redact_userinfo = urlx.redact_userinfo
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
+ClasspathURLPrefix = urlx.ClasspathURLPrefix
 FileURLPrefix = urlx.FileURLPrefix
+JarURLPrefix = urlx.JarURLPrefix
+WarURLPrefix = urlx.WarURLPrefix
 URLProtocolFile = urlx.URLProtocolFile
 URLProtocolJar = urlx.URLProtocolJar
 URLProtocolZip = urlx.URLProtocolZip
+URLProtocolWSJar = urlx.URLProtocolWSJar
+URLProtocolVFSZip = urlx.URLProtocolVFSZip
+URLProtocolVFSFile = urlx.URLProtocolVFSFile
+URLProtocolVFS = urlx.URLProtocolVFS
 JarURLSeparator = urlx.JarURLSeparator
+WarURLSeparator = urlx.WarURLSeparator
+DefaultMaxBytes = urlx.DefaultMaxBytes

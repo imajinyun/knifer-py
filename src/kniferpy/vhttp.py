@@ -188,6 +188,8 @@ set_user_agent = httpx.set_user_agent
 snapshot_global_config = httpx.snapshot_global_config
 reset_global_config = httpx.reset_global_config
 configure_global_config = httpx.configure_global_config
+configure_default_transport_provider = httpx.configure_default_transport_provider
+reset_default_transport = httpx.reset_default_transport
 set_global_timeout = httpx.set_global_timeout
 get_global_timeout = httpx.get_global_timeout
 set_global_max_redirects = httpx.set_global_max_redirects
@@ -420,6 +422,8 @@ __all__ = [
     "snapshot_global_config",
     "reset_global_config",
     "configure_global_config",
+    "configure_default_transport_provider",
+    "reset_default_transport",
     "set_global_timeout",
     "get_global_timeout",
     "set_global_max_redirects",

@@ -21,11 +21,22 @@ GT = "&gt;"
 CONTENT_KEY = "content"
 
 _INVALID_RE = re.compile("[\x00-\x08\x0b-\x0c\x0e-\x1f]")
+InvalidRegex = "[\x00-\x08\x0b-\x0c\x0e-\x1f]"
 _COMMENT_RE = re.compile(r"<!--.+?-->", re.DOTALL)
+CommentRegex = r"(?s)<!--.+?-->"
 _DOCTYPE_RE = re.compile(r"<!(?:DOCTYPE|ENTITY)", re.IGNORECASE)
 _INT_RE = re.compile(r"[+-]?\d+")
 _FLOAT_RE = re.compile(r"[+-]?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][+-]?\d+)?")
 _ESCAPE_ENTITIES = {'"': QUOTE, "'": APOS}
+
+IndentDefault = 2
+DefaultCharset = "UTF-8"
+
+# ========== XMLError ==========
+
+class XMLError(DecodeError):
+    """XML-specific error with optional code and cause."""
+    pass
 
 
 # ========== Document / Element Tree ==========
@@ -383,6 +394,16 @@ def marshal_bean(bean: Any, root_tag: str = "root", *, pretty: bool = False) -> 
         d = dataclasses.asdict(bean)
         return marshal_map(d, root_tag, pretty=pretty)
     return marshal_map({"value": str(bean)}, root_tag, pretty=pretty)
+
+
+def marshal_string(v: Any, *, pretty: bool = False) -> str:
+    """Marshal any value to XML string (Go compat alias for marshal_bean)."""
+    if isinstance(v, dict):
+        return marshal_map(v, pretty=pretty)
+    if isinstance(v, list):
+        d = {"item": v}
+        return marshal_map(d, "root", pretty=pretty)
+    return marshal_bean(v, pretty=pretty)
 
 
 def write_to(doc: Document, *, pretty: bool = False) -> str:

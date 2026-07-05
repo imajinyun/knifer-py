@@ -13,6 +13,7 @@ from kniferpy.internal import cryptox
 ErrInvalidKey = cryptox.ErrInvalidKey
 ErrInvalidIV = cryptox.ErrInvalidIV
 ErrInvalidCipherText = cryptox.ErrInvalidCipherText
+ErrInvalidSM2Signature = cryptox.ErrInvalidSM2Signature
 ErrInvalidOTP = cryptox.ErrInvalidOTP
 ErrInvalidPasswordHash = cryptox.ErrInvalidPasswordHash
 ErrInvalidJWK = cryptox.ErrInvalidJWK
@@ -137,6 +138,8 @@ sign_params_sha256 = cryptox.sign_params_sha256
 validate_aes_key = cryptox.validate_aes_key
 validate_aes_iv = cryptox.validate_aes_iv
 validate_aes_gcm_nonce = cryptox.validate_aes_gcm_nonce
+validate_sm4_key = cryptox.validate_sm4_key
+validate_sm4_iv = cryptox.validate_sm4_iv
 
 # ── *WithOptions aliases (Go compat) ──────────────────────────────────────────
 
@@ -152,6 +155,7 @@ __all__ = [
     "ErrInvalidKey",
     "ErrInvalidIV",
     "ErrInvalidCipherText",
+    "ErrInvalidSM2Signature",
     "ErrInvalidOTP",
     "ErrInvalidPasswordHash",
     "ErrInvalidJWK",
@@ -250,4 +254,6 @@ __all__ = [
     "validate_aes_key",
     "validate_aes_iv",
     "validate_aes_gcm_nonce",
+    "validate_sm4_key",
+    "validate_sm4_iv",
 ]

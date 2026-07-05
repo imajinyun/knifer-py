@@ -651,8 +651,17 @@ def size(raw: str, *, timeout: float | None = None) -> int:
 
 # ── Constants ─────────────────────────────────────────────────────────────────
 
+ClasspathURLPrefix = "classpath:"
 FileURLPrefix = "file:"
+JarURLPrefix = "jar:"
+WarURLPrefix = "war:"
 URLProtocolFile = "file"
 URLProtocolJar = "jar"
 URLProtocolZip = "zip"
+URLProtocolWSJar = "wsjar"
+URLProtocolVFSZip = "vfszip"
+URLProtocolVFSFile = "vfsfile"
+URLProtocolVFS = "vfs"
 JarURLSeparator = "!/"
+WarURLSeparator = "*/"
+DefaultMaxBytes = 64 << 20  # 67108864

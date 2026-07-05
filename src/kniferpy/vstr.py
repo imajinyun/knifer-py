@@ -7,6 +7,7 @@ from kniferpy.internal import strx
 # ── Types (Go compat) ─────────────────────────────────────────────────────────
 
 EmojiOption = Callable[..., None]
+BOMType = str  # Go: type BOMType string
 
 # ── BOM constants ─────────────────────────────────────────────────────────────
 
@@ -20,6 +21,7 @@ BOM_UTF32_BE = "UTF-32BE"
 __all__ = [
     # Types
     "EmojiOption",
+    "BOMType",
     # BOM constants
     "BOM_NONE",
     "BOM_UTF8",

@@ -7,6 +7,7 @@ from kniferpy.internal.xmlx import (
     Document,
     Element,
     NamespaceCache,
+    XMLError,
     CONTENT_KEY,
     NBSP,
     AMP,
@@ -14,6 +15,10 @@ from kniferpy.internal.xmlx import (
     APOS,
     LT,
     GT,
+    InvalidRegex,
+    CommentRegex,
+    IndentDefault,
+    DefaultCharset,
 )
 
 # ── Go-compat type aliases ─────────────────────────────────────────────────────
@@ -89,6 +94,7 @@ to_bean = xmlx.to_bean
 # Serialize
 marshal_map = xmlx.marshal_map
 marshal_bean = xmlx.marshal_bean
+marshal_string = xmlx.marshal_string
 to_xml = xmlx.to_xml
 write_to = xmlx.write_to
 write_file = xmlx.write_file
@@ -107,6 +113,7 @@ __all__ = [
     "Document",
     "Element",
     "NamespaceCache",
+    "XMLError",
     "CONTENT_KEY",
     "NBSP",
     "AMP",
@@ -114,6 +121,10 @@ __all__ = [
     "APOS",
     "LT",
     "GT",
+    "InvalidRegex",
+    "CommentRegex",
+    "IndentDefault",
+    "DefaultCharset",
     "escape",
     "unescape",
     "clean_invalid",
@@ -151,6 +162,7 @@ __all__ = [
     "to_bean",
     "marshal_map",
     "marshal_bean",
+    "marshal_string",
     "to_xml",
     "write_to",
     "write_file",
