@@ -106,6 +106,17 @@ class ContentType:
     OCTET_STREAM = "application/octet-stream"
     EVENT_STREAM = "text/event-stream"
 
+    def __init__(self, value: str = "") -> None:
+        self._value = value
+
+    def string(self) -> str:
+        """Return the content type string (Go compat)."""
+        return self._value
+
+    def with_charset(self, charset: str) -> str:
+        """Return the content type with charset appended (Go compat)."""
+        return f"{self._value}; charset={charset}"
+
 
 # ========== HTTPError ==========
 
@@ -383,6 +394,32 @@ class HTTPRequest:
 
     def set_form_file(self, field: str, file_name: str, data: bytes, content_type: str = "") -> HTTPRequest:
         self.form_files.append(FormFile(field, file_name, data, content_type))
+        return self
+
+    def cookie_string(self, s: str) -> HTTPRequest:
+        """Set the Cookie header from a raw cookie string (Go compat)."""
+        self.headers[Header.COOKIE] = s
+        return self
+
+    def transport(self, t: Any) -> HTTPRequest:
+        """Set a custom transport (Go compat, stored as session)."""
+        self.session = t
+        return self
+
+    def client(self, c: Any) -> HTTPRequest:
+        """Set a custom client (Go compat, stored as session)."""
+        self.session = c
+        return self
+
+    def url_policy(self, p: URLPolicy) -> HTTPRequest:
+        """Set the URL policy (Go compat)."""
+        self.url_policy = p
+        return self
+
+    def form_file_reader(self, field: str, file_name: str, reader: Any) -> HTTPRequest:
+        """Set a form file from a reader (Go compat)."""
+        data = reader.read() if hasattr(reader, "read") else reader
+        self.form_files.append(FormFile(field, file_name, data if isinstance(data, bytes) else data.encode(), ""))
         return self
 
     def clone(self) -> HTTPRequest:
@@ -1196,6 +1233,10 @@ class SimpleServer:
             self._server.shutdown()
         if self._thread:
             self._thread.join(timeout=timeout)
+
+    def stop_with_context(self, ctx: Any = None) -> None:
+        """Stop the server with context (Go compat)."""
+        self.stop()
 
     def _parse_addr(self) -> tuple[str, str]:
         if ":" in self._addr:

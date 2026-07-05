@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, Callable
+
 from kniferpy.internal import httpx
 from kniferpy.internal.httpx import (
     # Types / Data Classes
@@ -469,4 +471,38 @@ __all__ = [
     "is_global_decode_url",
     "set_ignore_eof_error",
     "is_ignore_eof_error",
+    # Go-compat type aliases
+    "ContentDecoder",
+    "NewRequestFunc",
+    "MultipartWriterFactory",
+    "MultipartWriter",
+    "ServerOption",
+    "StaticOption",
+    "ListenAndServeFunc",
+    # Go-compat functions
+    "set_global_user_agent",
+    "get_global_user_agent",
+    "get_with_timeout_e_with_options",
+    "reset_server_starters",
 ]
+
+# ── Go-compat type aliases ──────────────────────────────────────────────────
+
+ContentDecoder = Callable[[Any], Any]
+NewRequestFunc = Callable[[str, str, Any], Any]
+MultipartWriterFactory = Callable[[Any], Any]
+MultipartWriter = Any
+ServerOption = Callable[[Any], None]
+StaticOption = Callable[[Any], None]
+ListenAndServeFunc = Callable[[Any], Any]
+
+# ── Go-compat standalone functions ──────────────────────────────────────────
+
+set_global_user_agent = httpx.set_user_agent
+get_global_user_agent = httpx.get_user_agent
+get_with_timeout_e_with_options = httpx.get_with_timeout_e
+
+
+def reset_server_starters() -> None:
+    """Reset server starters (Go compat, no-op in Python)."""
+    pass
