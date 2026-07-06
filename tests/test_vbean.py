@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import pytest
 
@@ -310,3 +310,121 @@ def test_new_options_defaults() -> None:
     opts = vbean.new_options()
     assert opts.weakly_typed is True
     assert opts.case_insensitive is True
+
+
+def test_tag_alias_list_and_semicolon_aliases() -> None:
+    @dataclass
+    class AliasTarget:
+        name: str = field(default="", metadata={"bean": ["nickname", "alias"]})
+        code: str = field(default="", metadata={"bean": "code,aliases=c1;c2"})
+
+    dst = AliasTarget()
+    vbean.decode({"ALIAS": "kim", "c2": "007"}, dst)
+
+    assert dst.name == "kim"
+    assert dst.code == "007"
+
+
+def test_tuple_set_frozenset_and_dict_key_conversion() -> None:
+    @dataclass
+    class TypesTarget:
+        pair: tuple[int, str] = (0, "")
+        numbers: set[int] = field(default_factory=set)
+        frozen: frozenset[int] = frozenset()
+        mapping: dict[int, bool] = field(default_factory=dict)
+
+    dst = TypesTarget()
+    vbean.decode(
+        {
+            "pair": ["7", 8],
+            "numbers": ["1", "2"],
+            "frozen": ["3", "4"],
+            "mapping": {"1": "true", "2": "false"},
+        },
+        dst,
+    )
+
+    assert dst.pair == (7, "8")
+    assert dst.numbers == {1, 2}
+    assert dst.frozen == frozenset({3, 4})
+    assert dst.mapping == {1: True, 2: False}
+
+
+def test_conversion_error_branches() -> None:
+    @dataclass
+    class TypesTarget:
+        values: list[int] = field(default_factory=list)
+        mapping: dict[str, int] = field(default_factory=dict)
+
+    with pytest.raises(ValidationError) as list_exc:
+        vbean.decode({"values": "not-list"}, TypesTarget())
+    with pytest.raises(ValidationError) as map_exc:
+        vbean.decode({"mapping": "not-map"}, TypesTarget())
+    assert list_exc.value.code == "knifer.bean.convert"
+    assert map_exc.value.code == "knifer.bean.convert"
+
+
+def test_plain_object_target_and_source_errors() -> None:
+    class SourceObj:
+        def __init__(self) -> None:
+            self.name = "plain"
+            self._hidden = "skip"
+
+    class TargetObj:
+        name: str
+
+        def __init__(self) -> None:
+            self.name = ""
+
+    dst = TargetObj()
+    vbean.decode(SourceObj(), dst)
+    assert dst.name == "plain"
+
+    with pytest.raises(ValidationError):
+        vbean.to_map(object())
+
+
+def test_decode_hook_timedelta_and_passthrough() -> None:
+    @dataclass
+    class TimeoutConfig:
+        delay: timedelta = timedelta()
+        name: str = ""
+
+    dst = TimeoutConfig()
+    opts = vbean.Options(decode_hook=vbean.string_to_timedelta_hook())
+    vbean.decode({"delay": "1h30m", "name": "job"}, dst, opts)
+    assert dst.delay == timedelta(hours=1, minutes=30)
+    assert dst.name == "job"
+
+    empty = TimeoutConfig(delay=timedelta(seconds=1))
+    vbean.decode({"delay": ""}, empty, opts)
+    assert empty.delay == timedelta(0)
+    invalid = TimeoutConfig()
+    with pytest.raises(ValidationError):
+        vbean.decode({"delay": "bad"}, invalid, opts)
+
+
+def test_compose_decode_hook_skips_none_and_updates_type() -> None:
+    seen: list[tuple[type | None, object]] = []
+
+    def to_text(from_type: type | None, to_type: object, value: object) -> object:
+        seen.append((from_type, value))
+        return str(value)
+
+    def add_suffix(from_type: type | None, to_type: object, value: object) -> object:
+        seen.append((from_type, value))
+        return f"{value}!"
+
+    hook = vbean.compose_decode_hook(None, to_text, add_suffix)
+    assert hook(int, str, 7) == "7!"
+    assert seen == [(int, 7), (str, "7")]
+
+
+def test_merge_with_options_aliases() -> None:
+    dst = Target()
+    vbean.merge_with_options(dst, [{"name": "kim"}, {"age": "30"}])
+    assert dst.name == "kim"
+    assert dst.age == 30
+    result = vbean.merge_result_with_options(dst, [{"active": "true"}])
+    assert result.matched == ["active"]
+    assert dst.active is True

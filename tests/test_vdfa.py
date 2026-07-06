@@ -197,3 +197,66 @@ def test_package_matcher_set_char_filter() -> None:
     assert vdfa.contains("b-a-d") is False
     # Restore the default so later tests keep the standard behaviour.
     vdfa.set_char_filter(vdfa.is_not_stop_char)
+
+
+def test_word_tree_empty_word_and_empty_text_edges() -> None:
+    tree = vdfa.new_word_tree()
+    tree.add_word(" - ")
+    assert tree.is_empty()
+    assert tree.match_all_words("") == []
+
+
+def test_set_char_filter_none_keeps_existing_filter() -> None:
+    tree = vdfa.new_word_tree(char_filter=lambda _c: True)
+    assert tree.set_char_filter(None) is tree
+    tree.add_word("bad")
+    assert not tree.is_match("b-a-d")
+
+
+def test_package_aliases_and_filter_mode() -> None:
+    vdfa.init(["ab", "abc"])
+
+    assert vdfa.contains_any("abc")
+    assert vdfa.contains_any_with_options("abc")
+    assert vdfa.get_found_first_any("abc").word == "ab"
+    assert vdfa.get_found_first_any_with_options("abc").word == "ab"
+    assert [w.word for w in vdfa.get_found_all_any("abc")] == ["ab"]
+    assert [w.word for w in vdfa.get_found_all_any_with_options("abc")] == ["ab"]
+    assert [w.word for w in vdfa.get_found_all_with_options("abc")] == ["ab"]
+    assert [w.word for w in vdfa.get_found_all_mode_with_options("abc", True, True)] == [
+        "ab",
+        "abc",
+    ]
+    assert vdfa.filter_any("abc") == "***"
+    assert vdfa.filter_any_with_options("abc") == "***"
+    assert vdfa.filter_with_options("abc") == "***"
+    assert vdfa.filter_mode("", True, True) == ""
+    assert vdfa.filter_mode("none", True, True) == "none"
+    assert vdfa.filter_mode("abc", True, True, lambda word: f"[{word.word}]") == "[abc]"
+    assert vdfa.filter_mode_with_options("abc", True, False) == "**c"
+    assert vdfa.new_word_tree_with_options().is_empty()
+    vdfa.init_with_options(["bad"])
+    assert vdfa.contains("bad")
+    vdfa.init_string_with_options("bad|evil", "|")
+    assert vdfa.contains("evil")
+
+
+def test_async_runner_init_and_reset() -> None:
+    calls: list[str] = []
+
+    def runner(fn):
+        calls.append("run")
+        fn()
+
+    vdfa.configure_async_runner(runner)
+    vdfa.init_async(["async"])
+    assert calls == ["run"]
+    assert vdfa.contains("async")
+    vdfa.init_string_async("later|soon", "|")
+    assert calls == ["run", "run"]
+    assert vdfa.contains("soon")
+    vdfa.init_string_async_with_options("x,y")
+    assert calls == ["run", "run", "run"]
+    assert vdfa.contains("x")
+    vdfa.reset_async_runner()
+    vdfa.configure_async_runner(None)

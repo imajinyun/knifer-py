@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from kniferpy import vcli
+from kniferpy.internal import clix
 from kniferpy.verr import KniferError, ValidationError
 
 # --- run / output -------------------------------------------------------------
@@ -79,6 +80,32 @@ def test_run_timeout() -> None:
 
 def test_output_returns_stdout() -> None:
     assert vcli.output(sys.executable, ["-c", "print('out')"]).strip() == "out"
+
+
+def test_limit_result_truncates_stderr() -> None:
+    result = vcli.ExecResult(stdout="abc", stderr="defgh", exit_code=7, duration=1.0)
+    limited, overflowed = clix._limit_result(result, 5)
+
+    assert overflowed is True
+    assert limited.stdout == "abc"
+    assert limited.stderr == "de"
+    assert limited.exit_code == 7
+    assert clix._limit_result(result, 0) == (result, False)
+
+
+def test_default_runner_bytes_stdin_and_merged_env(tmp_path: Path) -> None:
+    result = clix._default_runner(
+        sys.executable,
+        ["-c", "import os,sys; sys.stdout.write(os.environ['X'] + ':' + sys.stdin.read())"],
+        dir=tmp_path,
+        env={"X": "ok"},
+        stdin=b"bytes",
+        max_output_bytes=0,
+        timeout=2.0,
+    )
+
+    assert result.stdout == "ok:bytes"
+    assert result.exit_code == 0
 
 
 # --- colorize -----------------------------------------------------------------
@@ -229,3 +256,50 @@ def test_execute_handler_returns_exit_code() -> None:
     cmd = vcli.Command(name="tool", run=lambda inv: 7)
     out, err = _streams()
     assert cmd.execute([], stdout=out, stderr=err) == 7
+
+
+def test_execute_empty_command_raises() -> None:
+    out, err = _streams()
+    with pytest.raises(ValidationError):
+        clix._execute(vcli.Command(name=""), [], out, err)
+
+
+def test_render_help_skips_none_child() -> None:
+    root = vcli.Command(name="tool")
+    root.children.append(None)  # type: ignore[arg-type]
+    root.add(vcli.Command(name="run", summary="Run it"))
+
+    help_text = vcli.render_help(root)
+
+    assert "run" in help_text
+
+
+def test_flag_parser_parse_and_usage() -> None:
+    out = StringIO()
+    parser = vcli.new_flag_parser("tool", output=out)
+    assert parser.string("name", "world", "name") == "world"
+    assert parser.int("count", 1, "count") == 1
+    assert parser.bool("verbose", False, "verbose") is False
+    assert parser.bool("enabled", True, "enabled") is True
+    assert parser.duration("timeout", "1s", "timeout") == "1s"
+    parser.add_argument("--extra", default="x")
+    parser.add_flag("--dry-run")
+
+    result = parser.parse(["--name", "kim", "--count", "2", "--dry-run", "tail"])
+
+    assert result.args == ["tail"]
+    assert result.error is None
+    assert parser.parse(["--count", "bad"]).error is not None
+    parser.print_usage()
+    parser.print_help()
+    parser.usage()
+    assert "usage:" in out.getvalue()
+
+
+def test_flag_parser_uses_sys_argv(monkeypatch: pytest.MonkeyPatch) -> None:
+    parser = vcli.new_flag_parser("tool")
+    monkeypatch.setattr(sys, "argv", ["tool", "--unknown"])
+
+    result = parser.parse()
+
+    assert result.args == ["--unknown"]
