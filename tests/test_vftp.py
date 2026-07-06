@@ -31,6 +31,11 @@ class ExampleProvider:
         )
 
 
+class OversizeUploadProvider(ExampleProvider):
+    def upload(self, request: vftp.UploadRequest) -> vftp.UploadResponse:
+        return vftp.UploadResponse(remote_path=request.remote_path, size=10)
+
+
 def test_entry_type_constants() -> None:
     assert vftp.EntryType.UNKNOWN == "unknown"
     assert vftp.EntryType.FILE == "file"
@@ -40,6 +45,20 @@ def test_entry_type_constants() -> None:
 def test_list_request_valid() -> None:
     req = vftp.ListRequest(remote_dir="/tmp")
     req.validate()
+
+
+def test_request_clone_returns_distinct_request() -> None:
+    list_req = vftp.ListRequest(remote_dir="/tmp", recursive=True, metadata={"k": "v"})
+    list_clone = list_req.clone()
+    assert list_clone is not list_req
+    assert list_clone.remote_dir == "/tmp"
+    assert list_clone.metadata is list_req.metadata
+
+    download_req = vftp.DownloadRequest(remote_path="/tmp/file.txt", max_bytes=10)
+    assert download_req.clone() is not download_req
+
+    upload_req = vftp.UploadRequest(remote_path="/tmp/file.txt", content=b"abc", max_bytes=10)
+    assert upload_req.clone() is not upload_req
 
 
 def test_list_request_empty_path() -> None:
@@ -65,6 +84,11 @@ def test_download_request_empty_path() -> None:
 def test_download_request_negative_max_bytes() -> None:
     with pytest.raises(ValidationError, match="max bytes"):
         vftp.DownloadRequest(remote_path="/tmp/file.txt", max_bytes=-1).validate()
+
+
+def test_upload_request_negative_max_bytes() -> None:
+    with pytest.raises(ValidationError, match="max bytes"):
+        vftp.UploadRequest(remote_path="/tmp/file.txt", max_bytes=-1).validate()
 
 
 def test_upload_request_valid() -> None:
@@ -96,10 +120,29 @@ def test_client_upload() -> None:
     assert response.size == 5
 
 
+def test_standalone_helpers() -> None:
+    provider = ExampleProvider()
+    listed = vftp.list_dir(provider, vftp.ListRequest(remote_dir="/tmp"))
+    assert listed.entries[0].path == "/tmp/file.txt"
+
+    downloaded = vftp.download_file(provider, vftp.DownloadRequest(remote_path="/tmp/file.txt"))
+    assert downloaded.content == b"file content"
+
+    uploaded = vftp.upload_file(
+        provider, vftp.UploadRequest(remote_path="/tmp/new.txt", content=b"hello")
+    )
+    assert uploaded.remote_path == "/tmp/new.txt"
+    assert uploaded.size == 5
+
+
 def test_client_without_provider_raises() -> None:
     client = vftp.Client()
     with pytest.raises(KniferError, match="missing provider"):
         client.list(vftp.ListRequest(remote_dir="/tmp"))
+    with pytest.raises(KniferError, match="missing provider"):
+        client.download(vftp.DownloadRequest(remote_path="/tmp/file.txt"))
+    with pytest.raises(KniferError, match="missing provider"):
+        client.upload(vftp.UploadRequest(remote_path="/tmp/file.txt"))
 
 
 def test_client_download_limit_exceeded() -> None:
@@ -114,3 +157,9 @@ def test_client_upload_limit_exceeded() -> None:
         client.upload(
             vftp.UploadRequest(remote_path="/tmp/file.txt", content=b"hello", max_bytes=1)
         )
+
+
+def test_client_upload_response_limit_exceeded() -> None:
+    client = vftp.Client(provider=OversizeUploadProvider())
+    with pytest.raises(KniferError, match="uploaded 10 bytes"):
+        client.upload(vftp.UploadRequest(remote_path="/tmp/file.txt", content=b"x", max_bytes=5))
