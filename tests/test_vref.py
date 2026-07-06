@@ -6,6 +6,7 @@ import inspect
 import pytest
 
 from kniferpy import vref
+from kniferpy.internal import refx
 from kniferpy.verr import KniferError
 
 # --- test helpers ---------------------------------------------------------------
@@ -162,6 +163,7 @@ def test_has_field_dataclass() -> None:
 def test_has_field_plain_class() -> None:
     p = Profile("Alice")
     assert vref.has_field(p, "name") is True
+    assert vref.has_field(Profile, "name") is False
 
 
 def test_get_field_value() -> None:
@@ -216,6 +218,16 @@ def test_field_aliases_and_direct_fields() -> None:
     assert vref.get_fields_value_with_options(user, lambda name: name != "ignored") == ["alice", 30]
     vref.set_field_value_with_options(user, "name", "bob")
     assert user.name == "bob"
+
+
+def test_field_helpers_for_plain_objects_and_missing_aliases() -> None:
+    profile = Profile("Alice")
+    assert vref.get_public_field_names(profile) == []
+    assert vref.get_fields(profile) == []
+    assert vref.get_fields_value(profile) == []
+    assert vref.get_field(Profile, "name") is None
+    assert vref.get_field_map(Profile) == {}
+    assert vref.get_fields_directly(Profile, with_embedded_fields=True) == []
 
 
 def test_type_predicate_edge_cases() -> None:
@@ -276,11 +288,14 @@ def test_get_methods_with_filter() -> None:
 
 def test_public_method_variants_and_direct_methods() -> None:
     user = User("Alice")
+    greet_param = tuple(inspect.signature(user.greet).parameters.values())[0]
 
     assert vref.get_public_method(user, "greet") is not None
+    assert vref.get_public_method(user, "greet", greet_param) is not None
     assert vref.get_public_method(user, "missing") is None
     assert vref.get_method_of_obj(user, "greet", "hello") is None
     assert vref.get_method_ignore_case(user, "GREET") is not None
+    assert vref.get_method_ignore_case(user, "GREET", greet_param) is not None
     assert vref.get_method_ignore_case(user, "GREET", str) is None
     assert vref.get_method_by_name(user, "greet") is not None
     direct = vref.get_methods_directly(user)
@@ -363,6 +378,13 @@ def test_invoke_static_raw_method_and_checked_errors() -> None:
     assert exc_info.value.code == "knifer.ref.invoke_failed"
 
 
+def test_invoke_missing_and_failing_function_paths() -> None:
+    with pytest.raises(TypeError):
+        vref.invoke_func(lambda value: value, )
+    with pytest.raises(TypeError):
+        vref.invoke_static(lambda value: value)
+
+
 def test_new_instance_dataclass() -> None:
     result = vref.new_instance(User(name="Alice"))
     assert isinstance(result, User)
@@ -378,6 +400,16 @@ def test_new_instance_type_and_error_paths() -> None:
     assert isinstance(vref.new_instance(Profile, "Alice"), Profile)
     with pytest.raises(KniferError) as exc_info:
         vref.new_instance(42)
+    assert exc_info.value.code == "knifer.ref.new_instance"
+
+
+def test_new_instance_copy_failure_returns_knifer_error(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Copyable:
+        pass
+
+    monkeypatch.setattr(refx.copy, "copy", lambda _obj: (_ for _ in ()).throw(RuntimeError("copy failed")))
+    with pytest.raises(KniferError) as exc_info:
+        vref.new_instance(Copyable())
     assert exc_info.value.code == "knifer.ref.new_instance"
 
 

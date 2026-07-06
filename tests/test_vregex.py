@@ -19,6 +19,8 @@ def test_match_no_match() -> None:
 
 
 def test_is_match_anchored() -> None:
+    assert vregex.is_match("", "x")
+    assert not vregex.is_match("", "")
     assert vregex.is_match(r"\d+", "123")
     assert not vregex.is_match(r"\d+", "123abc")
 
@@ -99,14 +101,17 @@ def test_get_group_by_name_no_match() -> None:
 
 def test_get_group_by_name_invalid() -> None:
     assert vregex.get_group_by_name(r"(\d{4})", "2026", "year") == ""
+    assert vregex.get_group_by_name(r"(?P<year>\d{4})", "2026", "missing") == ""
 
 
 def test_find_all_group_no_match() -> None:
     assert vregex.find_all_group(r"(\d)(\w)", "abc", 1) == []
+    assert vregex.find_all_group(r"(\d)", "1a", 99) == []
 
 
 def test_named_groups_no_match() -> None:
     assert vregex.named_groups(r"(?P<k>\w+)=(?P<v>\d+)", "abc") == {}
+    assert vregex.named_groups(r"(?P<k>\w+)=(?P<v>\d+)", "x=") == {}
 
 
 def test_named_groups_invalid_pattern() -> None:
@@ -219,6 +224,9 @@ def test_index_of() -> None:
     assert mr.text == "123"
     assert mr.start == 3
     assert mr.end == 6
+    fallback = vregex.index_of_re(re.compile(r"\d+"), "abc123")
+    assert fallback is not None
+    assert fallback.groups == ["123"]
 
 
 def test_index_of_no_match() -> None:
@@ -235,6 +243,9 @@ def test_last_index_of() -> None:
     assert mr.text == "3"
     assert mr.start == 5
     assert mr.end == 6
+    fallback = vregex.last_index_of_re(re.compile(r"\d+"), "a1b2")
+    assert fallback is not None
+    assert fallback.text == "2"
 
 
 def test_last_index_of_no_match() -> None:
@@ -258,6 +269,7 @@ def test_get_all_groups_with_group0() -> None:
 
 def test_get_all_groups_no_match() -> None:
     assert vregex.get_all_groups(r"\d+", "abc") == []
+    assert vregex.get_all_groups(r"(", "abc") == []
 
 
 def test_get_all_group_names() -> None:
@@ -266,6 +278,7 @@ def test_get_all_group_names() -> None:
 
 def test_get_all_group_names_no_match() -> None:
     assert vregex.get_all_group_names(r"(?P<k>\d+)", "abc") == {}
+    assert vregex.get_all_group_names(r"(", "abc") == {}
 
 
 # ========== New: ExtractMulti / ExtractMultiAndDelPre ==========
@@ -273,6 +286,7 @@ def test_get_all_group_names_no_match() -> None:
 
 def test_extract_multi() -> None:
     assert vregex.extract_multi(r"(\d+)-(\w+)", "id 12-abc", "$2-$1") == "abc-12"
+    assert vregex.extract_multi(r"(\d+)", "id 12", "$0") == "12"
 
 
 def test_extract_multi_no_match() -> None:
@@ -297,11 +311,16 @@ def test_extract_multi_and_del_pre_no_match() -> None:
     assert holder[0] == "abc"
 
 
+def test_extract_multi_and_del_pre_invalid_holder() -> None:
+    assert vregex.extract_multi_and_del_pre_re(re.compile(r"\d+"), "", "$0") == ""
+
+
 # ========== New: TemplateVars ==========
 
 
 def test_template_vars() -> None:
     assert vregex.template_vars("$1-$2-$1") == [2, 1]
+    assert vregex.template_vars("$10-$2") == [10, 2]
 
 
 def test_template_vars_empty() -> None:
@@ -344,6 +363,7 @@ def test_internal_match_result_fallback_and_none_branches() -> None:
     assert vregex.get_re_ok(None, "abc", 0) == ("", False)
     assert vregex.get_by_name_re(None, "abc", "x") == ""
     assert vregex.get_by_name_re(regex, "abc", "") == ""
+    assert vregex.get_re_ok(regex, "abc", -1) == ("", False)
 
 
 def test_precompiled_regex_helpers() -> None:
@@ -361,6 +381,7 @@ def test_precompiled_regex_helpers() -> None:
     assert vregex.get_all_group_names_re(regex) == ["num", "word"]
     assert vregex.find_all_group_re(regex, "12-a 34-b", "word") == ["a", "b"]
     assert vregex.find_all_group_re(regex, "12-a", "missing") == []
+    assert vregex.find_all_group_re(regex, "no match", "word") == []
     assert vregex.del_all_re(regex, "12-a x 34-b") == " x "
     assert vregex.del_first_re(regex, "12-a x 34-b") == " x 34-b"
     assert vregex.replace_first_re(regex, "12-a x 34-b", r"\g<word>") == "a x 34-b"
@@ -378,6 +399,7 @@ def test_compiled_delete_extract_variants_and_empty_content() -> None:
     assert vregex.del_pre_re(regex, "abc") == "abc"
     assert vregex.del_pre_re(regex, "") == ""
     assert vregex.extract_multi_re(regex, "12-a", r"\2-\1") == "a-12"
+    assert vregex.extract_multi_re(regex, "abc", r"\2") == "abc"
     assert vregex.extract_multi_re(regex, "", r"\2") == ""
     assert vregex.extract_multi_and_del_pre_re(regex, "xx 12-a yy", r"\2") == "a yy"
     assert vregex.extract_multi_and_del_pre_re(regex, "abc", r"\2") == "abc"

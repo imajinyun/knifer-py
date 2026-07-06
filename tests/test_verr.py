@@ -297,6 +297,11 @@ def test_get_stack_from_error_with_withstack() -> None:
     assert stack == "my custom stack"
 
 
+def test_get_stack_from_plain_error_falls_back() -> None:
+    stack = get_stack_from_error(ValueError("plain"))
+    assert isinstance(stack, str)
+
+
 def test_format_stack_frame() -> None:
     from kniferpy.internal.errx import format_stack_frame
     import traceback
@@ -445,6 +450,14 @@ def test_collector_with_runner() -> None:
     assert len(runs) == 1
 
 
+def test_collector_default_runner_collects_background_error() -> None:
+    c = new_collector()
+    c.go_run(lambda: (_ for _ in ()).throw(ValueError("boom")), "background %s", "job")
+    ok, err = c.wait_until(1.0)
+    assert ok is False
+    assert isinstance(err, ValueError)
+
+
 def test_collector_wait_until_no_error() -> None:
     c = new_collector()
     ok, err = c.wait_until(0.1)
@@ -481,6 +494,12 @@ def test_new_collector_with_options_runner() -> None:
     c = new_collector_with_options(runner=lambda fn: runs.append(fn) or fn())
     c.go_run(lambda: None)
     assert len(runs) == 1
+
+
+def test_new_collector_with_options_timer_factory_field() -> None:
+    timer = TimerFactory(0.01)
+    c = new_collector_with_options(timer_factory=timer)
+    assert getattr(c, "_timer_factory") is timer
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -544,11 +563,14 @@ def test_error_is_multierror() -> None:
     sub = KniferError("sub", code="sub.code")
     err.add(sub)
     assert error_is(err, "sub.code") is True
+    assert error_is(err, KniferError) is True
+    assert not error_is(err, KeyError)
 
 
 def test_error_is_panic_error() -> None:
     panic = PanicError("value", cause=ValueError("inner"))
     assert error_is(panic, ValueError) is True
+    assert not error_is(PanicError("value"), ValueError)
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -608,6 +630,29 @@ def test_must_exit_with_log_no_error() -> None:
 
 def test_must_exit_with_panic_no_error() -> None:
     must_exit_with_panic(None)  # should not exit
+
+
+def test_must_exit_variants_exit_and_log() -> None:
+    calls: list[tuple[str, str]] = []
+
+    def log_func(level: str, message: str, stack: str) -> None:
+        calls.append((level, message))
+
+    configure_default_log_func(log_func)
+    try:
+        with pytest.raises(SystemExit) as exit_one:
+            must_exit(ValueError("boom"))
+        with pytest.raises(SystemExit) as exit_code:
+            must_exit_with_code(ValueError("bad"), 7)
+        with pytest.raises(SystemExit) as exit_log:
+            must_exit_with_log(ValueError("custom"), log_func)
+    finally:
+        reset_default_log_func()
+
+    assert exit_one.value.code == 1
+    assert exit_code.value.code == 7
+    assert exit_log.value.code == 1
+    assert calls == [("error", "boom"), ("error", "bad"), ("error", "custom")]
 
 
 def test_must_exit_with_panic_with_error() -> None:
