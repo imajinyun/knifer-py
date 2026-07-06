@@ -1,6 +1,7 @@
 import pytest
 
 from kniferpy import vgeo
+from kniferpy.internal import geox
 from kniferpy.verr import ValidationError
 from kniferpy.vgeo import Coord, CoordType
 
@@ -51,3 +52,51 @@ def test_in_china_boundary() -> None:
 def test_distance_one_degree_latitude() -> None:
     d = vgeo.distance(Coord(lng=0, lat=0), Coord(lng=0, lat=1))
     assert abs(d - 111195) < 200
+
+
+def test_bd09mc_round_trips() -> None:
+    wgs = Coord(lng=116.397389, lat=39.908722)
+    gcj = vgeo.wgs84_to_gcj02(wgs)
+    bd = vgeo.gcj02_to_bd09(gcj)
+
+    bdmc_from_wgs = vgeo.wgs84_to_bd09mc(wgs)
+    bdmc_from_gcj = vgeo.gcj02_to_bd09mc(gcj)
+    bdmc_from_bd = vgeo.bd09_to_bd09mc(bd)
+
+    assert isinstance(vgeo.bd09mc_to_wgs84(bdmc_from_wgs), Coord)
+    assert isinstance(vgeo.bd09mc_to_gcj02(bdmc_from_gcj), Coord)
+    assert isinstance(vgeo.bd09mc_to_bd09(bdmc_from_bd), Coord)
+
+
+def test_convert_dispatch_for_bd09mc() -> None:
+    coord = Coord(lng=116.397389, lat=39.908722)
+    bd = vgeo.wgs84_to_bd09(coord)
+    bdmc = vgeo.convert(coord, CoordType.WGS84, CoordType.BD09MC)
+
+    assert vgeo.convert(bdmc, CoordType.BD09MC, CoordType.WGS84)
+    assert vgeo.convert(vgeo.wgs84_to_gcj02(coord), CoordType.GCJ02, CoordType.BD09MC)
+    assert vgeo.convert(bdmc, CoordType.BD09MC, CoordType.GCJ02)
+    assert vgeo.convert(bd, CoordType.BD09, CoordType.BD09MC)
+    assert vgeo.convert(bdmc, CoordType.BD09MC, CoordType.BD09)
+
+
+def test_internal_mercator_helpers_and_matrix_edges() -> None:
+    assert geox._lat_mercator(geox._y_mercator(30.0)) == pytest.approx(30.0)
+    assert geox._convert_mct(0.0) != 0.0
+    assert -90 <= geox._bd09mc_to_lat(0.0) <= 90
+
+
+def test_convert_unsupported_registry_entry(monkeypatch: pytest.MonkeyPatch) -> None:
+    coord = Coord(lng=116.0, lat=39.0)
+    original = dict(geox._CONVERTERS)
+    monkeypatch.setattr(geox, "_CONVERTERS", {})
+
+    with pytest.raises(ValidationError) as exc_info:
+        vgeo.convert(coord, CoordType.WGS84, CoordType.GCJ02)
+
+    assert exc_info.value.code == "knifer.geo.unsupported_conversion"
+    monkeypatch.setattr(geox, "_CONVERTERS", original)
+
+
+def test_geo_error_alias() -> None:
+    assert vgeo.GeoError is ValidationError

@@ -144,3 +144,87 @@ def test_client_token_limit_exceeded() -> None:
 
 def test_client_provider_is_protocol() -> None:
     assert isinstance(ExampleProvider(), vtok.Provider)
+
+
+def test_response_clone_is_shallow_copy() -> None:
+    token_response = vtok.TokenizeResponse(
+        text="hello",
+        tokens=[vtok.Token(text="hello", metadata={"kind": "word"})],
+        metadata={"source": "test"},
+    )
+    keyword_response = vtok.KeywordsResponse(
+        text="hello",
+        keywords=[vtok.Keyword(text="hello", score=1.0, metadata={"kind": "word"})],
+        metadata={"source": "test"},
+    )
+
+    cloned_tokens = token_response.clone()
+    cloned_keywords = keyword_response.clone()
+
+    assert cloned_tokens is not token_response
+    assert cloned_tokens.tokens is token_response.tokens
+    assert cloned_tokens.metadata is token_response.metadata
+    assert cloned_keywords is not keyword_response
+    assert cloned_keywords.keywords is keyword_response.keywords
+
+
+def test_ngram_bigram_and_trigram_edges() -> None:
+    assert vtok.ngram("abcd", 2) == ["ab", "bc", "cd"]
+    assert vtok.bigram("abc") == ["ab", "bc"]
+    assert vtok.trigram("abcd") == ["abc", "bcd"]
+    assert vtok.ngram("abc", 0) == []
+    assert vtok.ngram("abc", 5) == ["abc"]
+    assert vtok.ngram("", 5) == []
+
+
+def test_filter_words_and_stop_words() -> None:
+    assert vtok.filter_words("a bb ccc", min_len=2) == ["bb", "ccc"]
+    assert vtok.filter_words("abc-123_xyz!", allowed_chars="abc123") == ["abc", "123"]
+    assert vtok.remove_stop_words(["the", "quick", "and", "brown"]) == ["quick", "brown"]
+    assert vtok.remove_stop_words(["foo", "bar"], {"foo"}) == ["bar"]
+    assert vtok.is_stop_word("The")
+    assert not vtok.is_stop_word("knifer")
+    assert vtok.is_stop_word("foo", {"foo"})
+
+
+def test_simple_provider_tokenize_positions_and_limit() -> None:
+    provider = vtok.new_simple_provider()
+
+    response = provider.tokenize(vtok.TokenizeRequest(text="hello, hello world", max_tokens=2))
+
+    assert response.text == "hello, hello world"
+    assert [token.text for token in response.tokens] == ["hello", "hello"]
+    assert response.tokens[0].start == 0
+    assert response.tokens[0].end == 5
+    assert response.tokens[0].position == 0
+    assert response.tokens[0].weight == 1.0
+    assert response.tokens[1].start == 7
+
+
+def test_simple_provider_keywords_limit_and_stop_words() -> None:
+    provider = vtok.SimpleProvider()
+
+    response = provider.keywords(vtok.KeywordsRequest(text="the apple apple banana", limit=1))
+
+    assert response.text == "the apple apple banana"
+    assert len(response.keywords) == 1
+    assert response.keywords[0].text == "apple"
+    assert response.keywords[0].score == pytest.approx(2 / 3)
+
+
+def test_standalone_tokenize_and_keywords_helpers() -> None:
+    provider = ExampleProvider()
+
+    tokenized = vtok.tokenize(provider, vtok.TokenizeRequest(text="南京市长江大桥"))
+    keywords = vtok.keywords(provider, vtok.KeywordsRequest(text="南京市长江大桥"))
+
+    assert [token.text for token in tokenized.tokens] == ["南京", "长江大桥"]
+    assert [keyword.text for keyword in keywords.keywords] == ["南京", "长江大桥"]
+
+
+def test_error_sentinels_have_codes() -> None:
+    assert vtok.ErrInvalidTokenizeRequest.code == "knifer.tok.invalid_tokenize_request"
+    assert vtok.ErrInvalidKeywordsRequest.code == "knifer.tok.invalid_keywords_request"
+    assert vtok.ErrInputLimitExceeded.code == "knifer.tok.input_limit_exceeded"
+    assert vtok.ErrTokenLimitExceeded.code == "knifer.tok.token_limit_exceeded"
+    assert vtok.ErrMissingProvider.code == "knifer.tok.missing_provider"

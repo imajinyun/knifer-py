@@ -122,3 +122,90 @@ def test_intersect_optimization() -> None:
     b = vset.New(2, 3, 4, 5, 6, 7, 8, 9, 10)
     i = a.intersect(b)
     assert sorted(i.members()) == [2, 3]
+
+
+def test_custom_json_unmarshal_and_marshal_json() -> None:
+    s = vset.New(1, 2)
+    marshal_opt = vset.WithSetMarshalFunc(lambda values: b"custom")
+    unmarshal_opt = vset.WithSetUnmarshalFunc(lambda data: [3, 4])
+
+    assert s.marshal_json([marshal_opt]) == b"custom"
+    s.unmarshal_json(b"ignored", [unmarshal_opt])
+    assert sorted(s.members()) == [1, 2, 3, 4]
+    s2 = vset.Set.from_json("ignored", [unmarshal_opt])
+    assert sorted(s2.members()) == [3, 4]
+
+
+def test_yaml_helpers_and_fallback(monkeypatch) -> None:
+    s = vset.New("a", "b")
+
+    dumped = s.to_yaml()
+    assert "a" in dumped
+    assert sorted(vset.Set.from_yaml(dumped).members()) == ["a", "b"]
+    assert sorted(s.marshal_yaml()) == ["a", "b"]
+
+    target = vset.New()
+    target.unmarshal_yaml(["x", "y"])
+    assert sorted(target.members()) == ["x", "y"]
+    target.unmarshal_yaml("not-list")
+    assert sorted(target.members()) == ["x", "y"]
+
+
+def test_bulk_set_helpers_and_relationships() -> None:
+    s = vset.New(1)
+    s.add_all(2, 3)
+    assert s.contains_all(1, 2, 3)
+    assert not s.contains_all(1, 4)
+    assert vset.New(1, 2).is_subset(s)
+    assert s.is_superset(vset.New(1, 2)) is False
+    assert vset.New(1, 2).is_superset(s) is True
+    assert sorted(s.symmetric_difference(vset.New(3, 4)).members()) == [1, 2, 4]
+    assert sorted(s.difference(vset.New(2)).members()) == [1, 3]
+    assert s.to_slice() == s.members()
+    assert not s.is_empty()
+    assert s.size() == 3
+    s.remove_all(1, 2)
+    assert sorted(s.members()) == [3]
+    clone = s.clone()
+    assert clone == s
+    assert clone is not s
+    s.clear()
+    assert s.is_empty()
+
+
+def test_for_each_filter_map_reduce() -> None:
+    s = vset.New(1, 2, 3)
+    seen: list[int] = []
+    s.for_each(seen.append)
+
+    assert sorted(seen) == [1, 2, 3]
+    assert sorted(s.filter(lambda item: item % 2 == 1).members()) == [1, 3]
+    assert sorted(s.map(lambda item: item * 10).members()) == [10, 20, 30]
+    assert s.reduce(lambda total, item: total + item, 0) == 6
+
+
+def test_more_typed_constructors_and_type_aliases() -> None:
+    assert vset.NewInt32(1).contains(1)
+    assert vset.NewUint(1).contains(1)
+    assert vset.NewUint32(1).contains(1)
+    assert vset.NewUint64(1).contains(1)
+    assert isinstance(vset.NewInt(1), vset.Set)
+    assert isinstance(vset.NewString("x"), vset.Set)
+
+
+def test_plain_set_helpers() -> None:
+    items = vset.new(1, 2, 2)
+    other = vset.from_iterable([2, 3])
+
+    assert items == {1, 2}
+    assert other == {2, 3}
+    assert vset.contains(items, 1)
+    assert vset.union(items, other) == {1, 2, 3}
+    assert vset.intersect(items, other) == {2}
+    assert vset.sub(items, other) == {1}
+    assert vset.equal(items, {2, 1})
+    assert sorted(vset.members(items)) == [1, 2]
+
+
+def test_set_equality_with_non_set() -> None:
+    assert (vset.New(1) == {1}) is False
