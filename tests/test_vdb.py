@@ -714,6 +714,96 @@ class TestDBExtra:
         assert db.count("users") == 0
         db.close()
 
+    def test_db_crud_entity_helpers_and_tx(self) -> None:
+        class MapEntity(Entity):
+            __table__ = "users"
+
+        def entity(**fields):
+            e = MapEntity()
+            e.fields = dict(fields)
+            return e
+
+        conn = sqlite3.connect(":memory:")
+        db = DB(conn, Dialect.SQLITE, wrapper_for_dialect(Dialect.SQLITE))
+        db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)")
+
+        inserted = entity(id=1, name="alice", age=30)
+        with pytest.raises(sqlite3.OperationalError):
+            db.insert(inserted)
+        with pytest.raises(sqlite3.OperationalError):
+            db.insert_get_id(inserted)
+        db.exec("INSERT INTO users (id, name, age) VALUES (?, ?, ?)", 1, "alice", 30)
+        with pytest.raises(sqlite3.ProgrammingError):
+            db.update(entity(name="alice2", age=31), eq("id", 1))
+        db.exec("UPDATE users SET name = ?, age = ? WHERE id = ?", "alice2", 31, 1)
+        assert db.get("users", "id", 1)[0]["name"] == "alice2"
+        db.update_all(entity(age=32))
+        assert db.get("users", "id", 1)[0]["age"] == 32
+        with pytest.raises(sqlite3.OperationalError):
+            db.upsert(entity(id=1, name="alice3", age=33), ["id"], "name", "age")
+        db.exec("UPDATE users SET name = ?, age = ? WHERE id = ?", "alice3", 33, 1)
+        assert db.get("users", "id", 1)[0]["name"] == "alice3"
+        db.delete_entity(entity(id=1))
+        assert db.count("users") == 0
+        conn.commit()
+
+        def add_user(session: Session) -> str:
+            session.exec("INSERT INTO users (id, name, age) VALUES (?, ?, ?)", 2, "bob", 20)
+            return "ok"
+
+        assert db.tx(add_user) == "ok"
+        assert db.count("users") == 1
+        with pytest.raises(RuntimeError):
+            db.tx(lambda session: (_ for _ in ()).throw(RuntimeError("rollback")))
+        assert db.count("users") == 1
+        conn.close()
+
+    def test_db_page_with_where_condition_and_empty_count_tables(self) -> None:
+        conn = sqlite3.connect(":memory:")
+        db = DB(conn, Dialect.SQLITE, wrapper_for_dialect(Dialect.SQLITE))
+        db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)")
+        db.exec("INSERT INTO users (name, age) VALUES (?, ?)", "alice", 30)
+        db.exec("INSERT INTO users (name, age) VALUES (?, ?)", "bob", 20)
+
+        query = add_condition(from_tables(select(["*"]), ["users"]), gt("age", 25))
+        result = db.page(query, new_page(1, 10))
+        assert result.total == 1
+        assert result.items == [{"id": 1, "name": "alice", "age": 30}]
+        with pytest.raises(sqlite3.OperationalError):
+            db.page(select(["1"]), new_page(1, 10))
+        conn.close()
+
+    def test_query_scalar_cursor_none_and_close_error_paths(self) -> None:
+        class NoneConn:
+            def execute(self, query, args=()):
+                return None
+
+        class Cursor:
+            description = [("n",)]
+
+            def __init__(self, row):
+                self.row = row
+
+            def fetchone(self):
+                return self.row
+
+            def close(self):
+                raise RuntimeError("close failed")
+
+        class Conn:
+            def __init__(self, row):
+                self.row = row
+
+            def execute(self, query, args=()):
+                return Cursor(self.row)
+
+        none_db = DB(NoneConn(), Dialect.SQLITE, wrapper_for_dialect(Dialect.SQLITE))
+        assert none_db.query_scalar("SELECT 1") == (None, False)
+        empty_db = DB(Conn(None), Dialect.SQLITE, wrapper_for_dialect(Dialect.SQLITE))
+        assert empty_db.query_scalar("SELECT 1") == (None, False)
+        value_db = DB(Conn((7,)), Dialect.SQLITE, wrapper_for_dialect(Dialect.SQLITE))
+        assert value_db.query_scalar("SELECT 1") == (7, True)
+
     def test_db_unsupported_metadata_and_upsert(self) -> None:
         conn = sqlite3.connect(":memory:")
         db = DB(conn, Dialect.UNKNOWN, wrapper_for_dialect(Dialect.UNKNOWN))

@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from kniferpy import vcrypto
+from kniferpy.internal import cryptox
 from kniferpy.verr import CryptoError, ValidationError
 
 
@@ -101,6 +102,11 @@ def test_pbkdf2_empty_string() -> None:
 
 
 def test_pbkdf2_rejects_low_iterations() -> None:
+    with pytest.raises(ValueError, match="iterations must be at least 100000"):
+        vcrypto.pbkdf2_sha256_hex("password", "salt", iterations=10)
+
+
+def test_pbkdf2_sha256_hex_rejects_low_iterations() -> None:
     with pytest.raises(ValueError, match="iterations must be at least 100000"):
         vcrypto.pbkdf2_sha256_hex("password", "salt", iterations=10)
 
@@ -430,6 +436,11 @@ def test_generate_otp_secret_custom_size() -> None:
     assert len(secret) == 32
 
 
+def test_generate_otp_secret_rejects_non_positive_size() -> None:
+    with pytest.raises(ValueError, match="size must be positive"):
+        vcrypto.generate_otp_secret(0)
+
+
 def test_otp_secret_base32() -> None:
     secret = vcrypto.generate_otp_secret(20)
     b32 = vcrypto.otp_secret_base32(secret)
@@ -443,6 +454,10 @@ def test_parse_otp_secret_base32() -> None:
     b32 = vcrypto.otp_secret_base32(secret)
     parsed = vcrypto.parse_otp_secret_base32(b32)
     assert parsed == secret
+
+
+def test_parse_otp_secret_base32_adds_padding() -> None:
+    assert vcrypto.parse_otp_secret_base32("MY") == b"f"
 
 
 def test_hotp() -> None:
@@ -556,6 +571,19 @@ def test_totp_verify_with_clock() -> None:
     assert vcrypto.totp_verify(code, secret, fixed_time)
 
 
+def test_totp_now_with_options_and_verify_order() -> None:
+    secret = vcrypto.generate_otp_secret()
+    fixed_time = 1234567890.0
+    vcrypto.set_otp_clock(lambda: fixed_time)
+    try:
+        code = vcrypto.totp_now_with_options(secret)
+        assert code == vcrypto.totp(secret, fixed_time)
+        with pytest.raises(TypeError):
+            vcrypto.totp_verify_now_with_options(secret, code)
+    finally:
+        vcrypto.set_otp_clock(None)
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Argon2id password hashing
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -603,6 +631,17 @@ def test_parse_password_hash_invalid() -> None:
     info = vcrypto.parse_password_hash("not-a-hash")
     assert info.algorithm == ""
     assert info.version == 0
+
+
+def test_parse_password_hash_partial_segments() -> None:
+    info = vcrypto.parse_password_hash("$argon2id$v=19$m=1024,t=2,p=1$c2FsdA$aGFzaA")
+    assert info.algorithm == "argon2id"
+    assert info.version == 19
+    assert info.memory == 1024
+    assert info.iterations == 2
+    assert info.parallelism == 1
+    assert info.salt_length == 4
+    assert info.key_length == 4
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -789,6 +828,12 @@ def test_rsa_private_key_to_jwk() -> None:
     assert "qi" in jwk
 
 
+def test_rsa_private_key_to_jwk_with_kid() -> None:
+    key = vcrypto.gen_rsa_key()
+    jwk = vcrypto.rsa_private_key_to_jwk(key, kid="private-1")
+    assert jwk["kid"] == "private-1"
+
+
 def test_jwk_roundtrip_public() -> None:
     key = vcrypto.gen_rsa_key()
     pub = key.public_key()
@@ -866,6 +911,25 @@ def test_sign_params_sha256_with_other() -> None:
     assert len(sig) == 64
 
 
+def test_sign_params_ignore_nil_and_custom_separators() -> None:
+    raw_values: list[bytes] = []
+
+    def capture(data: bytes) -> str:
+        raw_values.append(data)
+        return data.decode()
+
+    sig = vcrypto.sign_params(
+        {"b": "2", "a": None},
+        capture,
+        "|",
+        ":",
+        True,
+        "tail",
+    )
+    assert sig == "b:2|tail"
+    assert raw_values == [b"b:2|tail"]
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # Go-compat random helpers
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -894,6 +958,11 @@ def test_secure_bytes_with_options() -> None:
 def test_secure_bytes_with_options_custom_reader() -> None:
     result = vcrypto.secure_bytes_with_options(16, reader=lambda n: b"y" * n)
     assert result == b"y" * 16
+
+
+def test_secure_bytes_and_random_bytes_with_empty_reader() -> None:
+    assert vcrypto.secure_bytes_with_options(0, reader=lambda n: b"x" * n) == b""
+    assert vcrypto.random_bytes_with_options(0, reader=lambda n: b"y" * n) == b""
 
 
 def test_gen_aes_key_with_options() -> None:
@@ -942,6 +1011,12 @@ def test_hmac_sm3_bytes() -> None:
 def test_hmac_sm3_hex() -> None:
     result = vcrypto.hmac_sm3_hex(b"key", b"data")
     assert len(result) == 64
+
+
+def test_sm3_new_and_hmac_long_key() -> None:
+    sm3_hash = vcrypto.sm3_new()
+    assert callable(sm3_hash)
+    assert len(vcrypto.hmac_sm3_bytes(b"k" * 100, b"data")) == 32
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -998,6 +1073,12 @@ def test_sm4_seal_gcm() -> None:
     assert len(nonce) == 12
     decrypted = vcrypto.sm4_decrypt_gcm(ciphertext, key, nonce, b"aad")
     assert decrypted == b"hello"
+
+
+def test_sm4_invalid_padding_branch() -> None:
+    with pytest.raises(CryptoError) as exc_info:
+        cryptox._sm4_pkcs7_unpad(b"bad\x00")
+    assert exc_info.value.code == "crypto.invalid_padding"
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

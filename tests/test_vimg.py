@@ -137,6 +137,10 @@ class TestInfo:
         assert h == 8
         assert fmt == "jpeg"
 
+    def test_info_invalid_data(self) -> None:
+        with pytest.raises(ErrImageInvalidInput):
+            info(b"not an image")
+
 
 class TestThumbnail:
     def test_thumbnail_downscale(self) -> None:
@@ -157,6 +161,13 @@ class TestThumbnail:
         img = Image.open(io.BytesIO(result))
         assert img.format == "JPEG"
         assert img.width <= 32
+
+    def test_thumbnail_portrait_downscale(self) -> None:
+        data = _make_png(20, 100)
+        result = thumbnail(data, 40, "png")
+        img = Image.open(io.BytesIO(result))
+        assert img.height == 40
+        assert img.width == 8
 
     def test_thumbnail_invalid_max_edge(self) -> None:
         data = _make_png(32, 32)
@@ -183,6 +194,10 @@ class TestConvertFormat:
         result = convert_format(buf.getvalue(), "png")
         out = Image.open(io.BytesIO(result))
         assert out.format == "PNG"
+
+    def test_convert_invalid_data(self) -> None:
+        with pytest.raises(ErrImageInvalidInput):
+            convert_format(b"not an image", "png")
 
 
 class TestResize:
@@ -259,12 +274,25 @@ class TestRotate:
         assert result.width == 100
         assert result.height == 80
 
+    def test_rotate_negative_and_invalid_angle(self) -> None:
+        img = Image.new("RGB", (100, 80))
+        result = rotate(img, -90.0, (255, 255, 255, 255))
+        assert result.width == 80 and result.height == 100
+        with pytest.raises(ErrImageInvalidInput):
+            rotate(img, float("nan"), (255, 255, 255, 255))
+
 
 class TestGrayscale:
     def test_grayscale(self) -> None:
         img = Image.new("RGB", (10, 10), (255, 0, 0))
         result = grayscale(img)
         assert result.width == 10 and result.height == 10
+
+    def test_grayscale_rgba_preserves_alpha(self) -> None:
+        img = Image.new("RGBA", (2, 2), (255, 0, 0, 128))
+        result = grayscale(img)
+        assert result.mode == "RGBA"
+        assert result.getpixel((0, 0))[3] == 128
 
 
 class TestCompressJPEG:
@@ -294,6 +322,12 @@ class TestWatermark:
         with pytest.raises(ErrImageInvalidInput):
             add_watermark(img, wm, 0, 0, 1.5)
 
+    def test_add_watermark_out_of_bounds_and_grayscale_base(self) -> None:
+        img = Image.new("L", (4, 4), 100)
+        wm = Image.new("RGBA", (3, 3), (255, 0, 0, 128))
+        result = add_watermark(img.convert("RGBA"), wm, -1, -1, 0.5)
+        assert result.size == (4, 4)
+
     def test_add_text_watermark(self) -> None:
         img = Image.new("RGBA", (100, 50), (255, 255, 255, 255))
         result = add_text_watermark(img, "ABC", 10, 10, (255, 0, 0, 255), 2, 0.8)
@@ -303,6 +337,13 @@ class TestWatermark:
         img = Image.new("RGBA", (10, 10))
         with pytest.raises(ErrImageInvalidInput):
             add_text_watermark(img, "", 0, 0, (0, 0, 0, 255), 1, 0.5)
+
+    def test_add_text_watermark_invalid_scale_and_opacity(self) -> None:
+        img = Image.new("RGBA", (10, 10))
+        with pytest.raises(ErrImageInvalidInput):
+            add_text_watermark(img, "A", 0, 0, (0, 0, 0, 255), 0, 0.5)
+        with pytest.raises(ErrImageInvalidInput):
+            add_text_watermark(img, "A", 0, 0, (0, 0, 0, 255), 1, float("nan"))
 
 
 # --- captcha generators -------------------------------------------------------
@@ -322,6 +363,11 @@ class TestRandomGenerator:
         assert not gen.verify(code, "")
         assert not gen.verify(code, "wrong")
 
+    def test_min_length_and_custom_charset(self) -> None:
+        gen = RandomGenerator(length=1, charset="A")
+        assert gen.length == 4
+        assert gen.gen() == "AAAA"
+
 
 class TestMathGenerator:
     def test_gen(self) -> None:
@@ -337,6 +383,12 @@ class TestMathGenerator:
         if expected is not None:
             assert gen.verify(code, str(expected))
             assert not gen.verify(code, "999")
+
+    def test_eval_expr_invalid_and_verify_bad_input(self) -> None:
+        assert MathGenerator._eval_expr("bad") is None
+        assert MathGenerator._eval_expr("1+x=") is None
+        gen = MathGenerator(number_length=1)
+        assert not gen.verify("1+1=", "bad")
 
 
 class TestVerifyIgnoreCase:
@@ -389,6 +441,52 @@ class TestLineCaptcha:
         assert len(b64) > 0
         data = c.image_base64_data()
         assert data.startswith("data:image/png;base64,")
+
+    def test_write_and_write_to_file_options(self, tmp_path: Path) -> None:
+        c = new_line_captcha(
+            80,
+            30,
+            [
+                imgx.with_random_int(lambda max_val: max_val + 2),
+                with_color_func(lambda: (1, 2, 3)),
+                with_font_size(2.0),
+                with_interfere_count(-1),
+            ],
+        )
+        buf = io.BytesIO()
+        c.write(buf)
+        assert buf.getvalue()
+        path = tmp_path / "captcha.png"
+        c.write_to_file(
+            str(path),
+            [
+                imgx.with_file_perm(0o600),
+                imgx.with_dir_perm(0o700),
+                imgx.with_create_parents(True),
+                imgx.with_overwrite(False),
+            ],
+        )
+        with pytest.raises(ErrImageInvalidInput):
+            c.write_to_file(str(path), [imgx.with_overwrite(False)])
+
+
+def test_abstract_captcha_empty_write_paths() -> None:
+    c = imgx.AbstractCaptcha()
+    c._img_bytes = b""
+    with pytest.raises(ErrImageInvalidInput):
+        c.write(io.BytesIO())
+    with pytest.raises(ErrImageInvalidInput):
+        c.write_to_file("/tmp/unused.png")
+    with pytest.raises(NotImplementedError):
+        c.create_code()
+    assert c._rand_int(0) == 0
+    c._random_int = lambda max_val: -1
+    assert c._rand_int(10) == 0
+    c._random_int = lambda max_val: max_val + 1
+    assert c._rand_int(10) == 1
+    assert c._rand_int_range(5, 5) == 5
+    c._color_func = lambda: (9, 8, 7)
+    assert c._rand_color() == (9, 8, 7)
 
 
 class TestCircleCaptcha:

@@ -317,37 +317,55 @@ def test_tag_alias_list_and_semicolon_aliases() -> None:
     class AliasTarget:
         name: str = field(default="", metadata={"bean": ["nickname", "alias"]})
         code: str = field(default="", metadata={"bean": "code,aliases=c1;c2"})
+        custom: str = field(default="", metadata={"custom": "customName"})
 
     dst = AliasTarget()
-    vbean.decode({"ALIAS": "kim", "c2": "007"}, dst)
+    opts = vbean.Options(tag_names=("custom", "bean"))
+    vbean.decode({"ALIAS": "kim", "c2": "007", "customName": "x"}, dst, opts)
 
     assert dst.name == "kim"
     assert dst.code == "007"
+    assert dst.custom == "x"
 
 
 def test_tuple_set_frozenset_and_dict_key_conversion() -> None:
     @dataclass
     class TypesTarget:
         pair: tuple[int, str] = (0, "")
+        open_tuple: tuple[int, ...] = ()
         numbers: set[int] = field(default_factory=set)
         frozen: frozenset[int] = frozenset()
         mapping: dict[int, bool] = field(default_factory=dict)
+        raw: object = None
+        any_value: object = None
+        blob: bytes = b""
+        ratio: float = 0.0
 
     dst = TypesTarget()
     vbean.decode(
         {
             "pair": ["7", 8],
+            "open_tuple": ["1", "2"],
             "numbers": ["1", "2"],
             "frozen": ["3", "4"],
             "mapping": {"1": "true", "2": "false"},
+            "raw": {"a": 1},
+            "any_value": [1, "x"],
+            "blob": "hi",
+            "ratio": "1.25",
         },
         dst,
     )
 
     assert dst.pair == (7, "8")
+    assert dst.open_tuple == (1, 2)
     assert dst.numbers == {1, 2}
     assert dst.frozen == frozenset({3, 4})
     assert dst.mapping == {1: True, 2: False}
+    assert dst.raw == {"a": 1}
+    assert dst.any_value == [1, "x"]
+    assert dst.blob == b"hi"
+    assert dst.ratio == 1.25
 
 
 def test_conversion_error_branches() -> None:
@@ -362,6 +380,49 @@ def test_conversion_error_branches() -> None:
         vbean.decode({"mapping": "not-map"}, TypesTarget())
     assert list_exc.value.code == "knifer.bean.convert"
     assert map_exc.value.code == "knifer.bean.convert"
+
+
+def test_union_and_non_assignable_conversion_paths() -> None:
+    @dataclass
+    class UnionTarget:
+        value: int | str | None = None
+        required: bytes = b""
+
+    dst = UnionTarget()
+    vbean.decode({"value": {"kept": True}, "required": "x"}, dst)
+    assert dst.value == {"kept": True}
+    assert dst.required == b"x"
+
+    bytes_dst = UnionTarget()
+    vbean.decode({"required": object()}, bytes_dst)
+    assert isinstance(bytes_dst.required, bytes)
+
+
+def test_dataclass_to_dict_conversion_for_mapping_field() -> None:
+    @dataclass
+    class Pair:
+        key: str = "1"
+        value: int = 2
+
+    @dataclass
+    class DictTarget:
+        mapping: dict[str, int] = field(default_factory=dict)
+
+    dst = DictTarget()
+    vbean.decode({"mapping": Pair()}, dst)
+    assert dst.mapping == {"key": 1, "value": 2}
+
+
+def test_type_hints_failure_falls_back_to_existing_attrs() -> None:
+    class BadHints:
+        __annotations__ = {"value": "missing.Type"}
+
+        def __init__(self) -> None:
+            self.value = ""
+
+    dst = BadHints()
+    vbean.decode({"value": 123}, dst)
+    assert dst.value == 123
 
 
 def test_plain_object_target_and_source_errors() -> None:
@@ -402,6 +463,28 @@ def test_decode_hook_timedelta_and_passthrough() -> None:
     invalid = TimeoutConfig()
     with pytest.raises(ValidationError):
         vbean.decode({"delay": "bad"}, invalid, opts)
+
+
+def test_timedelta_hook_all_units_and_incomplete_values() -> None:
+    @dataclass
+    class TimeoutConfig:
+        delay: timedelta = timedelta()
+
+    opts = vbean.Options(decode_hook=vbean.string_to_timedelta_hook())
+    dst = TimeoutConfig()
+    vbean.decode({"delay": "1w2d3h4m5s6u"}, dst, opts)
+    assert dst.delay == (
+        timedelta(weeks=1)
+        + timedelta(days=2)
+        + timedelta(hours=3)
+        + timedelta(minutes=4)
+        + timedelta(seconds=5)
+        + timedelta(microseconds=6)
+    )
+
+    bad = TimeoutConfig()
+    with pytest.raises(ValidationError):
+        vbean.decode({"delay": "h"}, bad, opts)
 
 
 def test_compose_decode_hook_skips_none_and_updates_type() -> None:
