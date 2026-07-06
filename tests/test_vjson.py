@@ -1,8 +1,10 @@
-import pytest
+from dataclasses import dataclass
 from pathlib import Path
 
+import pytest
+
 from kniferpy import vjson
-from kniferpy.verr import DecodeError, JSONError, SecurityError
+from kniferpy.verr import JSONError, SecurityError
 
 
 def test_parse_obj_and_get_path() -> None:
@@ -337,6 +339,201 @@ def test_is_json_array() -> None:
 
 def test_format_json_str() -> None:
     assert vjson.format_json_str('{"b":2,"a":1}') == '{\n  "a": 1,\n  "b": 2\n}'
+
+
+def test_null_singleton_repr_bool_and_config_clone() -> None:
+    assert repr(vjson.Null) == "null"
+    assert bool(vjson.Null) is False
+    cfg = vjson.new_config(
+        ignore_null_value=True,
+        ignore_case=True,
+        ignore_error=True,
+        date_format="%Y",
+        indent_factor=4,
+    )
+    clone = cfg.clone()
+    assert clone is not cfg
+    assert clone.ignore_null_value is True
+    assert clone.ignore_case is True
+    assert clone.ignore_error is True
+    assert clone.date_format == "%Y"
+    assert clone.indent_factor == 4
+    assert vjson.create_config(indent_factor=2).indent_factor == 2
+
+
+def test_json_object_ignore_case_put_remove_and_break_iteration() -> None:
+    obj = vjson.new_object_with_config(vjson.new_config(ignore_case=True))
+    obj.set("Name", "alice").put("AGE", 30)
+    seen: list[str] = []
+
+    assert obj.config().ignore_case is True
+    assert obj.has("name")
+    assert obj.get("name") == ("alice", True)
+    assert obj.get_string("missing") == ""
+    assert obj.get_string_or("missing", "fallback") == "fallback"
+    obj.for_each(lambda key, value: seen.append(key) or False)
+    assert seen == ["Name"]
+    assert obj.remove("age") is True
+    assert obj.remove("age") is False
+    assert obj.to_map() == {"Name": "alice"}
+
+
+def test_json_object_nested_getters_and_put_by_path() -> None:
+    child = vjson.new_json_object().set("name", "nested")
+    arr = vjson.new_json_array().add({"x": 1})
+    obj = vjson.new_json_object()
+    obj.set("child", child)
+    obj.set("dict_child", {"value": 1})
+    obj.set("arr", [1, {"name": "old"}])
+    obj.set("json_arr", arr)
+
+    assert obj.get_json_object("child") is child
+    assert obj.get_json_object("dict_child").get_int("value") == 1
+    assert obj.get_json_object("missing") is None
+    assert obj.get_json_array("arr").get_int(0) == 1
+    assert obj.get_json_array("json_arr") is arr
+    obj.put_by_path("dict_child.value", 2)
+    obj.put_by_path("child.name", "updated")
+    obj.put_by_path("new_top", True)
+    with pytest.raises(JSONError) as missing_exc:
+        obj.put_by_path("missing.value", 1)
+    with pytest.raises(UnboundLocalError):
+        obj.put_by_path("new_top.value", 1)
+
+    assert obj.get_by_path("dict_child.value") == 2
+    assert child.get_string("name") == "updated"
+    assert obj.get_bool("new_top") is True
+    assert missing_exc.value.code == "json.path_not_found"
+    with pytest.raises(TypeError):
+        obj.to_string_pretty()
+
+
+def test_json_object_typed_getter_defaults_and_numeric_coercion() -> None:
+    obj = vjson.new_json_object()
+    obj.set("float", 3.9).set("bool", True).set("text", "x")
+
+    assert obj.get_int("float") == 3
+    assert obj.get_int("bool") == 0
+    assert obj.get_int64("float") == 3
+    assert obj.get_int64_or("missing", 9) == 9
+    assert obj.get_float64("bool") == 0.0
+    assert obj.get_float64_or("missing", 1.5) == 1.5
+    assert obj.get_bool("text") is False
+    assert obj.get_bool_or("text", True) is True
+
+
+def test_json_array_nested_getters_put_by_path_and_defaults() -> None:
+    obj = vjson.new_json_object().set("name", "obj")
+    nested_arr = vjson.new_json_array().add("old")
+    arr = vjson.new_array_with_config(vjson.new_config())
+    arr.add({"name": "dict"}).add(obj).add([{"x": 1}]).add(nested_arr).add(None).add(True)
+    seen: list[int] = []
+
+    assert arr.config() is not None
+    assert arr.is_null(4)
+    assert arr.is_null(99) is False
+    assert arr.get_string_or(99, "fallback") == "fallback"
+    assert arr.get_int64(99) == 0
+    assert arr.get_int64_or(99, 7) == 7
+    assert arr.get_float64_or(99, 1.5) == 1.5
+    assert arr.get_bool_or(99, True) is True
+    assert arr.get_json_object(0).get_string("name") == "dict"
+    assert arr.get_json_object(1) is obj
+    assert arr.get_json_array(2).get_json_object(0).get_int("x") == 1
+    assert arr.get_json_array(3) is nested_arr
+    assert arr.get_json_object(5) is None
+    assert arr.get_json_array(5) is None
+    arr.put_by_path("0.name", "updated")
+    arr.put_by_path("1.name", "obj-updated")
+    arr.put_by_path("2.0.x", 2)
+    arr.put_by_path("3.0", "new")
+    arr.put_by_path("99.x", "ignored")
+    arr.put_by_path("bad.x", "ignored")
+    assert arr.get_by_path("0.name") == "updated"
+    assert obj.get_string("name") == "obj-updated"
+    assert arr.get_by_path("2.0.x") == 2
+    assert nested_arr.get_string(0) == "new"
+    arr.range(lambda index, value: seen.append(index) or index < 1)
+    assert seen == [0, 1]
+    with pytest.raises(TypeError):
+        arr.to_string_pretty()
+
+
+def test_put_by_path_module_dict_and_list() -> None:
+    data = {"a": 1}
+    arr = [{"a": 1}, [1, 2]]
+
+    assert vjson.put_by_path(data, "nested.value", 2) is data
+    assert data == {"a": 1, "nested": {"value": 2}}
+    assert vjson.put_by_path(arr, "0.a", 3) is arr
+    assert vjson.put_by_path(arr, "1.0", 9) is arr
+    assert vjson.put_by_path(arr, "9.x", "ignored") is arr
+    assert vjson.put_by_path(arr, "bad.x", "ignored") is arr
+    assert arr == [{"a": 3}, [9, 2]]
+    assert vjson.get_by_path_or(data, "missing", "fallback") == "fallback"
+
+
+def test_parse_serialize_validation_variants() -> None:
+    cfg = vjson.new_config(indent_factor=4)
+    assert vjson.parse(b'{"a":1}') == {"a": 1}
+    assert vjson.parse(bytearray(b'{"a":1}')) == {"a": 1}
+    assert vjson.parse_with_options('{"a":1}') == {"a": 1}
+    assert vjson.parse_with_config('{"a":1}', cfg) == {"a": 1}
+    assert vjson.parse_obj_with_options('{"a":1}') == {"a": 1}
+    assert vjson.parse_obj_with_config('{"a":1}', cfg) == {"a": 1}
+    assert vjson.parse_array("[1]") == [1]
+    assert vjson.parse_array_with_options("[1]") == [1]
+    assert vjson.parse_array_with_config("[1]", cfg) == [1]
+    with pytest.raises(JSONError) as arr_exc:
+        vjson.parse_array('{"a":1}')
+    assert arr_exc.value.code == "json.not_array"
+    assert vjson.to_str({"a": 1}) == '{"a":1}'
+    assert vjson.to_str({"a": 1}, indent=2) == '{\n  "a": 1\n}'
+    assert vjson.to_str_indent({"a": 1}, 4) == '{\n    "a": 1\n}'
+    assert vjson.to_str_with_config({"a": 1}, cfg) == '{\n    "a": 1\n}'
+    assert vjson.to_pretty_str({"a": 1}) == '{\n  "a": 1\n}'
+    assert vjson.to_pretty_str_with_config({"a": 1}, cfg) == '{\n    "a": 1\n}'
+    assert vjson.quote('a"b') == '"a\\"b"'
+    assert vjson.format_json("bad") == "bad"
+    assert vjson.format_json_with_options('{"a":1}', indent=4) == '{\n    "a": 1\n}'
+    assert vjson.is_valid('{"a":1}')
+    assert vjson.is_json_with_options('{"a":1}')
+    assert vjson.is_obj('{"a":1}')
+    assert vjson.is_obj_with_options('{"a":1}')
+    assert vjson.is_array("[1]")
+    assert vjson.is_array_with_options("[1]")
+
+
+def test_bean_list_error_and_xml_helpers() -> None:
+    @dataclass
+    class User:
+        name: str
+        age: int = 0
+
+    user = vjson.to_bean({"name": "alice", "age": 30}, User)
+    user_from_json = vjson.to_bean('{"name":"bob","age":25}', User)
+    invalid = vjson.to_bean("{bad", User)
+    non_object = vjson.to_bean("[1]", User)
+    users = vjson.to_list([{"name": "alice", "age": 30}, "raw"], User)
+
+    assert user == User("alice", 30)
+    assert user_from_json == User("bob", 25)
+    assert invalid is None
+    assert non_object is None
+    assert vjson.to_bean(1, User) is None
+    assert users == [User("alice", 30), "raw"]
+    assert vjson.to_bean_with_options({"name": "alice"}, User) is None
+    assert vjson.to_list_with_options([{"name": "alice"}], User) is None
+    err = vjson.new_json_error("bad %s", "json")
+    wrapped = vjson.wrap_json_error(RuntimeError("root"), "wrap %s", "json")
+    assert err.code == "json.error"
+    assert "bad json" in str(err)
+    assert wrapped.context == {"cause": "root"}
+    assert vjson.xml_to_json("<root><a>1</a></root>") == {"root": {"a": 1}}
+    assert vjson.xml_to_json_with_options("<root><a>1</a></root>") == {"root": {"a": 1}}
+    assert vjson.json_to_xml({"a": 1}, "root") == "<root><a>1</a></root>"
+    assert vjson.to_xml({"a": 1}, "root") == "<root><a>1</a></root>"
+    assert "<a>1</a>" in vjson.to_xml_with_options({"a": 1}, "root", pretty=True)
 
 
 def test_format_json_str_invalid() -> None:

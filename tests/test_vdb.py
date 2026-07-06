@@ -4,18 +4,27 @@ from __future__ import annotations
 
 import sqlite3
 
+import pytest
+
+from kniferpy.internal import dbx
 from kniferpy.vdb import (
     DB,
     DBError,
     Dialect,
+    Entity,
     Session,
     add_condition,
     and_group,
     asc,
+    assign_entity,
     between,
+    build_conditions,
+    build_like_value,
     delete,
     desc,
+    entity_from_map,
     eq,
+    exec,
     from_tables,
     group_by,
     gt,
@@ -31,6 +40,8 @@ from kniferpy.vdb import (
     lt,
     lte,
     ne,
+    new_db_error,
+    new_entity,
     new_options,
     new_page,
     new_page_result,
@@ -42,13 +53,21 @@ from kniferpy.vdb import (
     parse_named,
     raw,
     remove_outer_order_by,
+    scan_one,
+    scan_rows,
     select,
     set_field,
     update,
+    use,
     where,
+    with_conn_max_idle_time,
+    with_conn_max_lifetime,
     with_dialect,
+    with_max_idle_conns,
     with_max_open_conns,
+    with_sql_open_func,
     with_wrapper,
+    wrap_db_error,
     wrapper_for_dialect,
 )
 
@@ -485,3 +504,255 @@ class TestSession:
         assert len(rows) == 0  # rolled back
 
         session.close()
+
+
+# --- extra coverage: errors, entities, DB helpers ----------------------------
+
+
+class TestDBExtra:
+    def test_db_error_helpers(self) -> None:
+        cause = RuntimeError("root")
+        err = new_db_error("bad %s", "sql")
+        wrapped = wrap_db_error(cause, "wrap %s", "sql")
+
+        assert str(err) == "bad sql"
+        assert wrapped.unwrap() is cause
+        assert "root" in str(wrapped)
+
+    def test_page_result_helpers(self) -> None:
+        first = new_page_result(new_page(1, 10), 20, [])
+        last = new_page_result(new_page(2, 10), 20, [])
+        zero_size = new_page_result(new_page(1, 0), 20, [])
+
+        assert first.is_first()
+        assert not first.is_last()
+        assert last.is_last()
+        assert zero_size.is_last()
+        assert first.page_size == 10
+        assert first.total_page == 2
+        assert zero_size.total_page == 0
+        assert new_page(0, 10).offset == 0
+        assert new_page(1, 10).limit() == 10
+
+    def test_more_dialects_and_wrapper_unwrap(self) -> None:
+        assert normalize_dialect("pymysql") == Dialect.MYSQL
+        assert normalize_dialect("mysqlclient") == Dialect.MYSQL
+        assert normalize_dialect("postgres") == Dialect.POSTGRES
+        assert normalize_dialect("pymssql") == Dialect.SQL_SERVER
+        assert normalize_dialect("cx_oracle") == Dialect.ORACLE
+        assert normalize_dialect("oracledb") == Dialect.ORACLE
+        wrapper = new_wrapper("[", "]")
+        assert wrapper.unwrap("[users]") == "users"
+        assert wrapper.unwrap("users]") == "users"
+        assert wrapper.unwrap("[users") == "users"
+
+    def test_more_options(self) -> None:
+        opts = new_options()
+
+        def opener(dsn):
+            return dsn
+
+        with_max_idle_conns(5)(opts)
+        with_conn_max_lifetime(30)(opts)
+        with_conn_max_idle_time(40)(opts)
+        with_sql_open_func(opener)(opts)
+        assert opts.max_idle_conns == 5
+        assert opts.conn_max_lifetime == 30
+        assert opts.conn_max_idle_time == 40
+        assert opts.sql_open_func is opener
+
+    def test_builder_insert_invalid_update_and_placeholder_variants(self) -> None:
+        class User(Entity):
+            __table__ = "users"
+
+        insert_sql, insert_args = dbx.insert(User()).to_sql(Dialect.SQLITE)
+        assert insert_sql == "INSERT INTO users"
+        assert insert_args == []
+        with pytest.raises(DBError):
+            dbx.new_builder().to_sql(Dialect.SQLITE)
+
+        b = update("users")
+        b = set_field(b, "name", "alice")
+        b = set_field(b, "age", 30)
+        sql, args = b.to_sql(Dialect.SQLITE)
+        assert sql == "UPDATE users SET  name = ?, age = ?"
+        assert args == ["alice", 30, "alice", 30]
+        assert limit(dbx.new_builder(), 0)._limit is None
+        assert offset(dbx.new_builder(), -1)._offset is None
+        assert dbx._placeholder(Dialect.UNKNOWN) == "?"
+        assert eq("name", "alice")(Dialect.POSTGRES)[0] == "name = $%d"
+        assert eq("name", "alice")(Dialect.SQL_SERVER)[0] == "name = @p%d"
+
+    def test_named_sql_variants(self) -> None:
+        assert parse_named("SELECT 1", {}, Dialect.SQLITE) == dbx.NamedSQL("SELECT 1", [])
+        sql_server = parse_named("SELECT :a, :b", {"a": 1, "b": 2}, Dialect.SQL_SERVER)
+        assert sql_server.sql == "SELECT @p1, @p2"
+        assert sql_server.args == [1, 2]
+
+    def test_entity_helpers(self) -> None:
+        class MapEntity(Entity):
+            __table__ = "users"
+
+            def __init__(self) -> None:
+                self.fields = {}
+
+        entity = MapEntity()
+        entity.set("name", "alice").set_if_not_nil("age", 30).set_if_not_nil("skip", None)
+        assert entity.name == "alice"
+        assert entity.age == 30
+        assert not hasattr(entity, "skip")
+        assert entity.select("name") is entity
+        assert entity.filter("name") is entity
+        assert entity.remove("name") is entity
+
+        with pytest.raises(TypeError):
+            new_entity("users")
+        with pytest.raises(TypeError):
+            entity_from_map("users", {"name": "bob", "skip": None})
+
+        from_map = MapEntity()
+        from_map.fields = {"name": "bob"}
+        target = MapEntity()
+        assign_entity(target, from_map)
+        conds = dbx.conditions_from_entity(from_map)
+        assert target.fields == {"name": "bob"}
+        assert len(conds) == 1
+        assert build_conditions(conds) == conds
+        assert build_like_value("bob") == "%bob%"
+        assert dbx.or_with([eq("name", "bob")])(Dialect.SQLITE) == ("(name = ?)", ["bob"])
+
+    def test_upsert_sql_builders(self) -> None:
+        class MapEntity(Entity):
+            __table__ = "users"
+
+        entity = MapEntity()
+        entity.fields = {"id": 1, "name": "alice"}
+        id_only = MapEntity()
+        id_only.fields = {"id": 1}
+        wrapper = new_wrapper('"')
+
+        mysql = dbx._build_mysql_upsert("INSERT", entity, ["id"], (), wrapper)
+        pg = dbx._build_pg_upsert("INSERT", entity, ["id"], (), wrapper)
+        do_nothing = dbx._build_pg_upsert("INSERT", id_only, ["id"], (), wrapper)
+
+        assert 'ON DUPLICATE KEY UPDATE "name" = VALUES("name")' in mysql
+        assert 'ON CONFLICT ("id") DO UPDATE SET "name" = excluded."name"' in pg
+        assert 'ON CONFLICT ("id") DO NOTHING' in do_nothing
+
+    def test_scan_helpers_handle_none_and_close_errors(self) -> None:
+        class Cursor:
+            description = [("id",), ("name",)]
+
+            def __init__(self) -> None:
+                self.rows = [(1, "alice")]
+
+            def fetchall(self):
+                return list(self.rows)
+
+            def fetchone(self):
+                return self.rows[0] if self.rows else None
+
+            def close(self):
+                raise RuntimeError("close failed")
+
+        class EmptyCursor(Cursor):
+            description = None
+
+        assert scan_rows(None) == []
+        assert scan_rows(EmptyCursor()) == []
+        assert scan_rows(Cursor()) == [{"id": 1, "name": "alice"}]
+        assert scan_one(None) == (None, False)
+        assert scan_one(EmptyCursor()) == (None, False)
+        assert scan_one(Cursor()) == ({"id": 1, "name": "alice"}, True)
+
+    def test_db_sqlite_helpers(self) -> None:
+        conn = sqlite3.connect(":memory:")
+        db = DB(conn, Dialect.SQLITE, wrapper_for_dialect(Dialect.SQLITE))
+        db.exec("CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT, age INTEGER)")
+        db.exec("INSERT INTO users (name, age) VALUES (?, ?)", "alice", 30)
+        db.exec_named(
+            "INSERT INTO users (name, age) VALUES (:name, :age)",
+            {"name": "bob", "age": 25},
+        )
+        db.exec_batch(
+            "INSERT INTO users (name, age) VALUES (?, ?)",
+            ("charlie", 35),
+            ("dana", 40),
+        )
+
+        assert db.sql_db() is conn
+        db.ping()
+        assert db.query_entities("SELECT name FROM users ORDER BY id")[0] == {"name": "alice"}
+        assert db.query_named("SELECT age FROM users WHERE name = :name", {"name": "bob"}) == [
+            {"age": 25}
+        ]
+        row, found = db.query_one("SELECT name FROM users WHERE name = ?", "alice")
+        assert found and row == {"name": "alice"}
+        scalar, scalar_found = db.query_scalar("SELECT COUNT(*) FROM users")
+        assert scalar_found and scalar == 4
+        assert db.query_scalar("SELECT name FROM users WHERE name = ?", "missing") == (None, False)
+        got, ok = db.get("users", "name", "alice")
+        assert ok and got == {"id": 1, "name": "alice", "age": 30}
+        assert db.find_all("users")[0]["name"] == "alice"
+        assert db.find_by("users", "name", "bob") == [{"id": 2, "name": "bob", "age": 25}]
+        assert db.find_like("users", "name", "ali") == [{"id": 1, "name": "alice", "age": 30}]
+        assert db.count("users", gt("age", 20)) == 4
+        page = db.page(from_tables(select(["*"]), ["users"]), new_page(1, 2, [asc("id")]))
+        assert page.total == 4
+        assert len(page.items) == 2
+        assert db.list_tables() == ["users"]
+        cols = db.list_columns("users")
+        assert [c.name for c in cols] == ["id", "name", "age"]
+        assert db.table_meta("users").name == "users"
+        assert db.column_names("users") == ["id", "name", "age"]
+        assert db.primary_keys("users") == ["id"]
+        db.delete("users", eq("name", "dana"))
+        assert db.count("users") == 3
+        with pytest.raises(DBError):
+            db.delete("users")
+        db.delete_all("users")
+        assert db.count("users") == 0
+        db.close()
+
+    def test_db_unsupported_metadata_and_upsert(self) -> None:
+        conn = sqlite3.connect(":memory:")
+        db = DB(conn, Dialect.UNKNOWN, wrapper_for_dialect(Dialect.UNKNOWN))
+        with pytest.raises(DBError):
+            db.list_tables()
+        with pytest.raises(DBError):
+            db.list_columns("users")
+        with pytest.raises(DBError):
+            db.upsert(Entity(), ["id"])
+        conn.close()
+
+    def test_use_exec_open_and_session_extra(self) -> None:
+        conn = sqlite3.connect(":memory:")
+        db = use(
+            conn,
+            [with_dialect(Dialect.SQLITE), with_wrapper(wrapper_for_dialect(Dialect.SQLITE))],
+        )
+        exec(db, "CREATE TABLE users (id INTEGER PRIMARY KEY, name TEXT)")
+        exec(db, "INSERT INTO users (name) VALUES (?)", ("alice",))
+        session = Session(db, conn)
+        session.exec("INSERT INTO users (name) VALUES (?)", "bob")
+        session.exec_named("INSERT INTO users (name) VALUES (:name)", {"name": "charlie"})
+        session.exec_batch("INSERT INTO users (name) VALUES (?)", ("dana",), ("erin",))
+        assert session.query_entities("SELECT name FROM users WHERE name = ?", "alice") == [
+            {"name": "alice"}
+        ]
+        one, ok = session.query_one_entity("SELECT name FROM users WHERE name = ?", "bob")
+        assert ok and one == {"name": "bob"}
+        assert session.query_scalar("SELECT COUNT(*) FROM users") == (5, True)
+        assert session.query_scalar("SELECT name FROM users WHERE name = ?", "missing") == (
+            None,
+            False,
+        )
+        session.savepoint("sp1")
+        session.exec("INSERT INTO users (name) VALUES (?)", "frank")
+        session.rollback_to("sp1")
+        assert db.count("users") == 5
+        conn.close()
+
+        opened = dbx.open_db("sqlite3", ":memory:", [with_dialect(Dialect.SQLITE)])
+        assert opened.dialect == Dialect.SQLITE
+        opened.close()

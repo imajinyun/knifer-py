@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import dataclasses
+import inspect
 
 import pytest
 
@@ -23,6 +24,23 @@ class User:
 
     def to_string(self) -> str:
         return self.name
+
+
+@dataclasses.dataclass
+class TaggedUser:
+    name: str = dataclasses.field(metadata={"json": "user_name"})
+    age: int = dataclasses.field(default=0, metadata={"ref": "user_age"})
+    ignored: str = dataclasses.field(default="", metadata={"xml": "ignored_xml"})
+
+
+@dataclasses.dataclass
+class Base:
+    base: str = "base"
+
+
+@dataclasses.dataclass
+class Child(Base):
+    child: str = "child"
 
 
 class Profile:
@@ -130,6 +148,7 @@ def test_implements_context() -> None:
 
     assert vref.implements_context(ContextManager) is True
     assert vref.implements_context(int) is False
+    assert vref.implements_context(None) is False
 
 
 # --- field helpers -------------------------------------------------------------
@@ -179,6 +198,30 @@ def test_get_fields_value() -> None:
     values = vref.get_fields_value(u)
     assert "Alice" in values
     assert 30 in values
+
+
+def test_field_aliases_and_direct_fields() -> None:
+    user = TaggedUser("alice", 30, "x")
+
+    assert vref.has_field(TaggedUser, "name")
+    assert vref.get_field(TaggedUser, "user_name") == "name"
+    assert vref.get_field(TaggedUser, "user_age") == "age"
+    assert vref.get_field(TaggedUser, "ignored_xml") == "ignored"
+    assert vref.get_field(TaggedUser, "missing") is None
+    assert vref.get_field_map(TaggedUser) == {"name": "name", "age": "age", "ignored": "ignored"}
+    assert vref.get_field_name("name") == "name"
+    assert vref.get_fields_directly(Child, with_embedded_fields=True) == ["base", "child"]
+    assert vref.get_static_field_value(user) is user
+    assert vref.get_field_value_with_options(user, "name") == "alice"
+    assert vref.get_fields_value_with_options(user, lambda name: name != "ignored") == ["alice", 30]
+    vref.set_field_value_with_options(user, "name", "bob")
+    assert user.name == "bob"
+
+
+def test_type_predicate_edge_cases() -> None:
+    assert not vref.is_rangeable_type("list")
+    assert not vref.is_collection_type("list")
+    assert vref.is_func_type(type(str.upper)) is False
 
 
 # --- method helpers ------------------------------------------------------------
@@ -231,6 +274,29 @@ def test_get_methods_with_filter() -> None:
     assert names == ["greet"]
 
 
+def test_public_method_variants_and_direct_methods() -> None:
+    user = User("Alice")
+
+    assert vref.get_public_method(user, "greet") is not None
+    assert vref.get_public_method(user, "missing") is None
+    assert vref.get_method_of_obj(user, "greet", "hello") is None
+    assert vref.get_method_ignore_case(user, "GREET") is not None
+    assert vref.get_method_ignore_case(user, "GREET", str) is None
+    assert vref.get_method_by_name(user, "greet") is not None
+    direct = vref.get_methods_directly(user)
+    assert any(name == "greet" for name, _ in direct)
+    with_supers = vref.get_methods_directly(user, with_supers=True, with_method_from_object=True)
+    assert len(with_supers) >= len(direct)
+
+
+def test_signature_fallbacks_and_method_name_helpers(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(inspect, "signature", lambda method: (_ for _ in ()).throw(ValueError()))
+
+    assert vref.is_empty_param(lambda: None) is False
+    assert vref.get_public_method(User("Alice"), "greet", str) is None
+    assert vref.get_method_ignore_case(User("Alice"), "greet", str) is None
+
+
 def test_is_equals_method() -> None:
     assert vref.is_equals_method("equals") is True
     assert vref.is_equals_method("equal") is True
@@ -245,6 +311,7 @@ def test_is_hash_code_method() -> None:
 def test_is_to_string_method() -> None:
     assert vref.is_to_string_method("to_string") is True
     assert vref.is_to_string_method("__str__") is True
+    assert vref.is_to_string_method("string") is True
 
 
 def test_is_empty_param() -> None:
@@ -282,6 +349,20 @@ def test_invoke_func() -> None:
     assert result == 5
 
 
+def test_invoke_static_raw_method_and_checked_errors() -> None:
+    user = User("Alice")
+    method = vref.get_method(user, "greet")
+    assert method is not None
+
+    assert vref.invoke_static(lambda a, b: a + b, 1, 2) == 3
+    assert vref.invoke_raw(lambda value: value.upper(), "x") == "X"
+    assert vref.invoke_method(user, method, "hi") == "hi, Alice"
+    assert vref.invoke_with_check(user, method, "hello") == "hello, Alice"
+    with pytest.raises(KniferError) as exc_info:
+        vref.invoke_with_check(user, method)
+    assert exc_info.value.code == "knifer.ref.invoke_failed"
+
+
 def test_new_instance_dataclass() -> None:
     result = vref.new_instance(User(name="Alice"))
     assert isinstance(result, User)
@@ -291,6 +372,13 @@ def test_new_instance_dataclass() -> None:
 def test_new_instance_callable() -> None:
     result = vref.new_instance(lambda: 42)
     assert result == 42
+
+
+def test_new_instance_type_and_error_paths() -> None:
+    assert isinstance(vref.new_instance(Profile, "Alice"), Profile)
+    with pytest.raises(KniferError) as exc_info:
+        vref.new_instance(42)
+    assert exc_info.value.code == "knifer.ref.new_instance"
 
 
 def test_new_instance_if_possible() -> None:
