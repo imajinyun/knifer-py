@@ -5,6 +5,12 @@ import pytest
 
 from kniferpy.vskt import (
     DEFAULT_BUFFER_SIZE,
+    AppProtocol,
+    FuncDecoder,
+    FuncEncoder,
+    IoAction,
+    MsgDecoder,
+    MsgEncoder,
     OpAccept,
     OpConnect,
     OpRead,
@@ -12,16 +18,26 @@ from kniferpy.vskt import (
     SimpleIoAction,
     SocketRuntimeError,
     channel_dial,
+    channel_dial_with_options,
     get_remote_address,
     is_connected,
     new_aio_client,
+    new_aio_client_with_config,
+    new_aio_client_with_conn,
+    new_aio_client_with_options,
     new_aio_server,
     new_aio_server_addr,
+    new_aio_server_addr_with_options,
+    new_aio_server_with_options,
     new_aio_session,
     new_nio_client,
     new_nio_client_addr,
     new_nio_client_addr_with_options,
     new_nio_server,
+    new_nio_server_addr,
+    new_nio_server_addr_with_config,
+    new_nio_server_addr_with_options,
+    new_nio_server_with_config,
     new_nio_server_with_options,
     new_socket_config,
     new_socket_config_with_options,
@@ -36,7 +52,9 @@ from kniferpy.vskt import (
     with_connect_timeout,
     with_read_buffer_size,
     with_read_timeout,
+    with_runner,
     with_thread_pool_size,
+    with_thread_pool_size_func,
     with_write_buffer_size,
     with_write_timeout,
     wrap_socket_error,
@@ -295,3 +313,154 @@ def test_connect_dialer_option():
         return None
     with_connect_dialer(fn)(cfg)
     assert cfg.dialer is fn
+
+
+class FakeSocket:
+    def __init__(self, incoming: bytes = b"") -> None:
+        self.incoming = incoming
+        self.sent: list[bytes] = []
+        self.closed = False
+
+    def recv_into(self, buffer: bytearray) -> int:
+        n = min(len(buffer), len(self.incoming))
+        buffer[:n] = self.incoming[:n]
+        return n
+
+    def sendall(self, data: bytes) -> None:
+        self.sent.append(data)
+
+    def close(self) -> None:
+        self.closed = True
+
+    def getpeername(self):
+        return ("127.0.0.1", 12345)
+
+
+class RecordingAction(SimpleIoAction):
+    def __init__(self) -> None:
+        self.reads: list[bytes] = []
+
+    def on_read(self, session, buf: bytes) -> None:
+        self.reads.append(buf)
+
+
+def test_more_socket_config_options() -> None:
+    def runner(*args, **kwargs) -> None:
+        return None
+
+    cfg = new_socket_config_with_options(
+        [
+            with_thread_pool_size_func(lambda: 3),
+            with_runner(runner),
+            with_read_timeout(1),
+            with_write_timeout(2),
+            None,
+        ]
+    )
+
+    assert cfg.thread_pool_size_func() == 3
+    assert cfg.runner is runner
+    assert cfg.read_timeout_ms == 1
+    assert cfg.write_timeout_ms == 2
+
+
+def test_nio_server_constructor_variants() -> None:
+    cfg = new_socket_config()
+    assert new_nio_server_with_config(0, cfg)._config is cfg
+    assert new_nio_server_addr(("127.0.0.1", 0))._port == 0
+    server = new_nio_server_addr_with_options(("127.0.0.1", 0), [with_thread_pool_size(2)])
+    assert server._config.thread_pool_size == 2
+    assert new_nio_server_addr_with_config(("127.0.0.1", 0), cfg)._config is cfg
+
+
+def test_nio_client_connect_and_close_with_fake_dialer() -> None:
+    fake = FakeSocket()
+    client = new_nio_client_addr_with_options(
+        ("127.0.0.1", 12345),
+        [with_connect_dialer(lambda host, port: fake)],
+    )
+    # NioClient.connect uses socket_connect, so exercise close branch directly.
+    client._conn = fake
+    client.close()
+    assert fake.closed
+
+
+def test_aio_session_read_write_and_zero_read() -> None:
+    action = RecordingAction()
+    sock = FakeSocket(b"hello")
+    session = new_aio_session(
+        sock, action, new_socket_config_with_options([with_read_buffer_size(10)])
+    )
+
+    session.read()
+    session.write(b"out")
+    session.close()
+
+    assert action.reads == [b"hello"]
+    assert sock.sent == [b"out"]
+    assert sock.closed
+
+    empty_action = RecordingAction()
+    empty = new_aio_session(FakeSocket(b""), empty_action, new_socket_config())
+    empty.read()
+    assert empty_action.reads == []
+
+
+def test_aio_server_client_constructor_variants() -> None:
+    cfg = new_socket_config_with_options([with_thread_pool_size_func(lambda: 2)])
+    server = new_aio_server_with_options(0, [with_thread_pool_size(2)])
+    server_addr = new_aio_server_addr_with_options(
+        ("127.0.0.1", 0), cfg, [with_thread_pool_size(4)]
+    )
+    action = SimpleIoAction()
+    fake = FakeSocket()
+
+    assert server._config.thread_pool_size == 2
+    assert server_addr._config.thread_pool_size == 4
+    client = new_aio_client_with_options(("127.0.0.1", 1), action, [with_connect_timeout(1.0)])
+    assert client._addr == (
+        "127.0.0.1",
+        1,
+    )
+    assert new_aio_client_with_config(("127.0.0.1", 1), action, cfg)._config is cfg
+    client = new_aio_client_with_conn(fake, action, cfg)
+    assert client._conn is fake
+    assert client._session is not None
+    client.close()
+    assert fake.closed
+
+
+def test_aio_server_thread_pool_size_func() -> None:
+    cfg = new_socket_config_with_options([with_thread_pool_size_func(lambda: 5)])
+    server = new_aio_server_addr(("127.0.0.1", 0), cfg)
+    assert server._get_thread_pool_size() == 5
+
+
+def test_protocol_encoder_decoder_defaults_and_funcs() -> None:
+    session = new_aio_session(FakeSocket(), SimpleIoAction(), new_socket_config())
+    msg_decoder = MsgDecoder()
+    msg_encoder = MsgEncoder()
+    io_action = IoAction()
+    protocol = AppProtocol()
+    decoded_calls: list[bytes] = []
+    encoded_calls: list[bytes] = []
+
+    assert msg_decoder.decode(session, b"data") == (None, False)
+    assert msg_encoder.encode(session, bytearray(), object()) is None
+    assert io_action.on_read(session, b"data") is None
+    assert isinstance(protocol, AppProtocol)
+
+    decoder = FuncDecoder(lambda sess, buf: (decoded_calls.append(buf), True))
+    encoder = FuncEncoder(lambda sess, buf, msg: encoded_calls.append(bytes(buf) + msg))
+
+    assert decoder.decode(session, b"in") == (None, True)
+    encoder.encode(session, bytearray(b"out"), b"!")
+    assert decoded_calls == [b"in"]
+    assert encoded_calls == [b"out!"]
+
+
+def test_channel_dial_with_options_and_remote_address() -> None:
+    fake = FakeSocket()
+    sock = channel_dial_with_options(("127.0.0.1", 1), [with_connect_dialer(lambda h, p: fake)])
+    assert sock is fake
+    assert get_remote_address(fake) == ("127.0.0.1", 12345)
