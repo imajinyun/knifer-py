@@ -149,6 +149,7 @@ def test_expand_simple_reference() -> None:
 def test_expand_group_reference() -> None:
     conf = vconf.parse("[paths]\nroot = /srv\nlog = ${paths.root}/log\n")
     assert conf.get_expanded("log", group="paths") == "/srv/log"
+    assert conf.get_by_group_expanded("paths", "log") == "/srv/log"
 
 
 def test_expand_with_default_when_missing() -> None:
@@ -166,6 +167,12 @@ def test_expand_handles_self_reference_cycle() -> None:
     conf = vconf.parse("a = ${a}")
     # A direct cycle resolves to empty rather than recursing forever.
     assert conf.get_expanded("a") == ""
+
+
+def test_expand_depth_guard_and_dollar_placeholder() -> None:
+    conf = vconf.parse("a = $b\nb = value")
+    assert conf.get_expanded("a") == "value"
+    assert conf._expand_value("", "${missing}", set(), 65) == "${missing}"
 
 
 def test_expand_returns_full_copy() -> None:
@@ -303,6 +310,13 @@ class TestBind:
         assert obj.host == "0.0.0.0"
         assert obj.port == 3000
 
+    def test_bind_conversion_failures_keep_defaults(self) -> None:
+        conf = vconf.parse("port = bad\ndebug = maybe\n")
+        obj = ServerConfig(port=7, debug=True)
+        vconf.bind(conf, obj)
+        assert obj.port == 7
+        assert obj.debug is False
+
 
 # ---------------------------------------------------------------------------
 # Schema
@@ -334,6 +348,16 @@ class TestSchema:
         conf = vconf.parse("level = trace")
         errors = vconf.validate_schema(conf, schema)
         assert len(errors) == 1
+
+    def test_validate_schema_group_and_default(self) -> None:
+        schema = vconf.Schema(fields=[
+            vconf.FieldRule(group="server", key="port", type="int", default="8080"),
+            vconf.FieldRule(group="server", key="mode", choices=["dev", "prod"]),
+        ])
+        conf = vconf.parse("[server]\nmode = test\n")
+        assert vconf.validate_schema(conf, schema) == ["server.mode: 'test' not in ['dev', 'prod']"]
+        vconf.apply_defaults(conf, schema)
+        assert conf.get_by_group("server", "port") == "8080"
 
     def test_validate_schema_valid(self) -> None:
         schema = vconf.Schema(fields=[
@@ -452,6 +476,15 @@ def test_parse_by_ext_yaml_toml_json_and_errors(monkeypatch: pytest.MonkeyPatch)
     assert json_exc.value.code == "knifer.conf.json_parse_failed"
 
 
+def test_internal_helpers_and_flatten_empty_values() -> None:
+    conf = vconf.parse_json('{"a": null, "b": true, "nested": {"x": 1}}')
+    assert conf.get("a") == ""
+    assert conf.get("b") == "True"
+    assert conf.get("nested.x") == "1"
+    assert vconf.confx._first_index_any("a:b=c", "=:") == 1
+    assert vconf.confx._first_index_any("abc", "=:") == -1
+
+
 def test_bind_options_schema_metadata_dict_and_validation() -> None:
     @dataclasses.dataclass
     class AppConfig:
@@ -549,6 +582,17 @@ def test_remote_load_and_safe_host(monkeypatch: pytest.MonkeyPatch) -> None:
     assert invalid_url.value.code == "knifer.conf.invalid_url"
     assert private_host.value.code == "knifer.conf.private_host"
     assert remote_failed.value.code == "knifer.conf.load_remote_failed"
+
+
+def test_remote_safe_treats_resolution_errors_as_private(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda host, port: (_ for _ in ()).throw(socket.gaierror("no dns")),
+    )
+    with pytest.raises(ValidationError) as exc:
+        vconf.load_remote_safe("https://example.com/app.properties")
+    assert exc.value.code == "knifer.conf.private_host"
 
 
 def test_watch_with_options_and_missing_file_runner(tmp_path: Path) -> None:

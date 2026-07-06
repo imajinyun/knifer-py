@@ -3,6 +3,7 @@ from __future__ import annotations
 import pytest
 
 from kniferpy import vmap
+from kniferpy.internal import mapsx
 from kniferpy.verr import KniferError
 
 # --- new / of / from_pairs / from_entries ------------------------------------
@@ -40,10 +41,13 @@ def test_of_e_odd_keys() -> None:
 
 def test_from_pairs() -> None:
     assert vmap.from_pairs(("a", 1), ("b", 2)) == {"a": 1, "b": 2}
+    assert vmap.from_pairs(mapsx.Pair("c", 3)) == {"c": 3}
+    assert repr(mapsx.Pair("c", 3)) == "Pair('c', 3)"
 
 
 def test_from_entries() -> None:
     assert vmap.from_entries([("a", 1), ("b", 2)]) == {"a": 1, "b": 2}
+    assert vmap.from_entries([mapsx.Pair("c", 3)]) == {"c": 3}
 
 
 # --- or_empty / is_empty / is_not_empty ---------------------------------------
@@ -239,6 +243,12 @@ def test_to_slice() -> None:
     assert set(result) == {"a=1", "b=2"}
 
 
+def test_for_each() -> None:
+    seen: list[tuple[str, int]] = []
+    vmap.for_each({"a": 1, "b": 2}, lambda k, v: seen.append((k, v)))
+    assert set(seen) == {("a", 1), ("b", 2)}
+
+
 # --- filter / reject / filter_keys / filter_values ----------------------------
 
 
@@ -419,6 +429,14 @@ def test_clone() -> None:
     cloned = vmap.clone(original)
     assert cloned == original
     assert cloned is not original
+
+
+def test_equal_and_equal_by() -> None:
+    assert vmap.equal({"a": 1}, {"a": 1})
+    assert not vmap.equal({"a": 1}, {"a": 2})
+    assert not vmap.equal({"a": 1}, {"a": 1, "b": 2})
+    assert vmap.equal_by({"a": 1}, {"a": "1"}, lambda left, right: str(left) == str(right))
+    assert not vmap.equal_by({"a": 1}, {"a": "2"}, lambda left, right: str(left) == str(right))
 
 
 # --- equal / equal_by ---------------------------------------------------------

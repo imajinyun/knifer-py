@@ -106,6 +106,23 @@ def test_lfu_prunes_expired_before_frequency_eviction() -> None:
     assert c.get("c") == 3
 
 
+def test_lru_prune_empty_and_expired_with_listener() -> None:
+    clock = _Clock()
+    removed: list[tuple[str, int]] = []
+    c: vcache.LRUCache[str, int] = vcache.new_lru(
+        2,
+        timeout=5.0,
+        clock=clock,
+        listener=lambda key, value: removed.append((key, value)),
+    )
+    assert c.prune() == 0
+    c.put("a", 1)
+    c.put("b", 2)
+    clock.advance(6.0)
+    assert c.prune() == 2
+    assert sorted(removed) == [("a", 1), ("b", 2)]
+
+
 def test_ttl_expiration() -> None:
     clock = _Clock()
     c: vcache.LRUCache[str, int] = vcache.new_lru(4, timeout=10.0, clock=clock)
@@ -218,6 +235,7 @@ def test_no_cache() -> None:
     assert c.get("a") is None
     assert c.size() == 0
     assert c.is_empty() is True
+    assert c.prune() == 0
 
 
 def test_negative_capacity_rejected() -> None:
@@ -229,6 +247,19 @@ def test_negative_capacity_rejected() -> None:
 def test_cache_obj_expired_time() -> None:
     assert vcache.CacheObj("a", 1, 0.0, 10.0, 0).expired_time() is None
     assert vcache.CacheObj("a", 1, 5.0, 10.0, 0).expired_time() == 15.0
+
+
+def test_internal_cache_obj_touch_and_expiration() -> None:
+    obj = cachex._CacheObj("a", 1, 5.0, 10.0)
+    assert not obj.is_expired(14.0)
+    assert obj.is_expired(16.0)
+    assert obj.touch(False, 20.0) == 1
+    assert obj.last_access == 10.0
+    assert obj.touch(True, 20.0) == 1
+    assert obj.last_access == 20.0
+    assert obj.access_count == 2
+    never = cachex._CacheObj("b", 2, 0.0, 10.0)
+    assert never.expired_time() is None
 
 
 def test_get_or_load_e_success_error_and_cached_paths() -> None:
@@ -407,6 +438,13 @@ def test_timed_cache_get_or_load_e_and_options() -> None:
     assert timed.get_or_load_e("b", lambda: (3, None)) == (2, None)
     clock.advance(6.0)
     assert timed.get("a") is None
+
+
+def test_timed_cache_get_or_load_cached_paths() -> None:
+    timed = vcache.new_timed(0.0)
+    timed.put("a", 1)
+    assert timed.get_or_load("a", lambda: 2) == 1
+    assert timed.get_or_load_e("a", lambda: (2, None)) == (1, None)
 
 
 def test_timed_scheduled_uses_runner_and_can_cancel() -> None:
@@ -594,6 +632,19 @@ def test_weak_cache_dead_refs_and_listener_clear_paths() -> None:
     cache.remove("missing")
     cache.clear()
     assert ("live", 2) in removed
+
+
+def test_weak_cache_dead_ref_get_and_remove_paths() -> None:
+    cache: vcache.WeakCache[str, _Box] = vcache.new_weak(0.0)
+    box = _Box(1)
+    cache.put("a", box)
+    entry = cache._entries["a"]
+    cache._entries["dead-get"] = (lambda: None, entry[1], entry[2])  # type: ignore[assignment]
+    cache._entries["dead-remove"] = (lambda: None, entry[1], entry[2])  # type: ignore[assignment]
+
+    assert cache.get("dead-get", default=box) is box
+    cache.remove("dead-remove")
+    assert "dead-remove" not in cache._entries
 
 
 def test_default_ticker_factory_and_runner_smoke() -> None:

@@ -68,8 +68,18 @@ def test_edge_cases() -> None:
     assert vhash.java_default_hash("a") == 97
     assert vhash.tianl_hash("") == 0
     assert vhash.tianl_hash("abc") > 0
+    assert vhash.tianl_hash("A" * 300) > 0
+    assert vhash.hf_hash("Hello, 世界") > 0
+    assert vhash.fnv_hash_string("Hello, 世界") > 0
     assert vhash.additive_hash("abc", 0) == vhash.additive_hash("abc", 31)
     assert vhash.fnv_hash("abc") != 0
+
+
+def test_internal_integer_wrapping_helpers() -> None:
+    assert vhash.hashx._i32(0xFFFFFFFF) == -1
+    assert vhash.hashx._i32(0x7FFFFFFF) == 0x7FFFFFFF
+    assert vhash.hashx._i64(0xFFFFFFFFFFFFFFFF) == -1
+    assert vhash.hashx._i64(0x7FFFFFFFFFFFFFFF) == 0x7FFFFFFFFFFFFFFF
 
 
 # ── Hash32 ───────────────────────────────────────────────────────────────────
@@ -129,3 +139,23 @@ class TestConsistentHash:
         ring = vhash.ConsistentHash(10)
         ring.add("a")
         assert ring.get_n("key", 0) == []
+
+    def test_default_replicas_duplicate_and_missing_remove(self) -> None:
+        ring = vhash.new_consistent_hash(0)
+        ring.add("")
+        assert ring._nodes == set()
+        ring.add("a")
+        first_count = len(ring._hashes)
+        ring.add("a")
+        ring.remove("missing")
+        assert len(ring._hashes) == first_count
+        assert ring.get("key") == "a"
+        assert ring.get_n("key", 10) == ["a"]
+
+    def test_hash_wraps_to_first_node_when_key_is_after_last_hash(self) -> None:
+        ring = vhash.ConsistentHash(1)
+        ring.add("a")
+        ring.add("b")
+        ring._hashes = [1, 2]
+        ring._ring = {1: "a", 2: "b"}
+        assert ring.get("key") == "a"

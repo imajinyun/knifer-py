@@ -1,6 +1,11 @@
 from pathlib import Path
 
 import pytest
+from cryptography import x509
+from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.x509.oid import NameOID
+from datetime import datetime, timedelta, timezone
 
 from kniferpy import vcrypto
 from kniferpy.internal import cryptox
@@ -794,6 +799,26 @@ def test_public_key_to_pkcs1_pem() -> None:
     assert b"BEGIN RSA PUBLIC KEY" in pem
 
 
+def test_parse_rsa_pem_rejects_non_rsa_keys() -> None:
+    ec_key = ec.generate_private_key(ec.SECP256R1())
+    private_pem = ec_key.private_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PrivateFormat.PKCS8,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    public_pem = ec_key.public_key().public_bytes(
+        encoding=serialization.Encoding.PEM,
+        format=serialization.PublicFormat.SubjectPublicKeyInfo,
+    )
+
+    with pytest.raises(CryptoError) as private_exc:
+        vcrypto.parse_rsa_private_key_pem(private_pem)
+    with pytest.raises(CryptoError) as public_exc:
+        vcrypto.parse_rsa_public_key_pem(public_pem)
+    assert private_exc.value.code == "crypto.invalid_pem"
+    assert public_exc.value.code == "crypto.invalid_pem"
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # JWK
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -1150,11 +1175,33 @@ def test_sm2_pem_roundtrip() -> None:
 
 def test_parse_x509_certificate_pem() -> None:
     key = vcrypto.gen_rsa_key()
-    pem = vcrypto.private_key_to_pem(key)
-    # Just ensure it doesn't crash on valid PEM (even though it's not a cert)
-    # The function will raise on invalid cert data, but we test that it exists
-    assert callable(vcrypto.parse_x509_certificate_pem)
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "example.com")]))
+        .issuer_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "example.com")]))
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.now(timezone.utc) - timedelta(days=1))
+        .not_valid_after(datetime.now(timezone.utc) + timedelta(days=1))
+        .sign(key, hashes.SHA256())
+    )
+    pem = cert.public_bytes(serialization.Encoding.PEM)
+    parsed = vcrypto.parse_x509_certificate_pem(pem)
+    assert parsed.subject == cert.subject
 
 
 def test_public_key_from_certificate_pem() -> None:
-    assert callable(vcrypto.public_key_from_certificate_pem)
+    key = vcrypto.gen_rsa_key()
+    cert = (
+        x509.CertificateBuilder()
+        .subject_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "example.com")]))
+        .issuer_name(x509.Name([x509.NameAttribute(NameOID.COMMON_NAME, "example.com")]))
+        .public_key(key.public_key())
+        .serial_number(x509.random_serial_number())
+        .not_valid_before(datetime.now(timezone.utc) - timedelta(days=1))
+        .not_valid_after(datetime.now(timezone.utc) + timedelta(days=1))
+        .sign(key, hashes.SHA256())
+    )
+    pem = cert.public_bytes(serialization.Encoding.PEM)
+    pub = vcrypto.public_key_from_certificate_pem(pem)
+    assert pub.public_numbers().n == key.public_key().public_numbers().n
