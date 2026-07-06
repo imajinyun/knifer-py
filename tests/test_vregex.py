@@ -1,4 +1,4 @@
-import pytest
+import re
 
 from kniferpy import vregex
 
@@ -245,11 +245,15 @@ def test_last_index_of_no_match() -> None:
 
 
 def test_get_all_groups() -> None:
-    assert vregex.get_all_groups(r"(\d)(\w)", "1a 2b", with_group0=False, find_all=True) == ["1", "a", "2", "b"]
+    assert vregex.get_all_groups(
+        r"(\d)(\w)", "1a 2b", with_group0=False, find_all=True
+    ) == ["1", "a", "2", "b"]
 
 
 def test_get_all_groups_with_group0() -> None:
-    assert vregex.get_all_groups(r"(\d)(\w)", "1a 2b", with_group0=True, find_all=True) == ["1a", "1", "a", "2b", "2", "b"]
+    assert vregex.get_all_groups(
+        r"(\d)(\w)", "1a 2b", with_group0=True, find_all=True
+    ) == ["1a", "1", "a", "2b", "2", "b"]
 
 
 def test_get_all_groups_no_match() -> None:
@@ -317,6 +321,90 @@ def test_replace_all_no_match() -> None:
 
 def test_replace_all_invalid_pattern() -> None:
     assert vregex.replace_all("abc", r"(", "x") == "abc"
+
+
+def test_internal_match_result_fallback_and_none_branches() -> None:
+    regex = re.compile(r"\d+")
+    fallback = vregex.index_of_re(None, "abc")
+    assert fallback is None
+    assert vregex.last_index_of_re(None, "abc") is None
+    assert vregex.get_all_groups_re(None, "abc", False, False) == []
+    assert vregex.get_all_group_names_re(None) == []
+    assert vregex.find_all_group_re(None, "abc", "x") == []
+    assert vregex.del_last_re(None, "abc") == "abc"
+    assert vregex.del_pre_re(None, "abc") == "abc"
+    assert vregex.extract_multi_re(None, "abc", "$1") == "abc"
+    assert vregex.extract_multi_and_del_pre_re(None, "abc", "$1") == "abc"
+    assert vregex.replace_all_re(None, "abc", "x") == "abc"
+    assert vregex.replace_all_func_re(None, "abc", lambda m: "x") == "abc"
+    assert vregex.contains_re(None, "abc") is False
+    assert vregex.count_re(None, "abc") == 0
+    assert vregex.is_match_re(None, "abc") is False
+    assert vregex.get_re(None, "abc", 0) == ""
+    assert vregex.get_re_ok(None, "abc", 0) == ("", False)
+    assert vregex.get_by_name_re(None, "abc", "x") == ""
+    assert vregex.get_by_name_re(regex, "abc", "") == ""
+
+
+def test_precompiled_regex_helpers() -> None:
+    regex = re.compile(r"(?P<num>\d+)-(?P<word>\w+)")
+
+    assert vregex.contains_re(regex, "id 12-abc")
+    assert vregex.count_re(regex, "12-a 34-b") == 2
+    assert vregex.is_match_re(regex, "12-abc")
+    assert not vregex.is_match_re(regex, "id 12-abc")
+    assert vregex.get_re(regex, "id 12-abc", 0) == "12-abc"
+    assert vregex.get_re(regex, "id 12-abc", 2) == "abc"
+    assert vregex.get_re(regex, "id 12-abc", 9) == ""
+    assert vregex.get_by_name_re(regex, "id 12-abc", "word") == "abc"
+    assert vregex.get_by_name_re(regex, "id 12-abc", "missing") == ""
+    assert vregex.get_all_group_names_re(regex) == ["num", "word"]
+    assert vregex.find_all_group_re(regex, "12-a 34-b", "word") == ["a", "b"]
+    assert vregex.find_all_group_re(regex, "12-a", "missing") == []
+    assert vregex.del_all_re(regex, "12-a x 34-b") == " x "
+    assert vregex.del_first_re(regex, "12-a x 34-b") == " x 34-b"
+    assert vregex.replace_first_re(regex, "12-a x 34-b", r"\g<word>") == "a x 34-b"
+    assert vregex.replace_all_re(regex, "12-a 34-b", r"\g<word>") == "a b"
+    assert vregex.replace_all_func_re(regex, "12-a", lambda m: m.group("word").upper()) == "A"
+
+
+def test_compiled_delete_extract_variants_and_empty_content() -> None:
+    regex = re.compile(r"(\d+)-(\w+)")
+
+    assert vregex.del_last_re(regex, "12-a 34-b") == "12-a "
+    assert vregex.del_last_re(regex, "abc") == "abc"
+    assert vregex.del_last_re(regex, "") == ""
+    assert vregex.del_pre_re(regex, "xx 12-a yy") == "xx "
+    assert vregex.del_pre_re(regex, "abc") == "abc"
+    assert vregex.del_pre_re(regex, "") == ""
+    assert vregex.extract_multi_re(regex, "12-a", r"\2-\1") == "a-12"
+    assert vregex.extract_multi_re(regex, "", r"\2") == ""
+    assert vregex.extract_multi_and_del_pre_re(regex, "xx 12-a yy", r"\2") == "a yy"
+    assert vregex.extract_multi_and_del_pre_re(regex, "abc", r"\2") == "abc"
+    assert vregex.extract_multi_and_del_pre_re(regex, "", r"\2") == ""
+    assert vregex.replace_all_re(regex, "", "x") == ""
+    assert vregex.replace_all_func_re(regex, "", lambda m: "x") == ""
+
+
+def test_each_first_escape_and_number_ok() -> None:
+    regex = re.compile(r"(?P<num>\d+)")
+    each_seen: list[str] = []
+    first_seen: list[str] = []
+
+    vregex.each(regex, "a1b22", lambda mr: each_seen.append(mr.text))
+    vregex.first(regex, "a1b22", lambda mr: first_seen.append(mr.group_names["num"]))
+    vregex.each(None, "a1", lambda mr: each_seen.append("bad"))
+    vregex.each(regex, "a1", None)
+    vregex.first(None, "a1", lambda mr: first_seen.append("bad"))
+    vregex.first(regex, "a1", None)
+
+    assert each_seen == ["1", "22"]
+    assert first_seen == ["1"]
+    assert vregex.escape_char(".") == r"\."
+    assert vregex.escape_char("ab") == "ab"
+    assert vregex.escape_char("x") == "x"
+    assert vregex.get_first_number_ok("id 123") == (123, True)
+    assert vregex.get_first_number_ok("none") == (0, False)
 
 
 def test_replace_all_func() -> None:
