@@ -1,4 +1,8 @@
+import pytest
+
 from kniferpy import vobj
+from kniferpy.internal import objx
+from kniferpy.verr import SecurityError
 
 
 def test_equal_length_contains_and_empty() -> None:
@@ -100,3 +104,89 @@ def test_aggregate_helpers() -> None:
     assert not vobj.is_all_empty("", "x")
     assert vobj.is_all_not_empty("x", [1])
     assert not vobj.is_all_not_empty("x", [])
+
+
+def test_alias_null_nil_helpers() -> None:
+    assert vobj.equals(1, 1)
+    assert vobj.is_null(None)
+    assert vobj.is_not_null(1)
+    assert vobj.is_nil(None)
+    assert vobj.is_not_nil(1)
+    assert vobj.has_null(1, None)
+    assert not vobj.has_null(1, 2)
+
+
+def test_equal_none_and_length_custom_len() -> None:
+    class CustomLen:
+        def __len__(self) -> int:
+            return 0
+
+    assert vobj.equal(None, None)
+    assert not vobj.equal(None, 1)
+    assert vobj.length(None) == 0
+    assert vobj.is_empty(CustomLen())
+
+
+def test_clone_serialize_deserialize_roundtrip() -> None:
+    value = {"items": [1, 2], "name": "kniferpy"}
+
+    cloned = vobj.clone(value)
+    stream_clone = vobj.clone_by_stream(value)
+    encoded = vobj.serialize(value)
+
+    assert cloned == value
+    assert cloned is not value
+    assert stream_clone == value
+    assert vobj.deserialize(encoded, dict) == value
+    assert vobj.deserialize_to(encoded) == value
+    assert vobj.must_deserialize(encoded) == value
+    assert vobj.clone_with_options(value) == value
+    assert vobj.clone_by_stream_with_options(value) == value
+    assert vobj.serialize_with_options(value) == encoded
+    assert vobj.deserialize_with_options(encoded, dict) == value
+    assert vobj.deserialize_to_with_options(encoded) == value
+
+
+def test_codec_factory_options_and_failure_paths() -> None:
+    original = dict(objx._CODEC_CONFIG)
+    try:
+        vobj.with_encoder_factory(lambda: lambda obj: b"encoded")
+        vobj.with_decoder_factory(lambda: lambda data: {"decoded": data.decode()})
+        assert vobj.serialize("ignored") == b"encoded"
+        assert vobj.deserialize(b"value", dict) == {"decoded": "value"}
+
+        vobj.with_encoder_factory(lambda: lambda obj: (_ for _ in ()).throw(RuntimeError("boom")))
+        value = object()
+        assert vobj.serialize_or_nil(value) is None
+        assert vobj.serialize_or_nil_with_options(value) is None
+        assert vobj.clone_if_possible(value) is value
+        assert vobj.clone_if_possible_with_options(value) is value
+    finally:
+        objx._CODEC_CONFIG.clear()
+        objx._CODEC_CONFIG.update(original)
+
+
+def test_register_and_accepted_type_validation() -> None:
+    class SafeCustom:
+        pass
+
+    class UnsafeCustom:
+        pass
+
+    vobj.register(SafeCustom)
+    vobj.register_name("custom", SafeCustom)
+    assert objx._REGISTERED_TYPES["SafeCustom"] is SafeCustom
+    assert objx._REGISTERED_TYPES["custom"] is SafeCustom
+
+    vobj.validate_accepted_types({"k": [SafeCustom(), 1, "x", None]}, SafeCustom)
+    encoded = vobj.serialize({"k": [1, "x", None]})
+    assert vobj.deserialize(encoded, dict) == {"k": [1, "x", None]}
+    assert vobj.deserialize_to(encoded) == {"k": [1, "x", None]}
+
+    with pytest.raises(SecurityError) as unsafe_value_exc:
+        vobj.validate_accepted_types(UnsafeCustom(), SafeCustom)
+    with pytest.raises(SecurityError) as unsafe_key_exc:
+        vobj.validate_accepted_types({UnsafeCustom(): "value"}, SafeCustom)
+
+    assert unsafe_value_exc.value.code == "knifer.unsafe_type"
+    assert unsafe_key_exc.value.code == "knifer.unsafe_type"

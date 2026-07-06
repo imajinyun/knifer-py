@@ -1,8 +1,10 @@
 import os
+import stat
+import zipfile
 
 import pytest
 
-import zipfile
+from kniferpy.internal import poix
 from kniferpy.internal.poix import ErrNoSheet
 from kniferpy.vpoi import (
     DEFAULT_SHEET_NAME,
@@ -10,16 +12,32 @@ from kniferpy.vpoi import (
     ErrInvalidSheetName,
     is_valid_sheet_name,
     read_cells,
+    read_cells_from_reader,
     read_rows,
     read_rows_from_reader,
     read_sheet_cells,
+    read_sheet_cells_with_options,
     read_sheet_rows,
+    read_sheet_rows_with_options,
     sheet_names,
+    sheet_names_with_options,
     validate_sheet_name,
+    with_create_parents,
+    with_dir_perm,
+    with_file_perm,
+    with_open_file_func,
+    with_open_reader_func,
+    with_overwrite,
     with_read_limit,
+    with_read_sheet,
     with_read_start_cell,
+    with_start_cell,
+    with_write_sheet,
+    write_any_rows,
+    write_any_rows_to_buffer,
     write_rows,
     write_rows_to_buffer,
+    write_sheet_any_rows,
     write_sheet_rows,
     write_sheets,
 )
@@ -221,3 +239,138 @@ def test_integration_read_write_multiple_sheets(tmp_path):
     for sheet_name in data:
         rows = read_sheet_rows(wb_path, sheet_name)
         assert rows == data[sheet_name]
+
+
+def test_read_options_sheet_limit_and_custom_open_file(tmp_path):
+    wb_path = str(tmp_path / "custom.xlsx")
+    write_sheets(wb_path, {"A": [["skip"]], "B": [["h1", "h2"], ["v1", "v2"]]})
+
+    opened: list[str] = []
+
+    def open_file(path: str):
+        opened.append(path)
+        return poix.openpyxl.load_workbook(path, read_only=True, data_only=True)
+
+    assert sheet_names_with_options(wb_path, with_open_file_func(open_file)) == ["A", "B"]
+    rows = read_rows(
+        wb_path,
+        with_read_sheet("B"),
+        with_read_start_cell(2, 2),
+        with_read_limit(10, 1),
+        with_open_file_func(open_file),
+    )
+
+    assert opened == [wb_path, wb_path]
+    assert rows == [["v2"]]
+
+
+def test_read_cells_from_reader_and_cell_type_mapping() -> None:
+    buf = write_any_rows_to_buffer("Sheet", [[True, 3.14, "text"]])
+    cells = read_cells_from_reader(buf)
+
+    assert [cell.Type for cell in cells[0]] == [
+        poix.CellTypeBool,
+        poix.CellTypeNumber,
+        poix.CellTypeString,
+    ]
+    assert cells[0][0].Axis == "A1"
+    assert cells[0][1].Value == "3.14"
+    assert poix._map_cell_type("e") == poix.CellTypeError
+    assert poix._map_cell_type("unknown") == poix.CellTypeUnset
+
+
+def test_read_cells_limits_and_empty_rows(tmp_path):
+    wb_path = str(tmp_path / "cells.xlsx")
+    write_rows(
+        wb_path,
+        [
+            ["a", "b"],
+            ["c", "d"],
+        ],
+    )
+
+    assert read_sheet_cells_with_options(wb_path, "Sheet1", with_read_start_cell(9, 9)) == []
+    assert read_sheet_rows_with_options(wb_path, "Sheet1", with_read_start_cell(1, 9)) == [
+        [],
+        [],
+    ]
+
+
+def test_write_any_rows_sheet_and_buffer(tmp_path):
+    wb_path = str(tmp_path / "any.xlsx")
+    write_any_rows(wb_path, [["name", "active", "score"], ["alice", True, 3.5]])
+    assert read_rows(wb_path) == [["name", "active", "score"], ["alice", "True", "3.5"]]
+
+    sheet_path = str(tmp_path / "sheet-any.xlsx")
+    write_sheet_any_rows(sheet_path, "Typed", [[1, False]])
+    assert read_sheet_rows(sheet_path, "Typed") == [["1", "False"]]
+
+    buf = write_any_rows_to_buffer("Any", [[1, True]])
+    assert read_rows_from_reader(buf) == [["1", "True"]]
+
+
+def test_write_options_permissions_overwrite_and_create_parent(tmp_path):
+    wb_path = tmp_path / "perms" / "out.xlsx"
+    write_rows(
+        str(wb_path),
+        [["a"]],
+        with_dir_perm(0o755),
+        with_file_perm(0o600),
+        with_create_parents(True),
+    )
+    assert wb_path.exists()
+    assert stat.S_IMODE(wb_path.stat().st_mode) == 0o600
+
+    with pytest.raises(ErrInvalidSheetName):
+        write_rows(str(wb_path), [["b"]], with_overwrite(False))
+
+    missing_parent = tmp_path / "missing" / "out.xlsx"
+    with pytest.raises(FileNotFoundError):
+        write_rows(str(missing_parent), [["a"]], with_create_parents(False))
+
+
+def test_invalid_write_sheet_and_start_cell_defaults(tmp_path):
+    with pytest.raises(ErrInvalidSheetName):
+        write_rows(str(tmp_path / "bad.xlsx"), [["a"]], with_write_sheet("bad:name"))
+
+    wb_path = str(tmp_path / "start-default.xlsx")
+    write_rows(wb_path, [["a"]], with_start_cell(0, 0))
+    assert read_rows(wb_path) == [["a"]]
+
+
+def test_internal_config_helpers_and_custom_workbook(tmp_path):
+    read_cfg = poix._apply_read_options(
+        [
+            with_read_sheet("A"),
+            with_read_start_cell(-1, -1),
+            with_read_limit(-1, -1),
+            with_open_file_func(None),  # type: ignore[arg-type]
+            with_open_reader_func(None),  # type: ignore[arg-type]
+            None,  # type: ignore[list-item]
+        ]
+    )
+    assert read_cfg.sheet == "A"
+    assert read_cfg.start_row == 1
+    assert read_cfg.start_col == 1
+    assert read_cfg.max_rows == 0
+    assert read_cfg.max_cols == 0
+
+    calls: list[str] = []
+    wb = poix.openpyxl.Workbook()
+
+    def new_file():
+        calls.append("new")
+        return wb
+
+    cfg = poix._apply_write_options([None])  # type: ignore[list-item]
+    cfg.new_file = new_file
+    assert poix._new_workbook(cfg) is wb
+    assert calls == ["new"]
+
+
+def test_resolve_sheet_no_sheet_error() -> None:
+    class EmptyWorkbook:
+        sheetnames: list[str] = []
+
+    with pytest.raises(ErrNoSheet):
+        poix._resolve_sheet(EmptyWorkbook(), "")
