@@ -5,6 +5,7 @@ from fractions import Fraction
 import pytest
 
 from kniferpy import vnum
+from kniferpy.internal import numx
 from kniferpy.internal.numx import RoundingMode
 from kniferpy.verr import ValidationError
 
@@ -44,10 +45,16 @@ class TestArithmetic:
         result = vnum.MulStr("2", "3", "4")
         assert float(result) == pytest.approx(24.0)
 
+    def test_fraction_string_arithmetic_skips_blank_values(self) -> None:
+        assert vnum.AddStr("1", " ", "2") == Fraction(3, 1)
+        assert vnum.SubStr("10", "", "3") == Fraction(7, 1)
+        assert vnum.MulStr("2", "", "3") == Fraction(0, 1)
+
     def test_div(self) -> None:
         assert vnum.Div(10, 3) == pytest.approx(3.3333333333, abs=1e-6)
         assert vnum.Div(10, 0) == pytest.approx(0.0)
         assert vnum.Div(10, 3, 2) == pytest.approx(3.33)
+        assert vnum.Div(10, 4, -1) == pytest.approx(2.5)
 
     def test_div_with_mode(self) -> None:
         assert vnum.DivWithMode(10, 3, 2, RoundingMode.HALF_UP) == pytest.approx(3.33)
@@ -73,6 +80,9 @@ class TestArithmetic:
 
     def test_abs_integer_e(self) -> None:
         val, err = vnum.AbsIntegerE(-5)
+        assert val == 5
+        assert err is None
+        val, err = vnum.AbsIntegerE(5)
         assert val == 5
         assert err is None
 
@@ -130,6 +140,7 @@ class TestRounding:
         assert vnum.Round(3.14159, 2) == pytest.approx(3.14)
         assert vnum.Round(3.14159, 0) == pytest.approx(3.0)
         assert vnum.Round(3.5, 0) == pytest.approx(4.0)
+        assert vnum.Round(3.5, -2) == pytest.approx(4.0)
 
     def test_round_mode(self) -> None:
         assert vnum.RoundMode(3.14159, 2, RoundingMode.HALF_UP) == pytest.approx(3.14)
@@ -160,6 +171,8 @@ class TestFormatting:
         assert vnum.DecimalFormat("0.00", 3.14159) == "3.14"
         assert vnum.DecimalFormat("0", 3.7) == "4"
         assert vnum.DecimalFormat("", 3.7) == "4"
+        assert vnum.DecimalFormat(",##0.00", -12345.6) == "-12,345.60"
+        assert vnum.DecimalFormat("0.0%", 0.125) == "12.5%"
 
     def test_decimal_format_money(self) -> None:
         result = vnum.DecimalFormatMoney(12345.6)
@@ -180,6 +193,8 @@ class TestFormatting:
     def test_to_str_strip(self) -> None:
         result = vnum.ToStrStrip(12.3400, True)
         assert result == "12.34"
+        assert vnum.ToStrStrip(float("nan"), True) == ""
+        assert vnum.ToStrStrip(12.3400, False) == "12.34"
 
 
 # ---------------------------------------------------------------------------
@@ -191,7 +206,9 @@ class TestValidation:
     def test_is_number(self) -> None:
         assert vnum.IsNumber("  -3.14 ")
         assert vnum.IsNumber("0xFF")
+        assert not vnum.IsNumber("0xZZ")
         assert vnum.IsNumber("1e5")
+        assert vnum.IsNumber("1D")
         assert not vnum.IsNumber("abc")
         assert not vnum.IsNumber("")
 
@@ -208,6 +225,7 @@ class TestValidation:
     def test_is_double(self) -> None:
         assert vnum.IsDouble("3.14")
         assert not vnum.IsDouble("3")
+        assert not vnum.IsDouble("3.bad")
         assert not vnum.IsDouble("")
 
     def test_is_digits(self) -> None:
@@ -223,10 +241,12 @@ class TestValidation:
         assert not vnum.IsPrimes(1)
         assert not vnum.IsPrimes(4)
         assert not vnum.IsPrimes(9)
+        assert not vnum.IsPrimes(25)
 
     def test_is_valid_number(self) -> None:
         assert vnum.IsValidNumber(42.0)
         assert vnum.IsValidNumber(42)
+        assert vnum.IsValidNumber("42")
         assert not vnum.IsValidNumber(None)
         assert not vnum.IsValidNumber(float("nan"))
 
@@ -234,6 +254,10 @@ class TestValidation:
         assert vnum.IsValid(1.0)
         assert not vnum.IsValid(float("nan"))
         assert not vnum.IsValid(float("inf"))
+
+    def test_is_valid_float32(self) -> None:
+        assert vnum.IsValidFloat32(1.0)
+        assert not vnum.IsValidFloat32(float("inf"))
 
     def test_is_odd_even(self) -> None:
         assert vnum.IsOdd(3)
@@ -262,10 +286,28 @@ class TestParsing:
         assert vnum.ParseInt("-10") == -10
         assert vnum.ParseInt("") == 0
         assert vnum.ParseInt("  123  ") == 123
+        assert vnum.ParseInt("0xFF") == 255
+        assert vnum.ParseInt("1e5") == 0
+        assert vnum.ParseInt("1,234") == 1234
+        assert vnum.ParseInt(".5") == 0
+
+    def test_internal_parse_int_fallbacks(self) -> None:
+        assert numx._parse_int("42") == 42
+        assert numx._parse_int("") == 0
+        assert numx._parse_int(".5") == 0
+        assert numx._parse_int("0x10") == 16
+        assert numx._parse_int("1e5") == 0
+        assert numx._parse_int("1,234") == 1234
+        assert numx._parse_int("bad") == 0
+        assert numx._parse_int_impl("10") == 10
+        assert numx._parse_float_impl("1.5") == pytest.approx(1.5)
 
     def test_parse_long(self) -> None:
         assert vnum.ParseLong("42") == 42
         assert vnum.ParseLong("") == 0
+        assert vnum.ParseLong("0x10") == 16
+        assert vnum.ParseLong("1e5") == 0
+        assert vnum.ParseLong("1,234") == 1234
 
     def test_parse_float(self) -> None:
         assert vnum.ParseFloat("3.14") == pytest.approx(3.14, rel=0.01)
@@ -273,28 +315,40 @@ class TestParsing:
     def test_parse_double(self) -> None:
         assert vnum.ParseDouble("3.14") == pytest.approx(3.14)
         assert vnum.ParseDouble("") == pytest.approx(0.0)
+        assert vnum.ParseDouble("bad") == pytest.approx(0.0)
+        assert vnum.ParseDouble("1,234.5") == pytest.approx(1234.5)
 
     def test_parse_number(self) -> None:
         result = vnum.ParseNumber("3.14")
         assert result is not None
         assert result == pytest.approx(3.14)
+        assert vnum.ParseNumber("+0x10") == pytest.approx(16.0)
+        assert vnum.ParseNumber("0xZZ") is None
+        assert vnum.ParseNumber("bad") is None
 
     def test_parse_int_default(self) -> None:
         assert vnum.ParseIntDefault("42", -1) == 42
         assert vnum.ParseIntDefault("bad", -1) == -1
         assert vnum.ParseIntDefault("", -1) == -1
+        assert vnum.ParseIntDefault("1,234", -1) == 1234
 
     def test_parse_long_default(self) -> None:
         assert vnum.ParseLongDefault("42", -1) == 42
         assert vnum.ParseLongDefault("bad", -1) == -1
+        assert vnum.ParseLongDefault("", -1) == -1
+        assert vnum.ParseLongDefault("1,234", -1) == 1234
 
     def test_parse_float_default(self) -> None:
         assert vnum.ParseFloatDefault("3.5", 1.0) == pytest.approx(3.5, rel=0.01)
         assert vnum.ParseFloatDefault("bad", 1.0) == pytest.approx(1.0)
+        assert vnum.ParseFloatDefault("", 1.0) == pytest.approx(1.0)
+        assert vnum.ParseFloatDefault("1,234.5", 1.0) == pytest.approx(1234.5)
 
     def test_parse_double_default(self) -> None:
         assert vnum.ParseDoubleDefault("3.5", 1.0) == pytest.approx(3.5)
         assert vnum.ParseDoubleDefault("bad", 1.0) == pytest.approx(1.0)
+        assert vnum.ParseDoubleDefault("", 1.0) == pytest.approx(1.0)
+        assert vnum.ParseDoubleDefault("1,234.5", 1.0) == pytest.approx(1234.5)
 
 
 # ---------------------------------------------------------------------------
@@ -317,17 +371,22 @@ class TestRandom:
     def test_gen_random_number_invalid(self) -> None:
         assert vnum.GenRandomNumber(1, 5, 10) == []
         assert vnum.GenRandomNumber(1, 5, -1) == []
+        assert numx._secure_intn(0) == 0
 
     def test_gen_random_number_with_seed(self) -> None:
         result = vnum.GenRandomNumberWithSeed(1, 10, 3, [1, 3, 5, 7, 9])
         assert len(result) == 3
         assert all(x in [1, 3, 5, 7, 9] for x in result)
+        assert vnum.GenRandomNumberWithSeed(10, 1, 2, [1, 2, 3]) != []
+        assert vnum.GenRandomNumberWithSeed(1, 5, 3, [1]) == []
 
     def test_gen_by_set(self) -> None:
         result = vnum.GenBySet(1, 10, 5)
         assert len(result) == 5
         assert len(set(result)) == 5
         assert all(1 <= x < 10 for x in result)
+        assert vnum.GenBySet(10, 1, 3)
+        assert vnum.GenBySet(1, 3, 5) == []
 
 
 # ---------------------------------------------------------------------------
@@ -340,11 +399,14 @@ class TestRange:
         assert vnum.Range(0, 5, 2) == [0, 2, 4]
         assert vnum.Range(5, 0, -1) == [5, 4, 3, 2, 1]
         assert vnum.Range(0, 5) == [0, 1, 2, 3, 4]
+        assert vnum.Range(0, 3, 0) == [0, 1, 2]
+        assert vnum.Range(3, 0, 0) == [3, 2, 1]
 
     def test_range_closed(self) -> None:
         assert vnum.RangeClosed(1, 3) == [1, 2, 3]
         assert vnum.RangeClosed(5, 5) == [5]
         assert vnum.RangeClosed(0, 5, 2) == [0, 2, 4]
+        assert vnum.RangeClosed(3, 1, 0) == [3, 2, 1]
 
     def test_append_range(self) -> None:
         result = vnum.AppendRange(4, 6, 1, [1, 2, 3])
@@ -372,6 +434,10 @@ class TestCalculator:
     def test_calculate_error(self) -> None:
         with pytest.raises(ValidationError):
             vnum.Calculate("(1 + 2")
+        with pytest.raises(ValidationError):
+            vnum.Calculate("1 + @")
+        with pytest.raises(ValidationError):
+            vnum.Calculate("1 2")
 
 
 # ---------------------------------------------------------------------------
@@ -390,9 +456,12 @@ class TestBinary:
     def test_binary_str(self) -> None:
         result = vnum.GetBinaryStr(42)
         assert isinstance(result, str)
+        assert len(vnum.GetBinaryStr(1.5)) == 64
+        assert vnum.GetBinaryStr(object()) == ""
 
     def test_binary_to_int(self) -> None:
         assert vnum.BinaryToInt("1010") == 10
+        assert vnum.BinaryToInt("bad") == 0
 
     def test_binary_to_long(self) -> None:
         assert vnum.BinaryToLong("1010") == 10
@@ -405,12 +474,16 @@ class TestBinary:
     def test_unsigned_byte_array_len(self) -> None:
         result = vnum.ToUnsignedByteArrayLen(4, 255)
         assert result == b"\x00\x00\x00\xff"
+        with pytest.raises(ValidationError):
+            vnum.ToUnsignedByteArrayLen(1, 256)
 
     def test_from_unsigned_byte_array(self) -> None:
         assert vnum.FromUnsignedByteArray(b"\x00\xff") == 255
 
     def test_from_unsigned_byte_array_range(self) -> None:
         assert vnum.FromUnsignedByteArrayRange(b"\x00\x01\x02\x03", 0, 2) == 1
+        assert vnum.FromUnsignedByteArrayRange(b"\x00\x01", -1, 1) == 0
+        assert vnum.FromUnsignedByteArrayRange(b"\x00\x01", 1, 5) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -453,6 +526,8 @@ class TestComparison:
     def test_equals_exact(self) -> None:
         assert vnum.EqualsExact(42.0, 42.0)
         assert not vnum.EqualsExact(42.0, 42.1)
+        assert vnum.EqualsFloat32Exact(1.0, 1.0)
+        assert not vnum.EqualsFloat32Exact(1.0, 1.0000001)
 
     def test_equals_int64(self) -> None:
         assert vnum.EqualsInt64(42, 42)
@@ -499,12 +574,14 @@ class TestFactorial:
         assert vnum.Factorial(1) == 1
         assert vnum.Factorial(5) == 120
         assert vnum.Factorial(10) == 3628800
+        assert vnum.Factorial(21) == 51090942171709440000
 
     def test_factorial_negative(self) -> None:
         with pytest.raises(ValidationError):
             vnum.Factorial(-1)
 
     def test_factorial_range(self) -> None:
+        assert vnum.FactorialRange(0, 0) == 1
         assert vnum.FactorialRange(5, 3) == 20  # 5 * 4
         assert vnum.FactorialRange(5, 5) == 1
         assert vnum.FactorialRange(3, 5) == 0
@@ -525,6 +602,8 @@ class TestFactorial:
     def test_process_multiple(self) -> None:
         # C(5, 2) = 10
         assert vnum.ProcessMultiple(5, 2) == 10
+        assert vnum.ProcessMultiple(2, 5) == 0
+        assert vnum.ProcessMultiple(5, -1) == 0
 
     def test_divisor(self) -> None:
         assert vnum.Divisor(12, 8) == 4
@@ -544,6 +623,8 @@ class TestConversion:
     def test_to_big_decimal(self) -> None:
         result = vnum.ToBigDecimal("0.5")
         assert result == Fraction(1, 2)
+        assert vnum.ToBigDecimal("1,234.5") == Fraction(2469, 2)
+        assert vnum.ToBigDecimal("bad") == Fraction(0, 1)
 
     def test_to_big_decimal_empty(self) -> None:
         result = vnum.ToBigDecimal("")
@@ -552,6 +633,8 @@ class TestConversion:
     def test_to_big_integer(self) -> None:
         assert vnum.ToBigInteger("42") == 42
         assert vnum.ToBigInteger("") == 0
+        assert vnum.ToBigInteger("0xFF") == 255
+        assert vnum.ToBigInteger("bad") == 0
 
     def test_count(self) -> None:
         assert vnum.Count(10, 3) == 4
@@ -569,6 +652,7 @@ class TestConversion:
     def test_null_to_zero_int(self) -> None:
         assert vnum.NullToZero(5) == 5
         assert vnum.NullToZero(None) == 0
+        assert vnum.NullToZero(1.5) == pytest.approx(1.5)
 
     def test_null_big_int_to_zero(self) -> None:
         assert vnum.NullBigIntToZero(None) == 0
@@ -584,7 +668,16 @@ class TestConversion:
         val, ok = vnum.NewBigInteger("0xFF")
         assert ok and val == 255
 
+        val, ok = vnum.NewBigInteger("-#FF")
+        assert ok and val == -255
+
+        val, ok = vnum.NewBigInteger("077")
+        assert ok and val == 63
+
         val, ok = vnum.NewBigInteger("")
+        assert not ok and val is None
+
+        val, ok = vnum.NewBigInteger("bad")
         assert not ok and val is None
 
     def test_part_value(self) -> None:
@@ -619,6 +712,15 @@ class TestOptions:
     def test_with_format_float_func(self) -> None:
         opt = vnum.WithFormatFloatFunc(lambda f: f"[{f}]")
         assert vnum.ToStr(3.14, [opt]) == "[3.14]"
+
+    def test_with_format_int_func(self) -> None:
+        opt = vnum.WithFormatIntFunc(lambda i: f"[{i}]")
+        assert vnum.DecimalFormat("0", 3.0, [opt]) == "3"
+
+    def test_with_double_options(self) -> None:
+        parse_opt = vnum.WithDoubleParseFloatFunc(lambda s: float(s) * 2)
+        format_opt = vnum.WithDoubleFormatFloatFunc(lambda f: f"[{f}]")
+        assert vnum.ToDouble(1.0, [parse_opt, format_opt]) == pytest.approx(1.0)
 
     def test_with_random_reader(self) -> None:
         opt = vnum.WithRandomReader(lambda n: 0)  # always picks first

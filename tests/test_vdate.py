@@ -3,6 +3,7 @@ from datetime import datetime
 import pytest
 
 from kniferpy import vdate
+from kniferpy.internal import datex
 from kniferpy.verr import ValidationError
 
 
@@ -20,6 +21,10 @@ def test_parse_common_formats() -> None:
     assert vdate.parse("2026-07-02") == datetime(2026, 7, 2)
     assert vdate.parse("20260702") == datetime(2026, 7, 2)
     assert vdate.parse(" 2026/07/02 ") == datetime(2026, 7, 2)
+    assert vdate.parse("13:45:30") == datetime(1900, 1, 1, 13, 45, 30)
+    assert vdate.parse("20260702134530") == datetime(2026, 7, 2, 13, 45, 30)
+    assert vdate.parse("2026-07-02T13:45:30Z") == datetime(2026, 7, 2, 13, 45, 30)
+    assert vdate.parse("2026-07-02T13:45:30") == datetime(2026, 7, 2, 13, 45, 30)
     with pytest.raises(ValidationError):
         vdate.parse("")
     with pytest.raises(ValidationError):
@@ -82,6 +87,11 @@ def test_now_and_today() -> None:
 
 
 class TestLunarCalendar:
+    def test_date_repr_helpers(self) -> None:
+        assert repr(vdate.SolarDate(2026, 2, 17)) == "SolarDate(2026, 2, 17)"
+        lunar = vdate.LunarDate(2026, 1, 1, zodiac="马", year_gan_zhi="丙午")
+        assert repr(lunar) == "LunarDate(2026, 1, 1, leap=False, gz=丙午, z=马)"
+
     def test_solar_to_lunar_known_dates(self) -> None:
         # Spring Festival 2026: February 17 -> 正月初一
         lunar = vdate.solar_to_lunar(2026, 2, 17)
@@ -119,6 +129,8 @@ class TestLunarCalendar:
         # 2025 has a leap month 6 (闰六月)
         assert vdate.leap_month(2025) == 6
         assert vdate.is_leap_month(2025, 6)
+        assert not vdate.is_leap_month(1800, 1)
+        assert not vdate.is_leap_month(2023, 0)
 
     def test_lunar_month_days(self) -> None:
         # Lunar months have either 29 or 30 days
@@ -128,12 +140,15 @@ class TestLunarCalendar:
         assert days in (29, 30)
         days = vdate.lunar_month_days(2026, 3)
         assert days in (29, 30)
+        assert vdate.lunar_month_days(2026, 1, True) == 0
+        assert vdate.lunar_month_days(2023, 2, True) == 29
 
     def test_lunar_year_days(self) -> None:
         days = vdate.lunar_year_days(2026)
         assert 353 <= days <= 385
 
     def test_zodiac(self) -> None:
+        assert vdate.zodiac(0) == ""
         assert vdate.zodiac(2024) == "龙"
         assert vdate.zodiac(2025) == "蛇"
         assert vdate.zodiac(2026) == "马"
@@ -143,12 +158,16 @@ class TestLunarCalendar:
         assert vdate.year_gan_zhi(2024) == "甲辰"
         assert vdate.year_gan_zhi(2025) == "乙巳"
         assert vdate.year_gan_zhi(2026) == "丙午"
+        assert vdate.year_gan_zhi(0) == ""
+        assert datex._gan_zhi(-1) == "癸亥"
 
         # Month Gan-Zhi for 2026 January
         gz = vdate.month_gan_zhi(2026, 1)
         assert len(gz) == 2
         assert gz[0] in "甲乙丙丁戊己庚辛壬癸"
         assert gz[1] in "子丑寅卯辰巳午未申酉戌亥"
+        assert vdate.month_gan_zhi(0, 1) == ""
+        assert vdate.month_gan_zhi(2026, 13) == ""
 
         # Day Gan-Zhi for a known date
         gz = vdate.day_gan_zhi(2026, 7, 2)
@@ -159,6 +178,34 @@ class TestLunarCalendar:
         term = vdate.solar_term(2026, 2, 4)
         if term:  # solar term is approximate
             assert term in ("立春", "小寒", "大寒", "雨水")
+        assert vdate.solar_term(2026, 2, 5) == ""
+        assert vdate.solar_term(1800, 1, 1) == ""
+        assert vdate.solar_term(2026, 13, 1) == ""
+
+    def test_lunar_leap_month_conversion(self) -> None:
+        lunar = vdate.solar_to_lunar(2023, 3, 22)
+        assert lunar.year == 2023
+        assert lunar.month == 2
+        assert lunar.day == 1
+        assert lunar.is_leap_month
+
+        solar = vdate.lunar_to_solar(2023, 2, 1, True)
+        assert (solar.year, solar.month, solar.day) == (2023, 3, 22)
+
+        normal = vdate.lunar_to_solar(2023, 3, 1)
+        assert (normal.year, normal.month, normal.day) == (2023, 4, 20)
+
+    def test_lunar_invalid_month_day_and_leap_flags(self) -> None:
+        with pytest.raises(ValidationError):
+            vdate.lunar_month_days(2026, 13)
+        with pytest.raises(ValidationError):
+            vdate.lunar_to_solar(2026, 13, 1)
+        with pytest.raises(ValidationError):
+            vdate.lunar_to_solar(2026, 1, 1, True)
+        with pytest.raises(ValidationError):
+            vdate.lunar_to_solar(2026, 1, 0)
+        with pytest.raises(ValidationError):
+            vdate.lunar_to_solar(2026, 1, 31)
 
     def test_lunar_year_out_of_range(self) -> None:
         with pytest.raises(ValidationError):

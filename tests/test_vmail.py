@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import email
+import io
+import smtplib
 from datetime import datetime, timezone
 from email.message import Message as StdMessage
 from pathlib import Path
@@ -8,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from kniferpy import vmail
+from kniferpy.internal import mailx
 from kniferpy.verr import KniferError, ValidationError
 
 # --- Address ------------------------------------------------------------------
@@ -25,6 +28,12 @@ def test_new_address_rejects_crlf() -> None:
         vmail.new_address("Kim\r\nBcc: evil@example.com", "kim@example.com")
 
 
+def test_new_address_rejects_invalid_email_shapes() -> None:
+    for value in ("", "bad address@example.com", "Name <a@example.com>", "local@"):
+        with pytest.raises(ValidationError):
+            vmail.new_address("", value)
+
+
 def test_parse_address() -> None:
     addr = vmail.parse_address("Kim <kim@example.com>")
     assert addr.name == "Kim"
@@ -40,6 +49,8 @@ def test_parse_address_bare() -> None:
 def test_parse_address_invalid() -> None:
     with pytest.raises(ValidationError):
         vmail.parse_address("not-an-address")
+    with pytest.raises(ValidationError):
+        vmail.parse_address("Kim\r\n <kim@example.com>")
 
 
 def test_parse_address_list() -> None:
@@ -51,6 +62,19 @@ def test_parse_address_list() -> None:
 def test_parse_address_list_invalid() -> None:
     with pytest.raises(ValidationError):
         vmail.parse_address_list("a@example.com, broken")
+    with pytest.raises(ValidationError):
+        vmail.parse_address_list("a@example.com\r\nbcc@example.com")
+
+
+def test_new_message_accepts_address_objects_and_rejects_unsupported_type() -> None:
+    from_addr = vmail.new_address("From", "from@example.com")
+    to_addr = vmail.new_address("To", "to@example.com")
+    msg = vmail.new_message(from_=from_addr, to=[to_addr, "other@example.com"], text="hi")
+    assert msg.from_.name == "From"
+    assert msg.recipients() == ["to@example.com", "other@example.com"]
+
+    with pytest.raises(ValidationError):
+        vmail.new_message(from_=from_addr, to=[object()], text="hi")  # type: ignore[list-item]
 
 
 # --- Attachment ---------------------------------------------------------------
@@ -59,6 +83,22 @@ def test_parse_address_list_invalid() -> None:
 def test_detect_content_type() -> None:
     assert vmail.detect_content_type("report.pdf") == "application/pdf"
     assert vmail.detect_content_type("noext") == vmail.TYPE_APPLICATION_OCTET_STREAM
+    assert mailx._split_content_type("bad") == ("application", "octet-stream")
+    assert mailx._split_content_type(" text / plain ") == ("text", "plain")
+
+
+def test_header_collection() -> None:
+    header = vmail.new_header()
+    header.add("X-Test", "a")
+    header.add("X-Test", "b")
+    assert header.values("X-Test") == ["a", "b"]
+    header.set("X-Test", "c")
+    assert header.values("X-Test") == ["c"]
+    assert header.to_tuples() == (("X-Test", ("c",)),)
+    with pytest.raises(ValidationError):
+        header.add("Bad\r\nName", "x")
+    with pytest.raises(ValidationError):
+        header.set("Bad", "x\r\ny")
 
 
 def test_new_attachment_from_bytes() -> None:
@@ -78,6 +118,26 @@ def test_new_attachment_strips_directory() -> None:
 def test_new_attachment_rejects_crlf_name() -> None:
     with pytest.raises(ValidationError):
         vmail.new_attachment("bad\r\nname.txt", b"x")
+    with pytest.raises(ValidationError):
+        vmail.new_inline("logo.png", "bad\r\ncid", b"x")
+
+
+def test_attachment_reader_helpers() -> None:
+    att = vmail.new_attachment_reader("reader.txt", lambda: b"reader", content_type="text/custom")
+    assert att.name == "reader.txt"
+    assert att.content_type == "text/custom"
+    assert att.read() == b"reader"
+
+    inline = vmail.new_inline_reader("logo.png", "<logo>", lambda: b"png", content_type="image/png")
+    assert inline.is_inline
+    assert inline.content_id == "logo"
+    assert inline.read() == b"png"
+
+
+def test_attachment_without_content_raises() -> None:
+    att = vmail.Attachment(name="empty.txt", content_type="text/plain", size=0)
+    with pytest.raises(ValidationError):
+        att.read()
 
 
 def test_new_inline_has_content_id() -> None:
@@ -171,6 +231,30 @@ def test_header_rejects_crlf_value() -> None:
         _basic_message(headers={"X-Bad": "line1\r\nline2"})
 
 
+def test_message_rejects_invalid_metadata_and_envelope() -> None:
+    with pytest.raises(ValidationError):
+        _basic_message(message_id="abc\r\nbad")
+    with pytest.raises(ValidationError):
+        _basic_message(charset="")
+    with pytest.raises(ValidationError):
+        _basic_message(envelope_from="bad address@example.com")
+
+
+def test_message_validate_rejects_mutated_address_and_attachment() -> None:
+    msg = _basic_message()
+    bad_to = vmail.Address("Bad\r\nName", "to@example.com")
+    mutated = vmail.Message(from_=msg.from_, to=(bad_to,), text="hi")
+    with pytest.raises(ValidationError):
+        mutated.validate()
+
+    bad_attachment = vmail.Attachment(name="", content_type="text/plain", size=0, _data=b"")
+    mutated_attachment = vmail.Message(
+        from_=msg.from_, to=msg.to, text="hi", attachments=(bad_attachment,)
+    )
+    with pytest.raises(ValidationError):
+        mutated_attachment.validate()
+
+
 # --- Rendering ----------------------------------------------------------------
 
 
@@ -224,6 +308,17 @@ def test_render_reply_to_and_message_id() -> None:
     assert parsed["Message-ID"] == "<abc123>"
 
 
+def test_render_html_only_cc_and_write_to() -> None:
+    msg = _basic_message(text="", html="<p>Hello</p>", cc="cc@example.com")
+    parsed = _parse(msg)
+    assert parsed["Cc"] == "cc@example.com"
+    assert parsed.get_content_type() == "text/html"
+
+    writer = io.BytesIO()
+    written = msg.write_to(writer)
+    assert written == len(writer.getvalue())
+
+
 # --- Client / delivery --------------------------------------------------------
 
 
@@ -263,6 +358,18 @@ class _FakeSMTP:
 
     def close(self) -> None:
         pass
+
+
+class _QuitFailsSMTP(_FakeSMTP):
+    def __init__(self, host: str, port: int, **kwargs: object) -> None:
+        super().__init__(host, port, **kwargs)
+        self.close_called = False
+
+    def quit(self) -> None:
+        raise smtplib.SMTPException("quit failed")
+
+    def close(self) -> None:
+        self.close_called = True
 
 
 @pytest.fixture
@@ -335,6 +442,47 @@ def test_plain_auth_allowed_when_opted_in(fake_smtp: type[_FakeSMTP]) -> None:
     assert fake_smtp.instances[0].logged_in == ("u", "p")
 
 
+def test_opportunistic_starttls_without_support_continues(monkeypatch: pytest.MonkeyPatch) -> None:
+    class _NoStartTLS(_FakeSMTP):
+        def __init__(self, host: str, port: int, **kwargs: object) -> None:
+            super().__init__(host, port, **kwargs)
+            self._extns = set()
+
+    _FakeSMTP.instances = []
+    monkeypatch.setattr("smtplib.SMTP", _NoStartTLS)
+    client = vmail.Client(
+        vmail.Config(
+            host="smtp.example.com",
+            port=25,
+            tls_policy=vmail.TLSPolicy.OPPORTUNISTIC_STARTTLS,
+        )
+    )
+    client.send(_basic_message())
+    assert not _FakeSMTP.instances[0].started_tls
+
+
+def test_unknown_tls_policy_defaults_to_mandatory() -> None:
+    client = vmail.Client(
+        vmail.Config(host="smtp.example.com", port=587, tls_policy=vmail.TLSPolicy.UNKNOWN)
+    )
+    assert client.config.tls_policy is vmail.TLSPolicy.MANDATORY_STARTTLS
+
+
+def test_connection_closes_when_quit_fails(monkeypatch: pytest.MonkeyPatch) -> None:
+    _FakeSMTP.instances = []
+    monkeypatch.setattr("smtplib.SMTP", _QuitFailsSMTP)
+    client = vmail.Client(
+        vmail.Config(
+            host="smtp.example.com",
+            port=25,
+            tls_policy=vmail.TLSPolicy.NONE,
+        )
+    )
+    client.send(_basic_message())
+    assert isinstance(_FakeSMTP.instances[0], _QuitFailsSMTP)
+    assert _FakeSMTP.instances[0].close_called  # type: ignore[attr-defined]
+
+
 def test_implicit_tls_uses_ssl(fake_smtp: type[_FakeSMTP]) -> None:
     client = vmail.Client(
         vmail.Config(
@@ -369,6 +517,16 @@ def test_send_html(fake_smtp: type[_FakeSMTP]) -> None:
     assert parsed.get_content_type() == "text/html"
 
 
+def test_send_with_client_kwargs(fake_smtp: type[_FakeSMTP]) -> None:
+    vmail.send(
+        "smtp.example.com",
+        25,
+        _basic_message(),
+        tls_policy=vmail.TLSPolicy.NONE,
+    )
+    assert fake_smtp.instances[0].sent[0][0] == "from@example.com"
+
+
 def test_quick_send_with_account_defaults(fake_smtp: type[_FakeSMTP]) -> None:
     account = vmail.Account(
         host="smtp.example.com",
@@ -396,3 +554,16 @@ def test_send_account_text(fake_smtp: type[_FakeSMTP]) -> None:
     )
     vmail.send_account_text(account, "to@example.com", "Subject", "text body")
     assert fake_smtp.instances[0].sent[0][0] == "from@example.com"
+
+
+def test_send_account_html(fake_smtp: type[_FakeSMTP]) -> None:
+    account = vmail.Account(
+        host="smtp.example.com",
+        port=25,
+        from_="from@example.com",
+        tls_policy=vmail.TLSPolicy.NONE,
+        allow_plain_auth=True,
+    )
+    vmail.send_account_html(account, "to@example.com", "Subject", "<p>html</p>")
+    parsed = email.message_from_bytes(fake_smtp.instances[0].sent[0][2])
+    assert parsed.get_content_type() == "text/html"
