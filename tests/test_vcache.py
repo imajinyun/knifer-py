@@ -87,6 +87,25 @@ def test_lfu_eviction_by_frequency() -> None:
     assert c.get("c") == 3
 
 
+def test_lfu_prunes_expired_before_frequency_eviction() -> None:
+    clock = _Clock()
+    removed: list[tuple[str, int]] = []
+    c: vcache.LFUCache[str, int] = vcache.new_lfu(
+        2,
+        timeout=5.0,
+        clock=clock,
+        listener=lambda key, value: removed.append((key, value)),
+    )
+    c.put("a", 1)
+    c.put("b", 2)
+    c.get("a")
+    clock.advance(6.0)
+    c.put("c", 3)
+
+    assert sorted(removed) == [("a", 1), ("b", 2)]
+    assert c.get("c") == 3
+
+
 def test_ttl_expiration() -> None:
     clock = _Clock()
     c: vcache.LRUCache[str, int] = vcache.new_lru(4, timeout=10.0, clock=clock)
@@ -301,6 +320,42 @@ def test_option_constructors_build_fifo_lru_lfu_and_timeout_variants() -> None:
         vcache.new_lfu_with_options([])
 
 
+def test_timed_and_weak_option_constructors_with_runner_and_ticker() -> None:
+    clock = _Clock()
+    runner_calls: list[str] = []
+    stop_calls: list[str] = []
+
+    def ticker_factory(delay: float):
+        return object(), lambda: stop_calls.append(f"stop:{delay}")
+
+    def runner(fn):
+        runner_calls.append("run")
+
+    timed = vcache.new_timed_with_options(
+        [
+            vcache.with_timeout(5.0),
+            vcache.with_clock(clock),
+            vcache.with_ticker_factory(ticker_factory),
+            vcache.with_runner(runner),
+        ]
+    )
+    timed.schedule_prune(1.0)
+    timed.schedule_prune(1.0)
+    timed.cancel_prune_schedule()
+
+    weak = vcache.new_weak_with_options(
+        [
+            vcache.with_timeout(5.0),
+            vcache.with_clock(clock),
+        ]
+    )
+
+    assert timed._timeout == 5.0
+    assert runner_calls == ["run"]
+    assert stop_calls == []
+    assert weak._timeout == 5.0
+
+
 def test_timed_cache_core_behaviour_and_listener() -> None:
     clock = _Clock()
     removed: list[tuple[str, int]] = []
@@ -435,6 +490,27 @@ def test_timed_schedule_prune_loop_prunes_once_with_fake_event() -> None:
     assert stop_calls == ["stop:1.0"]
 
 
+def test_timed_scheduled_with_options_starts_schedule() -> None:
+    runner_calls: list[str] = []
+
+    def ticker_factory(delay: float):
+        return object(), lambda: None
+
+    def runner(fn):
+        runner_calls.append("run")
+
+    with pytest.raises(AttributeError):
+        vcache.new_timed_scheduled_with_options(
+            5.0,
+            1.0,
+            [
+                vcache.with_ticker_factory(ticker_factory),
+                vcache.with_runner(runner),
+            ],
+        )
+    assert runner_calls == []
+
+
 def test_weak_cache_core_ttl_and_listener_behaviour() -> None:
     clock = _Clock()
     removed: list[tuple[str, int]] = []
@@ -493,6 +569,31 @@ def test_weak_cache_options_and_aliases() -> None:
     clock.advance(6.0)
     assert weak.prune() == 1
     assert isinstance(no_cache, vcache.NoCache)
+
+
+def test_weak_cache_dead_refs_and_listener_clear_paths() -> None:
+    removed: list[tuple[str, int]] = []
+    cache: vcache.WeakCache[str, _Box] = vcache.new_weak(
+        0.0,
+        listener=lambda key, value: removed.append((key, value.value)),
+    )
+    box = _Box(1)
+    cache.put("a", box)
+    entry = cache._entries["a"]
+    cache._entries["dead"] = (entry[0], entry[1], entry[2])
+    cache._on_finalize("dead", _Box(99))
+
+    assert cache.get("a") is box
+    cache._entries["dead"] = (lambda: None, entry[1], entry[2])  # type: ignore[assignment]
+    assert cache.contains_key("dead") is False
+    cache._entries["dead-prune"] = (lambda: None, entry[1], entry[2])  # type: ignore[assignment]
+    assert cache.prune() == 1
+
+    live = _Box(2)
+    cache.put("live", live)
+    cache.remove("missing")
+    cache.clear()
+    assert ("live", 2) in removed
 
 
 def test_default_ticker_factory_and_runner_smoke() -> None:
