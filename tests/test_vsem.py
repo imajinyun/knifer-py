@@ -42,6 +42,32 @@ def test_try_acquire_no_block() -> None:
     assert s.try_acquire() is True
 
 
+def test_try_acquire_invalid_closed_and_waiter_paths() -> None:
+    s = vsem.new(2)
+    assert s.try_acquire(0) is False
+    assert s.try_acquire(3) is False
+
+    closed = vsem.new(1)
+    closed.close()
+    assert closed.try_acquire() is False
+
+    blocked = vsem.new(1)
+    blocked.acquire()
+    result: list[bool] = []
+
+    def worker() -> None:
+        result.append(blocked.acquire(timeout=1.0))
+
+    t = threading.Thread(target=worker)
+    t.start()
+    time.sleep(0.05)
+    assert blocked.try_acquire() is False
+    blocked.release()
+    t.join(timeout=1.0)
+    assert result == [True]
+    blocked.release()
+
+
 def test_acquire_timeout() -> None:
     s = vsem.new(1)
     assert s.acquire() is True
@@ -155,6 +181,12 @@ def test_validation() -> None:
         vsem.new(0)
     with pytest.raises(ValidationError):
         vsem.new(-1)
+    sem, err = vsem.new_e(0)
+    assert sem is None
+    assert err is not None and err.code == "sem.invalid_capacity"
+    sem, err = vsem.new_e(1)
+    assert sem is not None
+    assert err is None
     s = vsem.new(2)
     with pytest.raises(ValidationError):
         s.acquire(0)
@@ -162,6 +194,7 @@ def test_validation() -> None:
         s.acquire(3)  # exceeds capacity
     with pytest.raises(ValidationError):
         s.release(0)
+    assert s.release_e(0).code == "sem.invalid_weight"
 
 
 def test_release_too_many() -> None:
@@ -170,3 +203,5 @@ def test_release_too_many() -> None:
     with pytest.raises(ValidationError) as exc:
         s.release(2)
     assert exc.value.code == "sem.release_too_many"
+    assert s.release_e(2).code == "sem.release_too_many"
+    assert s.release_e(1) is None

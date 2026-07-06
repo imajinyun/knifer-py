@@ -98,7 +98,9 @@ class TestSubstring:
     def test_sub(self) -> None:
         assert vstr.sub("hello", 0, 2) == "he"
         assert vstr.sub("hello", -2, 20) == "lo"
+        assert vstr.sub("hello", 0, -1) == "hell"
         assert vstr.sub("", 0, 5) == ""
+        assert vstr.sub("hello", 2, 2) == ""
         assert vstr.sub("hello", 3, 1) == "el"
 
     def test_sub_before(self) -> None:
@@ -193,6 +195,10 @@ class TestEmoji:
         )
         assert result == "hello :) world"
 
+    def test_emoji_helpers_default_option_paths(self) -> None:
+        assert vstr.contains_emoji_with_options("hello 😀")
+        assert vstr.remove_emoji_with_options("hello 😀") == "hello "
+
 
 # ── Transform ────────────────────────────────────────────────────────────────
 
@@ -207,6 +213,8 @@ class TestTransform:
         assert vstr.format("{}", "kniferpy") == "kniferpy"
         assert vstr.format("no placeholder") == "no placeholder"
         assert vstr.format("") == ""
+        assert vstr.format(r"\{} {}", "x") == "{} x"
+        assert vstr.format("{} {} {}", "a") == "a {} {}"
 
     def test_remove_prefix(self) -> None:
         assert vstr.remove_prefix("hello", "he") == "llo"
@@ -273,10 +281,15 @@ class TestUnicodeEscape:
         assert vstr.escape_unicode("hello") == "hello"
         result = vstr.escape_unicode("你好")
         assert "\\u" in result
+        assert vstr.escape_unicode("😀") == r"\uD83D\uDE00"
 
     def test_unescape_unicode(self) -> None:
         escaped = vstr.escape_unicode("你好")
         assert vstr.unescape_unicode(escaped) == "你好"
+        assert vstr.unescape_unicode(r"\uD83D\uDE00") == "😀"
+        assert vstr.unescape_unicode(r"\uZZZZ") == r"\uZZZZ"
+        assert vstr.unescape_unicode(r"\uD83D\uZZZZ") == "\ud83d" + r"\uZZZZ"
+        assert vstr.unescape_unicode(r"\uD83D\u0041") == "\ud83d" + "A"
 
 
 # ── Case Conversion ──────────────────────────────────────────────────────────
@@ -303,6 +316,7 @@ class TestCaseConversion:
         assert vstr.to_kebab_case("HelloWorld") == "hello-world"
         assert vstr.to_kebab_case("hello_world") == "hello-world"
         assert vstr.to_kebab_case("") == ""
+        assert vstr.to_snake_case("HTTPServer2XX") == "http_server2_xx"
 
 
 # ── Ant Path Matching ────────────────────────────────────────────────────────
@@ -327,6 +341,13 @@ class TestAntPath:
     def test_custom_separator(self) -> None:
         assert vstr.ant_path_match_with_separator("a.*.c", "a.b.c", ".")
 
+    def test_empty_separator_and_empty_segments(self) -> None:
+        assert vstr.ant_path_match_with_separator("a/*", "a/b", "")
+        assert vstr.ant_path_match("/", "/")
+        assert vstr.ant_path_match("///", "/")
+        assert not vstr.ant_path_match("", "a")
+        assert not vstr.ant_path_match("a/**/c", "a/b/d")
+
 
 # ── Text Similarity ──────────────────────────────────────────────────────────
 
@@ -337,9 +358,13 @@ class TestSimilarity:
 
     def test_jaccard_different(self) -> None:
         assert vstr.jaccard_similarity("abc", "def") == 0.0
+        assert vstr.jaccard_similarity("", "") == 1.0
+        assert vstr.jaccard_similarity("", "abc") == 0.0
 
     def test_ngram_similarity(self) -> None:
         assert vstr.ngram_similarity("abc", "abc", 2) == 1.0
+        assert vstr.ngram_similarity("a", "a", 2) == 1.0
+        assert vstr.ngram_similarity("", "", 2) == 1.0
 
     def test_ngram_invalid_n(self) -> None:
         assert vstr.ngram_similarity("abc", "abc", 0) == 0.0
@@ -426,6 +451,14 @@ class TestCharset:
     def test_from_utf8_unsupported_raises(self) -> None:
         with pytest.raises(ValueError, match="unsupported"):
             vstr.from_utf8(b"hello", "unknown-charset")
+
+    def test_charset_aliases_bom_and_errors(self) -> None:
+        assert vstr.to_utf8(b"\xef\xbb\xbfhello", "") == b"hello"
+        assert vstr.to_utf8("é".encode("latin-1"), "latin 1") == "é".encode()
+        with pytest.raises(ValueError):
+            vstr.to_utf8(b"\xff", "gbk")
+        with pytest.raises(ValueError):
+            vstr.from_utf8("你好".encode(), "latin1")
 
 
 # ── Legacy backward-compat tests ─────────────────────────────────────────────

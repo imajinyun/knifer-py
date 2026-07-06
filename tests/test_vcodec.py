@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+
 import pytest
 
 from kniferpy import vcodec
@@ -14,8 +16,18 @@ class TestBase64:
     def test_encode_str(self) -> None:
         assert vcodec.base64_encode_str("go") == "Z28="
 
+    def test_encode_with_custom_callable_and_fallback(self) -> None:
+        assert vcodec.base64_encode_with_encoding(b"go") == "Z28="
+        assert vcodec.base64_encode_with_encoding(
+            b"a/b", base64.urlsafe_b64encode
+        ) == "YS9i"
+        assert vcodec.base64_encode_with_encoding(b"go", object()) == "Z28="
+
     def test_decode(self) -> None:
         assert vcodec.base64_decode("a25pZmVyLWdv") == b"knifer-go"
+
+    def test_decode_with_custom_callable_path(self) -> None:
+        assert vcodec.base64_decode_with_encoding("Z28=", lambda value: value) == b"go"
 
     def test_decode_str(self) -> None:
         assert vcodec.base64_decode_str("Z28=") == "go"
@@ -77,8 +89,15 @@ class TestBase32:
     def test_encode_hex(self) -> None:
         assert vcodec.base32_encode_with_encoding(b"go", vcodec.BASE32_HEX_ENCODING) == "CTNG===="
 
+    def test_encode_unknown_uses_standard(self) -> None:
+        assert vcodec.base32_encode_with_encoding(b"go", "unknown") == "M5XQ===="
+
     def test_decode_hex(self) -> None:
         assert vcodec.base32_decode_with_encoding("CTNG====", vcodec.BASE32_HEX_ENCODING) == b"go"
+
+    def test_decode_without_padding_and_unknown_encoding(self) -> None:
+        assert vcodec.base32_decode("M5XQ") == b"go"
+        assert vcodec.base32_decode_with_encoding("M5XQ", "unknown") == b"go"
 
     def test_decode_invalid(self) -> None:
         with pytest.raises(ValueError):
@@ -91,9 +110,13 @@ class TestBase32:
 class TestBase58:
     def test_encode(self) -> None:
         assert vcodec.base58_encode(b"hello world") == "StV1DL6CwTryKyV"
+        assert vcodec.base58_encode(b"\x00\x00") == "11"
+        assert vcodec.base58_encode(b"\x00hello") == "1Cn8eVZg"
 
     def test_decode(self) -> None:
         assert vcodec.base58_decode("StV1DL6CwTryKyV") == b"hello world"
+        assert vcodec.base58_decode("11") == b"\x00\x00"
+        assert vcodec.base58_decode("1Cn8eVZg") == b"\x00hello"
 
     def test_encode_flickr(self) -> None:
         assert vcodec.base58_encode_with_alphabet(b"hello", vcodec.BASE58_FLICKR_ALPHABET) == "cM8DuyF"
@@ -112,9 +135,13 @@ class TestBase58:
 class TestBase62:
     def test_encode(self) -> None:
         assert vcodec.base62_encode(b"hello") == "7tQLFHz"
+        assert vcodec.base62_encode(b"\x00\x00") == "00"
+        assert vcodec.base62_encode(b"\x00hello") == "07tQLFHz"
 
     def test_decode(self) -> None:
         assert vcodec.base62_decode("7tQLFHz") == b"hello"
+        assert vcodec.base62_decode("00") == b"\x00\x00"
+        assert vcodec.base62_decode("07tQLFHz") == b"\x00hello"
 
     def test_decode_invalid(self) -> None:
         with pytest.raises(ValueError):
@@ -137,6 +164,10 @@ class TestMorse:
     def test_decode_empty(self) -> None:
         assert vcodec.morse_decode("") == ""
 
+    def test_decode_invalid(self) -> None:
+        with pytest.raises(ValueError):
+            vcodec.morse_decode("... invalid")
+
     def test_encode_invalid(self) -> None:
         with pytest.raises(ValueError):
             vcodec.morse_encode("\u20ac")
@@ -153,6 +184,7 @@ class TestROT:
     def test_rot47(self) -> None:
         assert vcodec.rot47("Hello!") == "w6==@P"
         assert vcodec.rot47("w6==@P") == "Hello!"
+        assert vcodec.rot47("世界") == "世界"
 
     def test_rotn(self) -> None:
         assert vcodec.rotn("abcXYZ", 2) == "cdeZAB"
@@ -160,6 +192,10 @@ class TestROT:
 
     def test_rotn_large_shift(self) -> None:
         assert vcodec.rotn("a", 28) == "c"  # 28 % 26 = 2
+
+    def test_rot47_and_rotn_keep_non_rotated_chars(self) -> None:
+        assert vcodec.rot47("Hello 世界") == "w6==@ 世界"
+        assert vcodec.rotn("abc-123", 2) == "cde-123"
 
 
 # ── Legacy ───────────────────────────────────────────────────────────────────
