@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from kniferpy import vblf
+from kniferpy.internal import blfx
 from kniferpy.verr import ValidationError
 
 
@@ -122,3 +123,79 @@ def test_bitmap_bloom_filter_with_filters() -> None:
 def test_bitmap_bloom_filter_validation() -> None:
     with pytest.raises(ValidationError):
         vblf.new_bitmap_bloom_filter(4)
+
+
+def test_e_style_constructors() -> None:
+    bitset, bitset_err = vblf.new_bit_set_bloom_filter_e(200, 10, 3)
+    bitmap, bitmap_err = vblf.new_bitmap_bloom_filter_e(5)
+    custom, custom_err = vblf.new_bitmap_bloom_filter_with_filters_e(
+        1, vblf.new_js_filter(1_000), vblf.new_sdbm_filter(1_000)
+    )
+    func, func_err = vblf.new_func_filter_e(1_000)
+    machine, machine_err = vblf.new_func_filter_with_machine_num_e(
+        1_000, vblf.MACHINE_64
+    )
+
+    assert bitset_err is None and isinstance(bitset, vblf.BitSetBloomFilter)
+    assert bitmap_err is None and isinstance(bitmap, vblf.BitMapBloomFilter)
+    assert custom_err is None and custom.add("x")
+    assert func_err is None and func.add("x")
+    assert machine_err is None and machine.add("x")
+
+
+def test_new_default_bloom_filter_alias_and_hash_aliases() -> None:
+    bloom = vblf.new_default_bloom_filter(1_000)
+    bloom.add("alias")
+
+    assert bloom.contains("alias")
+    assert vblf.BloomRSHash("x") == vblf.rs_hash("x")
+    assert vblf.BloomJSHash("x") == vblf.js_hash("x")
+    assert vblf.BloomPJWHash("x") == vblf.pjw_hash("x")
+    assert vblf.BloomELFHash("x") == vblf.elf_hash("x")
+    assert vblf.BloomBKDRHash("x") == vblf.bkdr_hash("x")
+    assert vblf.BloomSDBMHash("x") == vblf.sdbm_hash("x")
+    assert vblf.BloomDJBHash("x") == vblf.djb_hash("x")
+    assert vblf.BloomFNVHash("x") == vblf.fnv_hash_string("x")
+
+
+def test_int_map_and_long_map() -> None:
+    int_map = vblf.new_int_map(2)
+    long_map = vblf.new_long_map(2)
+
+    int_map.add(33)
+    long_map.add(65)
+    assert int_map.contains(33)
+    assert long_map.contains(65)
+    int_map.remove(33)
+    long_map.remove(65)
+    assert not int_map.contains(33)
+    assert not long_map.contains(65)
+    with pytest.raises(ValidationError):
+        vblf.new_int_map(0)
+    with pytest.raises(ValidationError):
+        vblf.new_long_map(0)
+
+
+def test_internal_bitmap_and_file_options(tmp_path: Path) -> None:
+    bitmap = blfx._BitMap(2, vblf.MACHINE_32)
+    bitmap.add(33)
+    assert bitmap.contains(33)
+    bitmap.remove(33)
+    assert not bitmap.contains(33)
+
+    path = tmp_path / "words.txt"
+    path.write_text("alpha\nbeta\n", encoding="utf-8")
+    opened: list[str] = []
+
+    def open_file(p: str):
+        opened.append(p)
+        return open(p, encoding="utf-8")  # noqa: SIM115 - opener contract returns a handle
+
+    bloom = vblf.new_bit_set_bloom_filter(100, 10, 3)
+    vblf.init_from_file_with_options(bloom, str(path), [blfx.with_open_file(open_file)])
+    assert opened == [str(path)]
+    assert bloom.contains("alpha")
+    assert bloom.contains("beta")
+
+    cfg = blfx._apply_file_options([None])
+    assert cfg.open_file is None

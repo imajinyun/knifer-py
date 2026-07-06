@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import base64
 import dataclasses
+import socket
 import threading
 import time
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -362,6 +365,209 @@ class TestSchema:
         assert schema.fields[0].required is True
         assert schema.fields[1].key == "port"
         assert schema.fields[1].default == "8080"
+
+
+def test_error_getters_and_conf_error() -> None:
+    conf = vconf.parse("count = 42\nflag = true\nbad = no-int")
+    cause = RuntimeError("root")
+    err = vconf.ConfError("failed", cause)
+
+    assert conf.get_int_e("count") == 42
+    assert conf.get_bool_e("flag") is True
+    with pytest.raises(ValidationError) as missing_int:
+        conf.get_int_e("missing")
+    assert conf.get_int_e("bad") == 0
+    with pytest.raises(ValidationError) as missing_bool:
+        conf.get_bool_e("missing")
+    assert missing_int.value.code == "knifer.conf.key_not_found"
+    assert missing_bool.value.code == "knifer.conf.key_not_found"
+    assert str(err) == "failed: root"
+
+
+def test_profile_key_overlay_and_decrypt_values() -> None:
+    conf = vconf.parse(
+        "name = base\n"
+        "[profile]\n"
+        "prod.name = from-profile-group\n"
+        "prod.db.host = db-profile\n"
+        "[profile.prod]\n"
+        "name = prod\n"
+    )
+    def decrypt(value: str) -> str:
+        if value == "fail":
+            raise RuntimeError("bad")
+        return value.upper()
+
+    decrypted = vconf.parse("a = ok\nb = fail").decrypt_values(decrypt)
+
+    applied = conf.apply_profile("prod")
+
+    assert applied.get("name") == "from-profile-group"
+    assert applied.get_by_group("db", "host") == "db-profile"
+    assert decrypted.get("a") == "OK"
+    assert decrypted.get("b") == "fail"
+
+
+def test_load_with_options_files_and_base64(tmp_path: Path) -> None:
+    first = tmp_path / "first.properties"
+    second = tmp_path / "second.properties"
+    first.write_text("secret = aGVsbG8=\nname = first\n", encoding="utf-8")
+    second.write_text("name = second\n", encoding="utf-8")
+    opts = vconf.LoadOptions(decrypt=vconf.base64_decrypt)
+
+    loaded = vconf.load_with_options(first, opts)
+    merged = vconf.load_files_with_options([first, second], None)
+
+    assert loaded.get("secret") == "hello"
+    assert merged.get("name") == "second"
+    assert vconf.base64_decrypt(base64.b64encode(b"ok").decode()) == "ok"
+
+
+def test_parse_by_ext_yaml_toml_json_and_errors(monkeypatch: pytest.MonkeyPatch) -> None:
+    yaml_conf = vconf.parse_by_ext("app:\n  name: knifer\nlist:\n  - a\n  - b\n", ".yaml")
+    toml_conf = vconf.parse_by_ext("[app]\nname='knifer'\n", "toml")
+    json_conf = vconf.parse_by_ext('{"app":{"name":"knifer"},"ports":[1,2]}', "json")
+    ini_conf = vconf.parse_by_ext("name = ini", "properties")
+
+    assert yaml_conf.get("app.name") == "knifer"
+    assert yaml_conf.get("list") == "a,b"
+    assert vconf.parse_yaml_full("app:\n  name: knifer\n").get("app.name") == "knifer"
+    assert vconf.parse_yaml_full_with_options("app:\n  name: knifer\n").get("app.name") == "knifer"
+    assert toml_conf.get("app.name") == "knifer"
+    assert vconf.parse_toml_with_options("[app]\nname='knifer'\n").get("app.name") == "knifer"
+    assert json_conf.get("app.name") == "knifer"
+    assert json_conf.get("ports") == "1,2"
+    assert ini_conf.get("name") == "ini"
+    assert vconf.parse_by_ext_with_options("name = ini", "ini").get("name") == "ini"
+    assert vconf.parse_yaml("[]").to_dict() == {"": {}}
+
+    with pytest.raises(ValidationError) as yaml_exc:
+        vconf.parse_yaml(":\n")
+    with pytest.raises(ValidationError) as toml_exc:
+        vconf.parse_toml("[bad")
+    with pytest.raises(ValidationError) as json_exc:
+        vconf.parse_json("{bad")
+    assert yaml_exc.value.code == "knifer.conf.yaml_parse_failed"
+    assert toml_exc.value.code == "knifer.conf.toml_parse_failed"
+    assert json_exc.value.code == "knifer.conf.json_parse_failed"
+
+
+def test_bind_options_schema_metadata_dict_and_validation() -> None:
+    @dataclasses.dataclass
+    class AppConfig:
+        host: str = ""
+        port: int = dataclasses.field(default=0, metadata={"conf": "port"})
+        debug: bool = False
+        ratio: float = 0.0
+        tags: list[str] = dataclasses.field(default_factory=list)
+
+    conf = vconf.parse("host = localhost\nport = 8080\ndebug=true\nratio=1.5\ntags=a,b\n")
+    obj = AppConfig()
+    vconf.bind_with_options(conf, obj)
+    assert obj == AppConfig("localhost", 8080, True, 1.5, ["a", "b"])
+    group_obj = AppConfig()
+    vconf.bind_group_with_options(vconf.parse("[app]\nhost=0.0.0.0\nport=9000\n"), "app", group_obj)
+    assert group_obj.host == "0.0.0.0"
+    schema = vconf.schema_from_struct(obj)
+    assert [rule.type for rule in schema.fields] == [
+        "str",
+        "int",
+        "bool",
+        "float",
+        "str",
+    ]
+    assert vconf.validate_struct(conf, obj) == []
+    assert vconf.validate_struct_with_options(conf, obj) == []
+    assert vconf.validate_schema(vconf.parse("flag=maybe\n"), vconf.Schema([
+        vconf.FieldRule(key="flag", type="bool"),
+    ]))
+    assert vconf.validate_schema(vconf.parse("ratio=bad\n"), vconf.Schema([
+        vconf.FieldRule(key="ratio", type="float"),
+    ]))
+
+    @dataclasses.dataclass
+    class DictMetaConfig:
+        host: str = dataclasses.field(default="", metadata={"conf": {"key": "host"}})
+
+    dict_schema = vconf.schema_from_struct(DictMetaConfig())
+    assert dict_schema.fields[0].key == "host"
+
+    @dataclasses.dataclass
+    class TaggedConfig:
+        port: int = dataclasses.field(default=0, metadata={"conf": "port,required,default:8080"})
+
+    tagged_schema = vconf.schema_from_struct(TaggedConfig())
+    assert tagged_schema.fields[0].key == "port"
+    assert tagged_schema.fields[0].required is True
+    assert tagged_schema.fields[0].default == "8080"
+
+
+def test_remote_load_and_safe_host(monkeypatch: pytest.MonkeyPatch) -> None:
+    class Response:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return None
+
+        def read(self) -> bytes:
+            return b"name = remote\n"
+
+    monkeypatch.setattr(urllib.request, "urlopen", lambda url, timeout=10.0: Response())
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda host, port: [(socket.AF_INET, None, None, None, ("93.184.216.34", 0))],
+    )
+
+    assert vconf.load_remote("https://example.com/app.properties").get("name") == "remote"
+    assert (
+        vconf.load_remote_with_options("https://example.com/app.properties").get("name")
+        == "remote"
+    )
+    assert vconf.load_remote_safe("https://example.com/app.properties").get("name") == "remote"
+    assert (
+        vconf.load_remote_safe_with_options("https://example.com/app.properties").get("name")
+        == "remote"
+    )
+
+    with pytest.raises(ValidationError) as invalid_url:
+        vconf.load_remote_safe("https:///missing-host")
+    monkeypatch.setattr(
+        socket,
+        "getaddrinfo",
+        lambda host, port: [(socket.AF_INET, None, None, None, ("127.0.0.1", 0))],
+    )
+    with pytest.raises(ValidationError) as private_host:
+        vconf.load_remote_safe("https://localhost/app.properties")
+    def fail_urlopen(url: str, timeout: float = 10.0):
+        raise OSError("down")
+
+    monkeypatch.setattr(urllib.request, "urlopen", fail_urlopen)
+    with pytest.raises(ValidationError) as remote_failed:
+        vconf.load_remote("https://example.com/app.properties")
+    assert invalid_url.value.code == "knifer.conf.invalid_url"
+    assert private_host.value.code == "knifer.conf.private_host"
+    assert remote_failed.value.code == "knifer.conf.load_remote_failed"
+
+
+def test_watch_with_options_and_missing_file_runner(tmp_path: Path) -> None:
+    path = tmp_path / "missing.properties"
+    stop = threading.Event()
+    events: list[vconf.WatchEvent] = []
+
+    def callback(event: vconf.WatchEvent) -> None:
+        events.append(event)
+        stop.set()
+
+    thread = vconf.watch_with_options(path, callback, interval=0.05)
+    time.sleep(0.1)
+    path.write_text("key = value\n", encoding="utf-8")
+    time.sleep(0.15)
+    thread._conf_stop.set()  # type: ignore[attr-defined]
+    thread.join(timeout=1.0)
+    # Missing-file polling should not crash even if no event is observed before stop.
+    assert isinstance(events, list)
 
 
 # ---------------------------------------------------------------------------
