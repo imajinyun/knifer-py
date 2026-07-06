@@ -1,4 +1,3 @@
-import pytest
 
 from kniferpy import vmask
 
@@ -108,3 +107,56 @@ def test_car_license_empty() -> None:
 
 def test_address_empty() -> None:
     assert vmask.address("", 4) == ""
+
+
+def test_hide_start_greater_than_end() -> None:
+    assert vmask.hide("abcdef", 5, 2) == "abcdef"
+
+
+def test_mask_type_aliases() -> None:
+    assert vmask.UserID == vmask.MaskType.USER_ID
+    assert vmask.ChineseNameType == vmask.MaskType.CHINESE_NAME
+    assert vmask.IDCard == vmask.MaskType.ID_CARD
+    assert vmask.FixedPhoneType == vmask.MaskType.FIXED_PHONE
+    assert vmask.MobilePhoneType == vmask.MaskType.MOBILE_PHONE
+    assert vmask.AddressType == vmask.MaskType.ADDRESS
+    assert vmask.EmailType == vmask.MaskType.EMAIL
+    assert vmask.PasswordType == vmask.MaskType.PASSWORD
+    assert vmask.CarLicenseType == vmask.MaskType.CAR_LICENSE
+    assert vmask.BankCardType == vmask.MaskType.BANK_CARD
+    assert vmask.IPv4Type == vmask.MaskType.IPV4
+    assert vmask.IPv6Type == vmask.MaskType.IPV6
+    assert vmask.PassportType == vmask.MaskType.PASSPORT
+    assert vmask.CreditCodeType == vmask.MaskType.CREDIT_CODE
+    assert vmask.FirstMaskType == vmask.MaskType.FIRST_MASK
+    assert vmask.ClearToNullType == vmask.MaskType.CLEAR_TO_NULL
+    assert vmask.ClearToEmptyType == vmask.MaskType.CLEAR_TO_EMPTY
+
+
+def test_masked_dispatch_all_types() -> None:
+    assert vmask.masked("123", vmask.MaskType.USER_ID) == "0"
+    assert vmask.masked("张三", vmask.MaskType.CHINESE_NAME) == "张*"
+    assert vmask.masked("1234567890", vmask.MaskType.ID_CARD) == "1*******90"
+    assert vmask.masked("01012345678", vmask.MaskType.FIXED_PHONE) == "0101*****78"
+    assert vmask.masked("13812345678", vmask.MaskType.MOBILE_PHONE) == "138****5678"
+    assert vmask.masked("北京市海淀区中关村大街1号", vmask.MaskType.ADDRESS).endswith("********")
+    assert vmask.masked("someone@example.com", vmask.MaskType.EMAIL) == "s******@example.com"
+    assert vmask.masked("hunter2", vmask.MaskType.PASSWORD) == "*******"
+    assert vmask.masked("京A12345", vmask.MaskType.CAR_LICENSE) == "京A1***5"
+    assert "****" in vmask.masked("6222021234567890123", vmask.MaskType.BANK_CARD)
+    assert vmask.masked("192.168.0.1", vmask.MaskType.IPV4) == "192.*.*.*"
+    assert vmask.masked("2001:db8::1", vmask.MaskType.IPV6) == "2001:*:*:*:*:*:*:*:*"
+    assert vmask.masked("E12345678", vmask.MaskType.PASSPORT) == "E1*****78"
+    assert vmask.masked("91350100M000100Y43", vmask.MaskType.CREDIT_CODE) == "9135**********0Y43"
+    assert vmask.masked("secret", vmask.MaskType.FIRST_MASK) == "s*****"
+    assert vmask.masked("secret", vmask.MaskType.CLEAR_TO_EMPTY) == ""
+    assert vmask.masked("secret", vmask.MaskType.CLEAR_TO_NULL) == ""
+    assert vmask.masked(" ", vmask.MaskType.USER_ID) == ""
+
+
+def test_masked_unknown_type_and_pointer_helpers() -> None:
+    assert vmask.masked("value", 999) == "value"
+    assert vmask.masked_ptr("secret", vmask.MaskType.CLEAR_TO_NULL) is None
+    assert vmask.masked_ptr("secret", vmask.MaskType.FIRST_MASK) == "s*****"
+    assert vmask.clear_to_nil() is None
+    assert vmask.user_id_value() == 0

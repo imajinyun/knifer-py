@@ -5,18 +5,29 @@ from __future__ import annotations
 import io
 import os
 import tempfile
+from pathlib import Path
 
 import pytest
 from PIL import Image
 
+from kniferpy.internal import imgx
 from kniferpy.internal.imgx import ErrImageInvalidInput, ErrImageUnsupported
 from kniferpy.vimg import (
     BarcodeFormat,
+    GifCaptcha,
+    LineCaptcha,
     MathGenerator,
     QRErrorCorrectionLevel,
     RandomGenerator,
     add_text_watermark,
     add_watermark,
+    barcode_ascii,
+    barcode_ascii_with_chars,
+    barcode_base64_data,
+    barcode_bytes,
+    barcode_image,
+    barcode_png,
+    barcode_svg,
     can_decode_barcode_format,
     can_encode_barcode_format,
     compress_jpeg,
@@ -25,12 +36,22 @@ from kniferpy.vimg import (
     crop_center,
     flip_horizontal,
     flip_vertical,
+    gen_math_generator_with_options,
+    gen_random_generator_with_options,
     grayscale,
     info,
     new_circle_captcha,
+    new_circle_captcha_with,
     new_gif_captcha,
+    new_gif_captcha_with,
     new_line_captcha,
+    new_line_captcha_with,
+    new_math_generator,
+    new_math_generator_with,
+    new_random_generator,
+    new_random_generator_with_base,
     new_shear_captcha,
+    new_shear_captcha_with,
     qr_code_ascii,
     qr_code_ascii_with_chars,
     qr_code_base64_data,
@@ -45,17 +66,42 @@ from kniferpy.vimg import (
     supported_decode_barcode_formats,
     supported_encode_barcode_formats,
     thumbnail,
+    verify_captcha_ignore_case,
     verify_ignore_case,
     with_background,
     with_barcode_background,
+    with_barcode_character_set,
+    with_barcode_colors,
+    with_barcode_force_code_set,
     with_barcode_foreground,
+    with_barcode_gs1_format,
+    with_barcode_logo,
+    with_barcode_logo_size,
+    with_barcode_transparent_background,
+    with_color_func,
+    with_decode_also_inverted,
+    with_decode_character_set,
+    with_decode_formats,
+    with_decode_pure_barcode,
+    with_decode_try_harder,
+    with_font_size,
     with_generator,
+    with_generator_int_parser,
+    with_generator_random_int,
     with_gif_delay,
     with_gif_repeat,
     with_interfere_count,
+    with_qr_code_background,
+    with_qr_code_colors,
     with_qr_code_error_correction,
+    with_qr_code_foreground,
+    with_qr_code_logo,
+    with_qr_code_logo_ratio,
+    with_qr_code_logo_size,
     with_qr_code_margin,
+    with_qr_code_mask_pattern,
     with_qr_code_size,
+    with_qr_code_transparent_background,
     with_qr_code_version,
     write_qr_code,
 )
@@ -314,7 +360,11 @@ class TestLineCaptcha:
         assert c.verify(c.code)
 
     def test_with_options(self) -> None:
-        c = new_line_captcha(160, 60, [with_generator(RandomGenerator(length=4)), with_interfere_count(50)])
+        c = new_line_captcha(
+            160,
+            60,
+            [with_generator(RandomGenerator(length=4)), with_interfere_count(50)],
+        )
         assert len(c.code) == 4
         assert c.image_bytes()
 
@@ -463,3 +513,184 @@ class TestBarcodeFormat:
     def test_can_decode(self) -> None:
         assert can_decode_barcode_format(BarcodeFormat.QR_CODE)
         assert not can_decode_barcode_format(BarcodeFormat.CODE_128)
+
+
+# --- focused edge coverage ----------------------------------------------------
+
+
+def test_internal_helpers_and_error_paths() -> None:
+    assert imgx._normalize_format("jpg") == "jpeg"
+    assert imgx._fit_long_edge(200, 100, 50) == (50, 25)
+    assert imgx._fit_long_edge(100, 200, 50) == (25, 50)
+    assert imgx._normalize_pixel(None) == (0, 0, 0, 255)
+    assert imgx._normalize_pixel(12.9) == (12, 12, 12, 255)
+    assert imgx._normalize_pixel((1, 2, 3)) == (1, 2, 3, 255)
+    assert imgx._normalize_pixel((1, 2, 3, 4)) == (1, 2, 3, 4)
+    assert imgx._get_glyph(ord("a")) == imgx._get_glyph(ord("A"))
+    assert imgx._get_glyph(ord("\n")) == imgx._get_glyph(ord("?"))
+    assert imgx._blend_color((255, 255, 255, 255), (0, 0, 0, 255), 0.5)[0] < 255
+
+    with pytest.raises(ErrImageInvalidInput):
+        info(b"not-image")
+    with pytest.raises(ErrImageInvalidInput):
+        convert_format(b"not-image", "png")
+    with pytest.raises(ErrImageUnsupported):
+        convert_format(_make_png(4, 4), "bmp")
+    with pytest.raises(ErrImageInvalidInput):
+        rotate(Image.new("RGB", (2, 2)), float("nan"), (0, 0, 0, 0))
+    with pytest.raises(ErrImageInvalidInput):
+        rotate(Image.new("RGB", (2, 2)), float("inf"), (0, 0, 0, 0))
+    with pytest.raises(ErrImageInvalidInput):
+        crop(Image.new("RGB", (2, 2)), 0, 0, 0, 1)
+    with pytest.raises(ErrImageInvalidInput):
+        add_text_watermark(Image.new("RGBA", (10, 10)), "A", 0, 0, (0, 0, 0, 255), 0, 1)
+    with pytest.raises(ErrImageInvalidInput):
+        add_text_watermark(Image.new("RGBA", (10, 10)), "A", 0, 0, (0, 0, 0, 255), 1, -0.1)
+
+
+def test_rotate_negative_and_rgba_grayscale_jpeg() -> None:
+    img = Image.new("RGBA", (4, 2), (255, 0, 0, 128))
+
+    assert rotate(img, -90, (0, 0, 0, 0)).size == (2, 4)
+    assert grayscale(img).mode == "RGBA"
+    assert Image.open(io.BytesIO(compress_jpeg(img, 80))).format == "JPEG"
+
+
+def test_watermark_outside_bounds_and_text_unknown_char() -> None:
+    base = Image.new("RGBA", (5, 5), (255, 255, 255, 255))
+    wm = Image.new("RGBA", (3, 3), (0, 0, 0, 255))
+
+    result = add_watermark(base, wm, -2, -2, 1.0)
+    assert result.size == base.size
+    text = add_text_watermark(base, "\u2603", 0, 0, (0, 0, 0, 255), 1, 1.0)
+    assert text.size == base.size
+
+
+def test_generators_convenience_and_edge_verification(monkeypatch: pytest.MonkeyPatch) -> None:
+    random_gen = new_random_generator()
+    assert len(random_gen.gen()) == 5
+    assert new_random_generator_with_base("A").gen() == "AAAAA"
+    opt_gen = gen_random_generator_with_options(base="B", random_int=lambda n: 0)
+    assert opt_gen.base == "B"
+
+    math_gen = new_math_generator()
+    assert isinstance(math_gen, MathGenerator)
+    assert new_math_generator_with((1, 2), (3, 4))._num1_range == (1, 2)
+    opt_math = gen_math_generator_with_options(
+        (1, 2),
+        (3, 4),
+        int_parser=int,
+        random_int=lambda n: 0,
+    )
+    assert opt_math._num2_range == (3, 4)
+    assert MathGenerator._eval_expr("bad") is None
+    assert MathGenerator._eval_expr("1+x=") is None
+    assert not MathGenerator().verify("1+1=", "bad")
+    assert verify_captcha_ignore_case("ABC", "abc")
+
+
+def test_captcha_constructors_and_write_options(tmp_path: Path) -> None:
+    line = new_line_captcha_with(80, 30, 4, 2)
+    circle = new_circle_captcha_with(80, 30, 4, 2)
+    shear = new_shear_captcha_with(80, 30, 4, 2)
+    gif = new_gif_captcha_with(80, 30, 4)
+    custom = new_line_captcha(
+        80,
+        30,
+        [
+            with_font_size(12),
+            with_color_func(lambda: (1, 2, 3)),
+            with_generator_int_parser(int),
+            with_generator_random_int(lambda n: 0),
+        ],
+    )
+
+    assert isinstance(line, LineCaptcha)
+    assert len(line.code) == 4
+    assert len(circle.code) == 4
+    assert len(shear.code) == 4
+    assert isinstance(gif, GifCaptcha)
+    assert len(gif.code) == 4
+    assert custom.image_bytes()
+    target = tmp_path / "nested" / "captcha.png"
+    custom.write_to_file(str(target))
+    assert target.exists()
+
+
+def test_qr_and_barcode_option_builders() -> None:
+    logo = Image.new("RGB", (4, 4), (255, 255, 255))
+    qr_options = [
+        with_qr_code_size(64),
+        with_qr_code_margin(2),
+        with_qr_code_error_correction(QRErrorCorrectionLevel.LOW),
+        with_qr_code_version(2),
+        with_qr_code_foreground((0, 0, 0)),
+        with_qr_code_background((255, 255, 255)),
+    ]
+    extended_options = [
+        with_qr_code_colors((0, 0, 0), (255, 255, 255)),
+        with_qr_code_logo(logo),
+        with_qr_code_logo_ratio(0.2),
+        with_qr_code_logo_size(8),
+        with_qr_code_mask_pattern(1),
+        with_qr_code_transparent_background(True),
+        with_barcode_character_set("utf-8"),
+        with_barcode_colors((0, 0, 0), (255, 255, 255)),
+        with_barcode_force_code_set(True),
+        with_barcode_gs1_format(True),
+        with_barcode_logo(logo),
+        with_barcode_logo_size(0.2),
+        with_barcode_transparent_background(True),
+    ]
+
+    img = qr_code_image("test", qr_options)
+    assert img.width > 0
+    assert barcode_image("test", BarcodeFormat.QR_CODE, qr_options).width > 0
+    assert len(barcode_png("test", BarcodeFormat.QR_CODE, qr_options)) > 0
+    assert "<svg" in barcode_svg("test", BarcodeFormat.QR_CODE, qr_options)
+    assert barcode_ascii("test", BarcodeFormat.QR_CODE, qr_options)
+    assert barcode_ascii_with_chars("test", BarcodeFormat.QR_CODE, "#", ".", qr_options)
+    assert barcode_base64_data("test", BarcodeFormat.QR_CODE, qr_options).startswith(
+        "data:image/png"
+    )
+    assert len(barcode_bytes("test", BarcodeFormat.QR_CODE, qr_options)) > 0
+    out = io.BytesIO()
+    imgx.write_barcode(out, "test", BarcodeFormat.QR_CODE, qr_options)
+    assert out.tell() > 0
+    with pytest.raises(ErrImageUnsupported):
+        barcode_image("test", BarcodeFormat.CODE_128)
+
+    cfg: list[object] = []
+    for opt in extended_options:
+        opt(cfg)
+    assert cfg[7] == "utf-8"
+    assert cfg[9] is True
+    assert cfg[10] is True
+    assert cfg[11] is logo
+    assert cfg[12] == 0.2
+    assert cfg[13] is True
+    assert cfg[14] == 8
+    assert cfg[15] == 1
+
+
+def test_decode_option_builders_and_decode_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
+    cfg: list[object] = []
+    for opt in (
+        with_decode_also_inverted(True),
+        with_decode_character_set("utf-8"),
+        with_decode_formats([BarcodeFormat.QR_CODE]),
+        with_decode_pure_barcode(True),
+        with_decode_try_harder(True),
+    ):
+        opt(cfg)
+
+    assert cfg[16] is True
+    assert cfg[17] == "utf-8"
+    assert cfg[18] == [BarcodeFormat.QR_CODE]
+    assert cfg[19] is True
+    assert cfg[20] is True
+    assert imgx.decode_qr_code(_make_png(4, 4)) == []
+    assert imgx.decode_barcode(_make_png(4, 4)) == []
+    assert imgx.decode_barcode_image(Image.new("RGB", (4, 4))) == []
+    result = imgx.DecodeResult(text="x", format=BarcodeFormat.QR_CODE, raw_bytes=b"x")
+    assert isinstance(result, imgx.DecodeResult)
