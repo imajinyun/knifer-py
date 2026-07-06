@@ -1,4 +1,5 @@
 import io
+import os
 import socket
 import ssl
 import uuid
@@ -434,6 +435,14 @@ def test_address_and_local_interface_helpers(monkeypatch) -> None:
     assert vnet.get_local_host_name_with_options() == "host"
 
 
+def test_local_ips_gaierror_and_interface_address_fallback(monkeypatch) -> None:
+    monkeypatch.setattr(socket, "getaddrinfo", lambda *args, **kwargs: (_ for _ in ()).throw(socket.gaierror()))
+    assert vnet.local_ipv4s() == ["127.0.0.1"]
+    assert vnet.local_ipv6s() == []
+    assert vnet.local_ips() == ["127.0.0.1"]
+    assert netx._get_interface_addresses() == []
+
+
 def test_mac_and_hardware_helpers(monkeypatch) -> None:
     monkeypatch.setattr(uuid, "getnode", lambda: 0x001122334455)
     assert vnet.get_local_mac_address() == "00-11-22-33-44-55"
@@ -469,6 +478,8 @@ def test_misc_cookie_proxy_and_interface_address_helpers(monkeypatch) -> None:
     assert vnet.local_address_list_by_interface(None, lambda addr: addr.startswith("127.")) == [
         "127.0.0.1"
     ]
+    assert vnet.parse_cookies("broken") == {}
+    assert vnet.get_multistage_reverse_proxy_ip({"Proxy-Client-IP": "4.4.4.4"}) == "4.4.4.4"
 
 
 # ---------------------------------------------------------------------------
@@ -515,9 +526,81 @@ class TestMultipart:
         assert vnet.upload_file_size(file_entry) == 11
         assert vnet.upload_file_content_type(file_entry) == "text/plain"
 
+    def test_multipart_form_maps_and_multiple_values(self) -> None:
+        body = (
+            b"------TestBoundary\r\n"
+            b'Content-Disposition: form-data; name="field"\r\n'
+            b"\r\n"
+            b"value1\r\n"
+            b"------TestBoundary\r\n"
+            b'Content-Disposition: form-data; name="field"\r\n'
+            b"\r\n"
+            b"value2\r\n"
+            b"------TestBoundary\r\n"
+            b'Content-Disposition: form-data; name="file"; filename="a.txt"\r\n'
+            b"Content-Type: text/plain\r\n"
+            b"\r\n"
+            b"a\r\n"
+            b"------TestBoundary--\r\n"
+        )
+        form = vnet.parse_multipart_form(body, "multipart/form-data; boundary=----TestBoundary")
+        assert form.get_param_names() == ["field"]
+        assert form.get_array_param("field") == ["value1", "value2"]
+        assert form.get_param_map() == {"field": "value1"}
+        assert form.get_param_list_map() == {"field": ["value1", "value2"]}
+        assert form.get_file_param_names() == ["file"]
+        assert form.get_file_map()["file"][0] == "a.txt"
+        assert form.get_file_list("file")[0][1] == b"a"
+        assert form.get_file_list_value_map()["file"][0][2] == "text/plain"
+
+    def test_multipart_file_filters_limits_and_save(self, tmp_path) -> None:
+        body = (
+            b"------TestBoundary\r\n"
+            b'Content-Disposition: form-data; name="file"; filename="test.txt"\r\n'
+            b"Content-Type: text/plain\r\n"
+            b"\r\n"
+            b"hello\r\n"
+            b"------TestBoundary--\r\n"
+        )
+        content_type = "multipart/form-data; boundary=----TestBoundary"
+        skipped = vnet.parse_multipart_form(
+            body,
+            content_type,
+            vnet.UploadSetting(file_exts=[".png"]),
+        )
+        assert skipped.get_file("file") is None
+        with pytest.raises(ValidationError) as ext_exc:
+            vnet.parse_multipart_form(body, content_type, vnet.UploadSetting(allow_file_exts=[".png"]))
+        assert ext_exc.value.code == "knifer.net.file_ext_not_allowed"
+        with pytest.raises(ValidationError) as size_exc:
+            vnet.parse_multipart_form(body, content_type, vnet.UploadSetting(max_file_size=1))
+        assert size_exc.value.code == "knifer.net.file_too_large"
+
+        form = vnet.parse_multipart_form(body, content_type)
+        file_entry = form.get_file("file")
+        assert file_entry is not None
+        saved = vnet.save_uploaded_file(file_entry, str(tmp_path), "saved.txt")
+        assert os.path.exists(saved)
+        with pytest.raises(ValidationError) as exists_exc:
+            vnet.save_uploaded_file(file_entry, str(tmp_path), "saved.txt")
+        assert exists_exc.value.code == "knifer.net.file_exists"
+        overwritten = vnet.save_uploaded_file(file_entry, str(tmp_path), "saved.txt", overwrite=True)
+        assert overwritten == saved
+
     def test_multipart_no_boundary(self) -> None:
         with pytest.raises(ValidationError):
             vnet.parse_multipart_form(b"data", "multipart/form-data")
+
+
+def test_tls_root_ca_error_paths() -> None:
+    ctx = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
+    with pytest.raises(ssl.SSLError):
+        vnet.add_root_ca_bytes(ctx, b"not a cert")
+    builder = vnet.new_tls_config_builder()
+    with pytest.raises(FileNotFoundError):
+        builder.add_root_ca_file("/path/that/does/not/exist.pem")
+    with pytest.raises(ssl.SSLError):
+        builder.add_root_ca_bytes(b"not a cert")
 
     def test_upload_setting(self) -> None:
         setting = vnet.UploadSetting(max_file_size=1024)

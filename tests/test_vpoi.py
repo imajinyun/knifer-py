@@ -152,6 +152,30 @@ def test_read_cells_from_bytes():
     assert rows == [["a", "b"], ["1", "2"]]
 
 
+def test_read_reader_options_and_limits() -> None:
+    buf = write_rows_to_buffer("Sheet", [["a", "b", "c"], ["1", "2", "3"]])
+
+    def open_reader(data: bytes):
+        return poix.openpyxl.load_workbook(io.BytesIO(data), read_only=True, data_only=True)
+
+    rows = read_rows_from_reader(
+        buf,
+        with_open_reader_func(open_reader),
+        with_read_start_cell(2, 2),
+        with_read_limit(10, 1),
+    )
+    cells = read_cells_from_reader(
+        buf,
+        with_open_reader_func(open_reader),
+        with_read_start_cell(2, 2),
+        with_read_limit(10, 1),
+    )
+
+    assert rows == [["2"]]
+    assert cells[0][0].Axis == "B2"
+    assert cells[0][0].Value == "2"
+
+
 # --- write rows -------------------------------------------------------------
 
 
@@ -188,6 +212,12 @@ def test_write_rows_to_buffer():
     buf = write_rows_to_buffer("Sheet1", [["hello", "world"]])
     assert len(buf) > 0
     assert isinstance(buf, bytes)
+
+
+def test_write_rows_to_buffer_with_start_cell() -> None:
+    buf = write_rows_to_buffer("Offset", [["x"]], with_start_cell(2, 3))
+    cells = read_cells_from_reader(buf)
+    assert cells[1][2].Value == "x"
 
 
 def test_default_sheet_name():
@@ -329,6 +359,41 @@ def test_write_options_permissions_overwrite_and_create_parent(tmp_path):
         write_rows(str(missing_parent), [["a"]], with_create_parents(False))
 
 
+def test_save_workbook_parent_creation_and_overwrite_guard(tmp_path):
+    cfg = poix._default_write_config()
+    cfg.dir_perm = 0o700
+    cfg.file_perm = 0
+    path = tmp_path / "nested" / "book.xlsx"
+    wb = poix.openpyxl.Workbook()
+    poix._save_workbook(wb, str(path), cfg)
+    assert path.exists()
+
+    cfg.overwrite = False
+    with pytest.raises(ErrInvalidSheetName):
+        poix._save_workbook(poix.openpyxl.Workbook(), str(path), cfg)
+
+
+def test_limit_rows_and_cells_edge_branches() -> None:
+    cfg = poix._ReadConfig(start_row=3, start_col=1)
+    assert poix._limit_rows([["a"], ["b"]], cfg) == []
+    assert poix._limit_cells([[poix.Cell(Value="a")]], cfg) == []
+
+    cfg = poix._ReadConfig(start_row=1, start_col=3, max_rows=1, max_cols=1)
+    assert poix._limit_rows([["a"], ["b"]], cfg) == [[]]
+    assert poix._limit_cells([[poix.Cell(Value="a")], [poix.Cell(Value="b")]], cfg) == [
+        []
+    ]
+
+
+def test_set_rows_and_any_rows_defaults() -> None:
+    wb = poix.openpyxl.Workbook()
+    ws = wb.active
+    poix._set_rows(ws, [["a"]], 0, 0)
+    poix._set_any_rows(ws, [[True, 3]], -1, -1)
+    assert ws["A1"].value is True
+    assert ws["B1"].value == 3
+
+
 def test_invalid_write_sheet_and_start_cell_defaults(tmp_path):
     with pytest.raises(ErrInvalidSheetName):
         write_rows(str(tmp_path / "bad.xlsx"), [["a"]], with_write_sheet("bad:name"))
@@ -366,6 +431,36 @@ def test_internal_config_helpers_and_custom_workbook(tmp_path):
     cfg.new_file = new_file
     assert poix._new_workbook(cfg) is wb
     assert calls == ["new"]
+
+    default_cfg = poix._default_write_config()
+    default_wb = poix._new_workbook(default_cfg)
+    assert default_wb.sheetnames
+
+    wb_path = str(tmp_path / "open-default.xlsx")
+    write_rows(wb_path, [["a"]])
+    opened = poix._open_workbook(wb_path, poix._default_read_config())
+    assert opened.sheetnames == ["Sheet1"]
+
+
+def test_write_option_callbacks_are_stored() -> None:
+    cfg = poix._default_write_config()
+    mkdir = lambda path, perm: None
+    opener = lambda path, flags, perm: None
+    save_as = lambda wb, path: None
+    chmod = lambda path, perm: None
+    stat = lambda path: None
+
+    cfg.mkdir_all = mkdir
+    cfg.open_file = opener
+    cfg.save_as = save_as
+    cfg.chmod = chmod
+    cfg.stat = stat
+
+    assert cfg.mkdir_all is mkdir
+    assert cfg.open_file is opener
+    assert cfg.save_as is save_as
+    assert cfg.chmod is chmod
+    assert cfg.stat is stat
 
 
 def test_resolve_sheet_no_sheet_error() -> None:
