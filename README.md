@@ -44,6 +44,9 @@ Runtime installs can stay lean and opt into heavier domains as needed:
 pip install "kniferpy[http,crypto,jwt,img,poi]"
 ```
 
+`requirements-min.txt` pins the declared runtime lower bounds used by the
+minimum-dependency CI smoke job.
+
 CI runs `ruff`, `mypy`, and `pytest` on Python 3.11, 3.12, and 3.13.
 
 ## 🚢 Release
