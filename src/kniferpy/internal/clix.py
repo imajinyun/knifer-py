@@ -9,7 +9,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass, field
 from enum import Enum, StrEnum
 from io import StringIO
-from typing import Protocol, TextIO
+from typing import Any, Protocol, TextIO
 
 from kniferpy.verr import KniferError, ValidationError
 
@@ -427,11 +427,15 @@ class FlagParser:
 
     def add_argument(self, *args: str, **kwargs: object) -> None:
         """Add a command-line argument (delegates to argparse)."""
-        self._parser.add_argument(*args, **kwargs)
+        parser = self._parser
+        cast_parser: Any = parser
+        cast_parser.add_argument(*args, **kwargs)
 
     def add_flag(self, *flags: str, **kwargs: object) -> None:
         """Add a boolean flag (delegates to argparse)."""
-        self._parser.add_argument(*flags, action="store_true", **kwargs)
+        parser = self._parser
+        cast_parser: Any = parser
+        cast_parser.add_argument(*flags, action="store_true", **kwargs)
 
     def print_usage(self) -> None:
         """Print usage to output (or stderr)."""
