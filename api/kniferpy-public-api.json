@@ -11602,7 +11602,7 @@
               "signature": "(self, header_b64: 'str', payload_b64: 'str', sig_b64: 'str') -> 'bool'"
             }
           },
-          "signature": "(algorithm: 'str', sign_fn: 'Callable', verify_fn: 'Callable') -> 'None'",
+          "signature": "(algorithm: 'str', sign_fn: '_SignFunc', verify_fn: '_VerifyFunc') -> 'None'",
           "type": "builtins.type"
         },
         "MinHMACKeyBytesHS256": {

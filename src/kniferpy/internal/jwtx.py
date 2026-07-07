@@ -13,6 +13,9 @@ from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 
 from kniferpy.verr import CryptoError
 
+_SignFunc = Callable[[str, str], str]
+_VerifyFunc = Callable[[str, str, str], bool]
+
 _MIN_HS256_SECRET_BYTES = 32
 _MIN_HS384_SECRET_BYTES = 48
 _MIN_HS512_SECRET_BYTES = 64
@@ -66,7 +69,7 @@ def _sign_hmac(
         delta = expires_in if isinstance(expires_in, timedelta) else timedelta(seconds=expires_in)
         claims["exp"] = datetime.now(timezone.utc) + delta
     try:
-        return jwt.encode(claims, secret, algorithm=alg, headers=headers)
+        return str(jwt.encode(claims, secret, algorithm=alg, headers=headers))
     except jwt.PyJWTError as exc:
         raise CryptoError(str(exc), code="jwt.sign_failed") from exc
 
@@ -155,7 +158,7 @@ def _sign_ec(
         delta = expires_in if isinstance(expires_in, timedelta) else timedelta(seconds=expires_in)
         claims["exp"] = datetime.now(timezone.utc) + delta
     try:
-        return jwt.encode(claims, private_key, algorithm=alg, headers=headers)
+        return str(jwt.encode(claims, private_key, algorithm=alg, headers=headers))
     except jwt.PyJWTError as exc:
         raise CryptoError(str(exc), code="jwt.sign_failed") from exc
 
@@ -253,7 +256,7 @@ def _sign_ps(
         delta = expires_in if isinstance(expires_in, timedelta) else timedelta(seconds=expires_in)
         claims["exp"] = datetime.now(timezone.utc) + delta
     try:
-        return jwt.encode(claims, private_key, algorithm=alg, headers=headers)
+        return str(jwt.encode(claims, private_key, algorithm=alg, headers=headers))
     except jwt.PyJWTError as exc:
         raise CryptoError(str(exc), code="jwt.sign_failed") from exc
 
@@ -338,9 +341,12 @@ def verify_ps512(
 def parse_jwt(token: str) -> dict[str, Any]:
     """Parse a JWT without verifying the signature."""
     try:
-        return jwt.decode(token, options={"verify_signature": False})
+        payload = jwt.decode(token, options={"verify_signature": False})
     except jwt.PyJWTError as exc:
         raise CryptoError(str(exc), code="jwt.decode_failed") from exc
+    if not isinstance(payload, dict):
+        raise CryptoError("JWT payload is not an object", code="jwt.invalid_payload")
+    return payload
 
 
 def new_jwt(payload: dict[str, Any]) -> dict[str, Any]:
@@ -390,7 +396,7 @@ def validate_algorithm(token: str, expected_alg: str) -> bool:
         header = _get_header(token)
     except CryptoError:
         return False
-    return header.get("alg", "").upper() == expected_alg.upper()
+    return str(header.get("alg", "")).upper() == expected_alg.upper()
 
 
 # ── Date validation ───────────────────────────────────────────────────────────
@@ -674,7 +680,7 @@ class JWTSigner:
     ``new_ecdsa_signer()`` with an explicit algorithm string.
     """
 
-    def __init__(self, algorithm: str, sign_fn: Callable, verify_fn: Callable) -> None:
+    def __init__(self, algorithm: str, sign_fn: _SignFunc, verify_fn: _VerifyFunc) -> None:
         self._algorithm = algorithm
         self._sign = sign_fn
         self._verify = verify_fn
@@ -695,7 +701,7 @@ class JWTSigner:
 # ── HMAC signer ──────────────────────────────────────────────────────────────
 
 
-def _hmac_sign(key: bytes, hash_name: str) -> Callable:
+def _hmac_sign(key: bytes, hash_name: str) -> _SignFunc:
     def sign(header_b64: str, payload_b64: str) -> str:
         message = f"{header_b64}.{payload_b64}".encode("ascii")
         sig = _hmac.new(key, message, hash_name).digest()
@@ -704,7 +710,7 @@ def _hmac_sign(key: bytes, hash_name: str) -> Callable:
     return sign
 
 
-def _hmac_verify(key: bytes, hash_name: str) -> Callable:
+def _hmac_verify(key: bytes, hash_name: str) -> _VerifyFunc:
     def verify(header_b64: str, payload_b64: str, sig_b64: str) -> bool:
         message = f"{header_b64}.{payload_b64}".encode("ascii")
         expected = _hmac.new(key, message, hash_name).digest()
@@ -763,7 +769,7 @@ def create_signer_from_key_strict(algorithm_id: str, key: bytes) -> JWTSigner:
 # ── RSA-PSS signer ───────────────────────────────────────────────────────────
 
 
-def _rsa_pss_sign(priv: rsa.RSAPrivateKey, hash_alg: str) -> Callable:
+def _rsa_pss_sign(priv: rsa.RSAPrivateKey, hash_alg: str) -> _SignFunc:
     hash_map = {"sha256": hashes.SHA256(), "sha384": hashes.SHA384(), "sha512": hashes.SHA512()}
     chosen_hash = hash_map.get(hash_alg, hashes.SHA256())
 
@@ -779,7 +785,7 @@ def _rsa_pss_sign(priv: rsa.RSAPrivateKey, hash_alg: str) -> Callable:
     return sign
 
 
-def _rsa_pss_verify(pub: rsa.RSAPublicKey, hash_alg: str) -> Callable:
+def _rsa_pss_verify(pub: rsa.RSAPublicKey, hash_alg: str) -> _VerifyFunc:
     hash_map = {"sha256": hashes.SHA256(), "sha384": hashes.SHA384(), "sha512": hashes.SHA512()}
     chosen_hash = hash_map.get(hash_alg, hashes.SHA256())
 
@@ -816,7 +822,7 @@ def new_rsa_pss_signer(algorithm: str, priv: rsa.RSAPrivateKey, pub: rsa.RSAPubl
 # ── ECDSA signer ─────────────────────────────────────────────────────────────
 
 
-def _ecdsa_sign(priv: ec.EllipticCurvePrivateKey, hash_alg: str) -> Callable:
+def _ecdsa_sign(priv: ec.EllipticCurvePrivateKey, hash_alg: str) -> _SignFunc:
     hash_map = {"sha256": hashes.SHA256(), "sha384": hashes.SHA384(), "sha512": hashes.SHA512()}
     chosen_hash = hash_map.get(hash_alg, hashes.SHA256())
 
@@ -830,7 +836,7 @@ def _ecdsa_sign(priv: ec.EllipticCurvePrivateKey, hash_alg: str) -> Callable:
     return sign
 
 
-def _ecdsa_verify(pub: ec.EllipticCurvePublicKey, hash_alg: str) -> Callable:
+def _ecdsa_verify(pub: ec.EllipticCurvePublicKey, hash_alg: str) -> _VerifyFunc:
     hash_map = {"sha256": hashes.SHA256(), "sha384": hashes.SHA384(), "sha512": hashes.SHA512()}
     chosen_hash = hash_map.get(hash_alg, hashes.SHA256())
 

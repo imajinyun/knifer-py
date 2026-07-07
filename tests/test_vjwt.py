@@ -758,7 +758,7 @@ def test_new_hmac_signer_hs512() -> None:
 
 
 def test_new_hmac_signer_with_str_key() -> None:
-    signer = vjwt.new_hmac_signer("HS256", SECRET)
+    signer = vjwt.new_hmac_signer("HS256", SECRET.encode())
     assert signer.algorithm() == "HS256"
 
 
