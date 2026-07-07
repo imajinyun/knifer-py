@@ -1,4 +1,4 @@
-.PHONY: install test test-cov lint format typecheck api-check taxonomy-check facade-check facade-status-check readme-smoke examples-smoke bench-smoke changelog build check-dist check clean
+.PHONY: install test test-cov lint format typecheck api-check taxonomy-check facade-check facade-status-check readme-smoke examples-smoke bench-smoke changelog build check-dist release-ready check clean
 
 BENCH_SMOKE_OUTPUT ?= tmp/benchmark-smoke.json
 BENCH_SMOKE_BASELINE ?= api/benchmark-smoke-baseline.json
@@ -54,6 +54,9 @@ build:
 
 check-dist: build
 	.venv/bin/python -m twine check dist/*
+
+release-ready:
+	.venv/bin/python scripts/check_release_ready.py
 
 check: lint typecheck api-check taxonomy-check facade-check facade-status-check readme-smoke examples-smoke bench-smoke test
 
