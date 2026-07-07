@@ -46,6 +46,7 @@ jobs:
           poetry run python scripts/check_readme_smoke.py
           poetry run python examples/smoke.py
           poetry run python scripts/benchmark_smoke.py
+          poetry run python scripts/generate_changelog.py --check
           poetry run pytest
           poetry run pytest --cov=kniferpy --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=95
 

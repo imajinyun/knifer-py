@@ -1,4 +1,4 @@
-.PHONY: install test test-cov lint format typecheck api-check taxonomy-check facade-check readme-smoke examples-smoke bench-smoke build check clean
+.PHONY: install test test-cov lint format typecheck api-check taxonomy-check facade-check readme-smoke examples-smoke bench-smoke changelog build check clean
 
 install:
 	.venv/bin/poetry install --all-extras
@@ -39,6 +39,9 @@ examples-smoke:
 
 bench-smoke:
 	.venv/bin/python scripts/benchmark_smoke.py
+
+changelog:
+	.venv/bin/python scripts/generate_changelog.py --check
 
 build:
 	.venv/bin/poetry build

@@ -34,6 +34,7 @@ make facade-check
 make readme-smoke
 make examples-smoke
 make bench-smoke
+make changelog
 ```
 
 Runtime installs can stay lean and opt into heavier domains as needed:
