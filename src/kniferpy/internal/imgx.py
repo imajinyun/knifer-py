@@ -1508,7 +1508,7 @@ def decode_qr_code(data: bytes) -> list[DecodeResult]:
 
 def decode_qr_code_image(img: Image.Image) -> list[DecodeResult]:
     try:
-        from pyzbar.pyzbar import decode as _pyzbar_decode  # type: ignore[import-untyped]
+        from pyzbar.pyzbar import decode as _pyzbar_decode  # type: ignore[import-not-found]
     except ImportError:
         return []
     results: list[DecodeResult] = []

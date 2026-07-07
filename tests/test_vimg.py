@@ -6,6 +6,7 @@ import io
 import os
 import tempfile
 from pathlib import Path
+from typing import cast
 
 import pytest
 from PIL import Image
@@ -15,6 +16,7 @@ from kniferpy.internal.imgx import ErrImageInvalidInput, ErrImageUnsupported
 from kniferpy.vimg import (
     BarcodeFormat,
     BarcodeOutputFormat,
+    CaptchaOption,
     GifCaptcha,
     LineCaptcha,
     MathGenerator,
@@ -294,7 +296,8 @@ class TestGrayscale:
         img = Image.new("RGBA", (2, 2), (255, 0, 0, 128))
         result = grayscale(img)
         assert result.mode == "RGBA"
-        assert result.getpixel((0, 0))[3] == 128
+        pixel = cast(tuple[int, ...], result.getpixel((0, 0)))
+        assert pixel[3] == 128
 
 
 class TestCompressJPEG:
@@ -723,8 +726,8 @@ def test_captcha_constructors_and_write_options(tmp_path: Path) -> None:
         [
             with_font_size(12),
             with_color_func(lambda: (1, 2, 3)),
-            with_generator_int_parser(int),
-            with_generator_random_int(lambda n: 0),
+            cast(CaptchaOption, with_generator_int_parser(int)),
+            cast(CaptchaOption, with_generator_random_int(lambda n: 0)),
         ],
     )
 

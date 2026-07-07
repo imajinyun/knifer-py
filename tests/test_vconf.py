@@ -7,10 +7,13 @@ import threading
 import time
 import urllib.request
 from pathlib import Path
+from types import TracebackType
+from typing import Any
 
 import pytest
 
 from kniferpy import vconf
+from kniferpy.internal import confx
 from kniferpy.verr import ValidationError
 
 
@@ -492,8 +495,8 @@ def test_internal_helpers_and_flatten_empty_values() -> None:
     assert conf.get("a") == ""
     assert conf.get("b") == "True"
     assert conf.get("nested.x") == "1"
-    assert vconf.confx._first_index_any("a:b=c", "=:") == 1
-    assert vconf.confx._first_index_any("abc", "=:") == -1
+    assert confx._first_index_any("a:b=c", "=:") == 1
+    assert confx._first_index_any("abc", "=:") == -1
 
 
 def test_bind_options_schema_metadata_dict_and_validation() -> None:
@@ -558,10 +561,15 @@ def test_bind_options_schema_metadata_dict_and_validation() -> None:
 
 def test_remote_load_and_safe_host(monkeypatch: pytest.MonkeyPatch) -> None:
     class Response:
-        def __enter__(self):
+        def __enter__(self) -> Response:
             return self
 
-        def __exit__(self, exc_type, exc, tb):
+        def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc: BaseException | None,
+            tb: TracebackType | None,
+        ) -> None:
             return None
 
         def read(self) -> bytes:
@@ -594,7 +602,7 @@ def test_remote_load_and_safe_host(monkeypatch: pytest.MonkeyPatch) -> None:
     with pytest.raises(ValidationError) as private_host:
         vconf.load_remote_safe("https://localhost/app.properties")
 
-    def fail_urlopen(url: str, timeout: float = 10.0):
+    def fail_urlopen(url: str, timeout: float = 10.0) -> Any:
         raise OSError("down")
 
     monkeypatch.setattr(urllib.request, "urlopen", fail_urlopen)

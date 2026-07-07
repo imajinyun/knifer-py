@@ -134,10 +134,10 @@ DecodeOption = Callable[[Any], None]
 
 # ── Go-compat type aliases for the captcha interface ───────────────────────────
 
-ICaptcha = AbstractCaptcha  # type: ignore[assignment]
+ICaptcha = AbstractCaptcha
 """Go-compat type alias for the captcha interface."""
 
-Captcha = AbstractCaptcha  # type: ignore[assignment]
+Captcha = AbstractCaptcha
 """Go-compat type alias for the captcha interface."""
 
 __all__ = [

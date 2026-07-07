@@ -807,7 +807,7 @@ def parse_by_ext(content: str, ext: str) -> Conf:
 def parse_yaml(content: str) -> Conf:
     """Parse YAML content into a Conf."""
     try:
-        import yaml
+        import yaml  # type: ignore[import-untyped]
     except ImportError:
         raise ValidationError(
             message="yaml parsing requires PyYAML: pip install pyyaml",
@@ -830,7 +830,7 @@ def parse_toml(content: str) -> Conf:
         import tomllib
     except ImportError:
         try:
-            import toml as _toml
+            import toml as _toml  # type: ignore[import-untyped]
 
             data = _toml.loads(content)
         except ImportError:
