@@ -2,6 +2,7 @@ import sys
 import types
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 from cryptography import x509
@@ -579,15 +580,14 @@ def test_totp_verify_with_clock() -> None:
     assert vcrypto.totp_verify(code, secret, fixed_time)
 
 
-def test_totp_now_with_options_and_verify_order() -> None:
+def test_totp_now_with_options_and_verify_success() -> None:
     secret = vcrypto.generate_otp_secret()
     fixed_time = 1234567890.0
     vcrypto.set_otp_clock(lambda: fixed_time)
     try:
         code = vcrypto.totp_now_with_options(secret)
         assert code == vcrypto.totp(secret, fixed_time)
-        with pytest.raises(TypeError):
-            vcrypto.totp_verify_now_with_options(secret, code)
+        assert vcrypto.totp_verify_now_with_options(secret, code)
     finally:
         vcrypto.set_otp_clock(None)
 
@@ -1193,7 +1193,7 @@ def test_rsa_options_sha384_and_unknown_hash_fallback() -> None:
 
 def test_sm2_facade_with_fake_gmssl_modules(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeCryptSM2:
-        def __init__(self, private_key, public_key) -> None:
+        def __init__(self, private_key: str | None, public_key: str | None) -> None:
             self._private_key = private_key or "generated-private"
             self._public_key = public_key or "generated-public"
 
@@ -1215,12 +1215,12 @@ def test_sm2_facade_with_fake_gmssl_modules(monkeypatch: pytest.MonkeyPatch) -> 
 
     gmssl_mod = types.ModuleType("gmssl")
     sm2_mod = types.ModuleType("gmssl.sm2")
-    sm2_mod.CryptSM2 = FakeCryptSM2
+    cast(Any, sm2_mod).CryptSM2 = FakeCryptSM2
     func_mod = types.ModuleType("gmssl.func")
-    func_mod.sm2_private_key_to_pem = lambda key: f"private:{key}"
-    func_mod.sm2_public_key_to_pem = lambda key: f"public:{key}"
-    func_mod.pem_to_sm2_private_key = lambda data: data.removeprefix("private:")
-    func_mod.pem_to_sm2_public_key = lambda data: data.removeprefix("public:")
+    cast(Any, func_mod).sm2_private_key_to_pem = lambda key: f"private:{key}"
+    cast(Any, func_mod).sm2_public_key_to_pem = lambda key: f"public:{key}"
+    cast(Any, func_mod).pem_to_sm2_private_key = lambda data: data.removeprefix("private:")
+    cast(Any, func_mod).pem_to_sm2_public_key = lambda data: data.removeprefix("public:")
 
     monkeypatch.setitem(sys.modules, "gmssl", gmssl_mod)
     monkeypatch.setitem(sys.modules, "gmssl.sm2", sm2_mod)

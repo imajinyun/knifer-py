@@ -3931,7 +3931,7 @@
         },
         "sign_params": {
           "kind": "function",
-          "signature": "(params: 'dict[str, Any]', digest_hex_fn, separator: 'str' = '&', key_value_separator: 'str' = '=', ignore_nil: 'bool' = False, *other_params: 'str') -> 'str'",
+          "signature": "(params: 'dict[str, Any]', digest_hex_fn: 'Callable[[bytes], str]', separator: 'str' = '&', key_value_separator: 'str' = '=', ignore_nil: 'bool' = False, *other_params: 'str') -> 'str'",
           "type": "builtins.function"
         },
         "sign_params_sha256": {

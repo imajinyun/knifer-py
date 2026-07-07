@@ -10,7 +10,7 @@ import struct
 import time as _time
 from collections.abc import Callable
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from argon2.low_level import Type, hash_secret_raw, verify_secret
 from cryptography.hazmat.primitives import hashes, serialization
@@ -381,7 +381,7 @@ def hash_password_argon2id(
 
 def verify_password_argon2id(encoded: str, password: bytes) -> bool:
     try:
-        return verify_secret(encoded, password, Type.ID)
+        return verify_secret(encoded.encode("utf-8"), password, Type.ID)
     except Exception:
         return False
 
@@ -614,7 +614,7 @@ def marshal_jwk(jwk: dict[str, Any]) -> bytes:
 
 
 def parse_jwk(data: bytes) -> dict[str, Any]:
-    return json.loads(data.decode("utf-8"))
+    return cast(dict[str, Any], json.loads(data.decode("utf-8")))
 
 
 def marshal_jwks(keys: list[dict[str, Any]]) -> bytes:
@@ -622,11 +622,11 @@ def marshal_jwks(keys: list[dict[str, Any]]) -> bytes:
 
 
 def parse_jwks(data: bytes) -> dict[str, Any]:
-    return json.loads(data.decode("utf-8"))
+    return cast(dict[str, Any], json.loads(data.decode("utf-8")))
 
 
 def select_jwk_by_key_id(jwks: dict[str, Any], kid: str) -> dict[str, Any]:
-    for key in jwks.get("keys", []):
+    for key in cast(list[dict[str, Any]], jwks.get("keys", [])):
         if key.get("kid") == kid:
             return key
     raise CryptoError(f"JWK with kid={kid!r} not found", code="crypto.jwk_not_found")
@@ -648,14 +648,14 @@ def _b64url_decode(s: str) -> bytes:
 
 def sign_params(
     params: dict[str, Any],
-    digest_hex_fn,
+    digest_hex_fn: Callable[[bytes], str],
     separator: str = "&",
     key_value_separator: str = "=",
     ignore_nil: bool = False,
     *other_params: str,
 ) -> str:
     keys = sorted(params.keys())
-    parts = []
+    parts: list[str] = []
     for key in keys:
         val = params[key]
         if ignore_nil and val is None:
@@ -856,7 +856,7 @@ def totp_now_with_options(
 ) -> str:
     """Generate TOTP using the injectable clock."""
     now = int(_otp_now())
-    return totp(secret, now, digits=digits, step=step)
+    return totp(to_bytes(secret), now, digits=digits, step=step)
 
 
 def totp_verify_now_with_options(
@@ -869,7 +869,7 @@ def totp_verify_now_with_options(
 ) -> bool:
     """Verify TOTP using the injectable clock."""
     now = int(_otp_now())
-    return totp_verify(secret, code, now, digits=digits, step=step, window=window)
+    return totp_verify(code, to_bytes(secret), now, digits=digits, step=step, window=window)
 
 
 # ── Random with options (Go compat) ──────────────────────────────────────────
@@ -917,7 +917,7 @@ def random_bytes_with_options(
 
 def sm3(data: bytes) -> bytes:
     """Return the SM3 digest bytes of data."""
-    from gmssl.sm3 import sm3_hash
+    from gmssl.sm3 import sm3_hash  # type: ignore[import-untyped]
 
     return bytes.fromhex(sm3_hash(list(data)))
 
@@ -926,7 +926,7 @@ def sm3_hex(data: bytes) -> str:
     """Return the SM3 digest in lower-case hex form."""
     from gmssl.sm3 import sm3_hash
 
-    return sm3_hash(list(data))
+    return cast(str, sm3_hash(list(data)))
 
 
 def sm3_new() -> Any:
@@ -1093,7 +1093,7 @@ def sm4_seal_gcm(plain: bytes, key: bytes, additional_data: bytes) -> tuple[byte
 
 def gen_sm2_key() -> tuple[Any, Any]:
     """Generate an SM2 private/public key pair."""
-    from gmssl.sm2 import CryptSM2
+    from gmssl.sm2 import CryptSM2  # type: ignore[import-untyped]
 
     sm2_crypt = CryptSM2(private_key=None, public_key=None)
     sm2_crypt.generate_key()
@@ -1105,7 +1105,7 @@ def sm2_encrypt(plain: bytes, pub_key: str) -> bytes:
     from gmssl.sm2 import CryptSM2
 
     sm2_crypt = CryptSM2(private_key=None, public_key=pub_key)
-    return sm2_crypt.encrypt(plain)
+    return cast(bytes, sm2_crypt.encrypt(plain))
 
 
 def sm2_decrypt(cipher_text: bytes, priv_key: str) -> bytes:
@@ -1113,7 +1113,7 @@ def sm2_decrypt(cipher_text: bytes, priv_key: str) -> bytes:
     from gmssl.sm2 import CryptSM2
 
     sm2_crypt = CryptSM2(private_key=priv_key, public_key=None)
-    return sm2_crypt.decrypt(cipher_text)
+    return cast(bytes, sm2_crypt.decrypt(cipher_text))
 
 
 def sm2_sign(data: bytes, priv_key: str) -> bytes:
@@ -1121,7 +1121,7 @@ def sm2_sign(data: bytes, priv_key: str) -> bytes:
     from gmssl.sm2 import CryptSM2
 
     sm2_crypt = CryptSM2(private_key=priv_key, public_key=None)
-    return sm2_crypt.sign_with_sm3(data)
+    return cast(bytes, sm2_crypt.sign_with_sm3(data))
 
 
 def sm2_verify(data: bytes, sig: bytes, pub_key: str) -> bool:
@@ -1129,21 +1129,21 @@ def sm2_verify(data: bytes, sig: bytes, pub_key: str) -> bool:
     from gmssl.sm2 import CryptSM2
 
     sm2_crypt = CryptSM2(private_key=None, public_key=pub_key)
-    return sm2_crypt.verify_with_sm3(sig, data)
+    return cast(bool, sm2_crypt.verify_with_sm3(sig, data))
 
 
 def sm2_private_key_to_pem(priv_key: Any) -> bytes:
     """Encode an SM2 private key as PKCS#8 PEM."""
-    from gmssl.func import sm2_private_key_to_pem as _to_pem
+    from gmssl.func import sm2_private_key_to_pem as _to_pem  # type: ignore[import-untyped]
 
-    return _to_pem(priv_key).encode()
+    return cast(str, _to_pem(priv_key)).encode()
 
 
 def sm2_public_key_to_pem(pub_key: Any) -> bytes:
     """Encode an SM2 public key as PKIX PEM."""
     from gmssl.func import sm2_public_key_to_pem as _to_pem
 
-    return _to_pem(pub_key).encode()
+    return cast(str, _to_pem(pub_key)).encode()
 
 
 def parse_sm2_private_key_pem(data: bytes) -> Any:
@@ -1177,6 +1177,7 @@ def sign_with_rsa_options(
     }
     chosen_hash = hash_map.get(hash_alg, hashes.SHA256())
 
+    pad: Any
     if pss:
         pad = padding.PSS(mgf=padding.MGF1(chosen_hash), salt_length=padding.PSS.MAX_LENGTH)
     else:
@@ -1199,6 +1200,7 @@ def verify_with_rsa_options(
     }
     chosen_hash = hash_map.get(hash_alg, hashes.SHA256())
 
+    pad: Any
     if pss:
         pad = padding.PSS(mgf=padding.MGF1(chosen_hash), salt_length=padding.PSS.MAX_LENGTH)
     else:
