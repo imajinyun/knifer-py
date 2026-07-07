@@ -7,7 +7,7 @@ import tempfile
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import IO
+from typing import IO, Protocol, cast
 
 from kniferpy.verr import SecurityError
 
@@ -183,7 +183,7 @@ def extension(path: str | Path) -> str:
 # ── file type detection ─────────────────────────────────────────────────────
 
 
-_MAGIC_SIGNATURES: dict[str, tuple[str, str, str]] = {
+_MAGIC_SIGNATURES: dict[bytes, tuple[str, str, str]] = {
     b"\xff\xd8\xff": ("image/jpeg", ".jpg", "image"),
     b"\x89PNG\r\n\x1a\n": ("image/png", ".png", "image"),
     b"GIF87a": ("image/gif", ".gif", "image"),
@@ -278,13 +278,20 @@ def detect_file_type_from_path(path: str | Path) -> FileType:
     return detect_file_type(head)
 
 
-def detect_file_type_from_reader(reader) -> FileType:
+class _BinaryReader(Protocol):
+    def read(self, size: int = -1) -> bytes: ...
+
+    def seek(self, offset: int, whence: int = 0) -> int: ...
+
+
+def detect_file_type_from_reader(reader: object) -> FileType:
     """Detect file type from a reader (Go compat: DetectFileType(io.Reader))."""
     from io import IOBase
 
     if isinstance(reader, IOBase):
         try:
-            data = reader.read(560)
+            typed_reader = cast(_BinaryReader, reader)
+            data = typed_reader.read(560)
             if hasattr(reader, "seek"):
                 reader.seek(0)
             return detect_file_type(data)
