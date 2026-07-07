@@ -253,6 +253,7 @@ def test_internal_cache_obj_touch_and_expiration() -> None:
     obj = cachex._CacheObj("a", 1, 5.0, 10.0)
     assert not obj.is_expired(14.0)
     assert obj.is_expired(16.0)
+    assert obj.expired_time() == 15.0
     assert obj.touch(False, 20.0) == 1
     assert obj.last_access == 10.0
     assert obj.touch(True, 20.0) == 1
@@ -290,6 +291,35 @@ def test_get_or_load_with_custom_timeout_and_load_lock_cleanup() -> None:
     assert c._key_locks == {}
     clock.advance(6.0)
     assert c.get("a") is None
+
+
+def test_base_cache_contains_missing_and_capacity_zero_paths() -> None:
+    c: vcache.FIFOCache[str, int] = vcache.new_fifo(0)
+
+    assert c.contains_key("missing") is False
+    assert c.get_or_load_with("missing", None, True, 0.0) is None
+    c.put("a", 1)
+
+    assert c.is_full() is False
+    assert c.keys() == ["a"]
+    assert c.values() == [1]
+
+
+def test_base_cache_listener_none_drains_pending_events() -> None:
+    c: cachex.FIFOCache[str, int] = cachex.FIFOCache(2, 0.0)
+    c._pending.append(("stale", 1))
+
+    assert c._drain_events_locked() == []
+    assert c._pending == []
+    assert c.set_listener(None) is c
+    c._notify([("ignored", 2)])
+
+
+def test_base_cache_abstract_prune_must_be_overridden() -> None:
+    c: cachex._AbstractCache[str, int] = cachex._AbstractCache(1, 0.0)
+
+    with pytest.raises(NotImplementedError):
+        c.prune()
 
 
 def test_listener_can_be_cache_listener_func_and_reentrant() -> None:
@@ -418,6 +448,29 @@ def test_timed_cache_core_behaviour_and_listener() -> None:
     assert c.set_listener(None) is c
     c.clear()
     assert c.is_empty()
+
+
+def test_timed_cache_no_listener_and_empty_paths() -> None:
+    clock = _Clock()
+    c: vcache.TimedCache[str, int] = vcache.new_timed(5.0, clock=clock)
+
+    assert c.contains_key("missing") is False
+    assert c._drain_events() == []
+    assert c.set_listener(None) is c
+    c._notify([("ignored", 1)])
+    assert c.prune() == 0
+    assert c.size() == 0
+
+
+def test_timed_cache_values_skip_expired_entries() -> None:
+    clock = _Clock()
+    c: vcache.TimedCache[str, int] = vcache.new_timed(5.0, clock=clock)
+    c.put("a", 1)
+    c.put_with_timeout("b", 2, 10.0)
+
+    clock.advance(6.0)
+
+    assert c.values() == [2]
 
 
 def test_timed_cache_get_or_load_e_and_options() -> None:
@@ -581,6 +634,18 @@ def test_weak_cache_core_ttl_and_listener_behaviour() -> None:
     assert cache.is_empty()
 
 
+def test_weak_cache_no_listener_empty_and_value_paths() -> None:
+    cache: vcache.WeakCache[str, _Box] = vcache.new_weak(0.0)
+
+    assert cache.contains_key("missing") is False
+    assert cache._drain_events() == []
+    assert cache.set_listener(None) is cache
+    cache._notify([("ignored", _Box(1))])
+    assert cache.size() == 0
+    assert cache.hit_count() == 0
+    assert cache.miss_count() == 0
+
+
 def test_weak_cache_get_or_load_and_error_paths() -> None:
     err = RuntimeError("load failed")
     cache: vcache.WeakCache[str, _Box] = vcache.new_weak(0)
@@ -650,10 +715,12 @@ def test_weak_cache_dead_ref_get_and_remove_paths() -> None:
 def test_default_ticker_factory_and_runner_smoke() -> None:
     calls: list[str] = []
     ticker = cachex._Ticker(60.0, lambda: calls.append("tick"))
+    ticker._tick()
     ticker.stop()
     created, stop = cachex._default_ticker_factory(60.0)
     stop()
     assert isinstance(created, cachex._Ticker)
+    assert calls == ["tick"]
 
     event = cachex.threading.Event()
 
@@ -662,3 +729,15 @@ def test_default_ticker_factory_and_runner_smoke() -> None:
 
     cachex._default_runner(mark)
     assert event.wait(1.0)
+
+
+def test_constructor_options_accept_none_and_empty_lists() -> None:
+    for factory in (
+        vcache.new_fifo_with_options,
+        vcache.new_lru_with_options,
+        vcache.new_lfu_with_options,
+    ):
+        with pytest.raises(TypeError):
+            factory(None)
+    assert isinstance(vcache.new_timed_with_options(None), vcache.TimedCache)
+    assert isinstance(vcache.new_weak_with_options([]), vcache.WeakCache)

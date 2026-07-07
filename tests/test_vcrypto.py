@@ -1,4 +1,6 @@
 from pathlib import Path
+import sys
+import types
 
 import pytest
 from cryptography import x509
@@ -1106,9 +1108,125 @@ def test_sm4_invalid_padding_branch() -> None:
     assert exc_info.value.code == "crypto.invalid_padding"
 
 
+def test_sm4_and_random_helpers_custom_readers() -> None:
+    assert vcrypto.secure_bytes_with_options(4, reader=lambda n: b"a" * n) == b"aaaa"
+    assert vcrypto.gen_aes_key_with_options(16, reader=lambda n: b"b" * n) == b"b" * 16
+    assert vcrypto.gen_sm4_key_with_options(reader=lambda n: b"c" * n) == b"c" * 16
+
+
+def test_sm3_helpers_and_hmac_long_key() -> None:
+    digest = vcrypto.sm3(b"kniferpy")
+    assert len(digest) == 32
+    assert vcrypto.sm3_hex(b"kniferpy") == digest.hex()
+    assert callable(vcrypto.sm3_new())
+    assert vcrypto.sm3_equal(digest, digest)
+    assert not vcrypto.sm3_equal(digest, b"\x00" * 32)
+
+    mac = vcrypto.hmac_sm3_bytes(b"k" * 80, b"payload")
+    assert len(mac) == 32
+    assert vcrypto.hmac_sm3_hex(b"k" * 80, b"payload") == mac.hex()
+
+
+def test_sm4_ecb_and_cbc_roundtrip_and_validation_errors() -> None:
+    key = b"k" * 16
+    iv = b"i" * 16
+    plain = b"hello sm4 block"
+
+    ecb_cipher = vcrypto.sm4_encrypt_ecb(plain, key)
+    assert vcrypto.sm4_decrypt_ecb(ecb_cipher, key) == plain
+    cbc_cipher = vcrypto.sm4_encrypt_cbc(plain, key, iv)
+    assert vcrypto.sm4_decrypt_cbc(cbc_cipher, key, iv) == plain
+
+    with pytest.raises(CryptoError) as key_exc:
+        vcrypto.sm4_encrypt_cbc(plain, b"short", iv)
+    with pytest.raises(CryptoError) as iv_exc:
+        vcrypto.sm4_decrypt_cbc(cbc_cipher, key, b"short")
+    assert key_exc.value.code == "crypto.invalid_key"
+    assert iv_exc.value.code == "crypto.invalid_iv"
+
+
+def test_sm4_gcm_validation_and_wrong_aad_paths() -> None:
+    key = b"k" * 16
+    nonce = b"n" * 12
+    cipher = vcrypto.sm4_encrypt_gcm(b"hello", key, nonce, b"aad")
+
+    with pytest.raises(CryptoError) as key_exc:
+        vcrypto.sm4_encrypt_gcm(b"hello", b"short", nonce, b"aad")
+    with pytest.raises(CryptoError) as nonce_exc:
+        vcrypto.sm4_decrypt_gcm(cipher, key, b"short", b"aad")
+    with pytest.raises(Exception):
+        vcrypto.sm4_decrypt_gcm(cipher, key, nonce, b"wrong")
+    assert key_exc.value.code == "crypto.invalid_key"
+    assert nonce_exc.value.code == "crypto.invalid_nonce"
+
+
+def test_rsa_options_sha384_and_unknown_hash_fallback() -> None:
+    import hashlib
+
+    key = vcrypto.gen_rsa_key()
+    pub = key.public_key()
+    digest384 = hashlib.sha384(b"hello").digest()
+    sig384 = vcrypto.sign_with_rsa_options(digest384, key, hash_alg="sha384", pss=False)
+    assert vcrypto.verify_with_rsa_options(digest384, sig384, pub, hash_alg="sha384", pss=False)
+
+    digest256 = hashlib.sha256(b"hello").digest()
+    sig_default = vcrypto.sign_with_rsa_options(digest256, key, hash_alg="unknown", pss=False)
+    assert vcrypto.verify_with_rsa_options(digest256, sig_default, pub, hash_alg="unknown", pss=False)
+    assert not vcrypto.verify_with_rsa_options(digest384, sig_default, pub, hash_alg="sha384", pss=False)
+
+
 # ═══════════════════════════════════════════════════════════════════════════════
 # SM2
 # ═══════════════════════════════════════════════════════════════════════════════
+
+
+def test_sm2_facade_with_fake_gmssl_modules(monkeypatch: pytest.MonkeyPatch) -> None:
+    class FakeCryptSM2:
+        def __init__(self, private_key, public_key) -> None:
+            self._private_key = private_key or "generated-private"
+            self._public_key = public_key or "generated-public"
+
+        def generate_key(self) -> None:
+            self._private_key = "generated-private"
+            self._public_key = "generated-public"
+
+        def encrypt(self, plain: bytes) -> bytes:
+            return b"enc:" + plain
+
+        def decrypt(self, cipher_text: bytes) -> bytes:
+            return cipher_text.removeprefix(b"enc:")
+
+        def sign_with_sm3(self, data: bytes) -> bytes:
+            return b"sig:" + data
+
+        def verify_with_sm3(self, sig: bytes, data: bytes) -> bool:
+            return sig == b"sig:" + data
+
+    gmssl_mod = types.ModuleType("gmssl")
+    sm2_mod = types.ModuleType("gmssl.sm2")
+    sm2_mod.CryptSM2 = FakeCryptSM2
+    func_mod = types.ModuleType("gmssl.func")
+    func_mod.sm2_private_key_to_pem = lambda key: f"private:{key}"
+    func_mod.sm2_public_key_to_pem = lambda key: f"public:{key}"
+    func_mod.pem_to_sm2_private_key = lambda data: data.removeprefix("private:")
+    func_mod.pem_to_sm2_public_key = lambda data: data.removeprefix("public:")
+
+    monkeypatch.setitem(sys.modules, "gmssl", gmssl_mod)
+    monkeypatch.setitem(sys.modules, "gmssl.sm2", sm2_mod)
+    monkeypatch.setitem(sys.modules, "gmssl.func", func_mod)
+
+    priv, pub = vcrypto.gen_sm2_key()
+    cipher = vcrypto.sm2_encrypt(b"hello", pub)
+    sig = vcrypto.sm2_sign(b"hello", priv)
+
+    assert (priv, pub) == ("generated-private", "generated-public")
+    assert vcrypto.sm2_decrypt(cipher, priv) == b"hello"
+    assert vcrypto.sm2_verify(b"hello", sig, pub)
+    assert not vcrypto.sm2_verify(b"wrong", sig, pub)
+    assert vcrypto.sm2_private_key_to_pem(priv) == b"private:generated-private"
+    assert vcrypto.sm2_public_key_to_pem(pub) == b"public:generated-public"
+    assert vcrypto.parse_sm2_private_key_pem(b"private:generated-private") == "generated-private"
+    assert vcrypto.parse_sm2_public_key_pem(b"public:generated-public") == "generated-public"
 
 
 @pytest.mark.skip(reason="gmssl CryptSM2 does not accept None for public_key")

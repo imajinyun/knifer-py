@@ -232,6 +232,7 @@ def test_negative_values_question_wildcard_and_matcher_edges() -> None:
     matcher = cronx._new_matcher(vcron.Part.MINUTE, "1,2")
     assert matcher.matches(1)
     assert not matcher.matches(3)
+    assert cronx._new_matcher(vcron.Part.MINUTE, "*").matches(59)
     with pytest.raises(ValidationError):
         cronx._new_matcher(vcron.Part.MINUTE, "")
 
@@ -317,6 +318,18 @@ def test_task_func_cron_task_listener_and_task_table() -> None:
     assert events == ["func", "func"]
 
 
+def test_task_table_duplicate_raises_and_executor_none_paths() -> None:
+    table = vcron.new_task_table()
+    pattern = vcron.new_pattern("* * * * *")
+    task = _Task([])
+    table.add("dup", pattern, task)
+    with pytest.raises(ValidationError) as exc_info:
+        table.add("dup", pattern, task)
+    assert exc_info.value.code == "knifer.cron.duplicate"
+    scheduler = vcron.new_scheduler()
+    assert scheduler.running_count() == 0
+
+
 def test_scheduler_management_and_synchronous_execution() -> None:
     events: list[str] = []
     scheduler = vcron.new_scheduler(match_second=True)
@@ -355,6 +368,18 @@ def test_scheduler_management_and_synchronous_execution() -> None:
     assert scheduler.deschedule(auto_id)
     scheduler.clear()
     assert scheduler.is_empty()
+
+
+def test_scheduler_listener_failures_are_swallowed() -> None:
+    events: list[str] = []
+    scheduler = vcron.new_scheduler()
+    scheduler.set_executor(lambda fn: fn())
+    scheduler.add_listener(_Listener(events, fail=True))
+    scheduler.schedule_pattern("ok", vcron.new_pattern("* * * * *"), _Task(events, "task"))
+    scheduler._execute_task(scheduler._table.get("ok"))
+    assert "start:ok" in events
+    assert "task" in events
+    assert "ok:ok" in events
 
 
 def test_scheduler_lifecycle_and_started_errors() -> None:
