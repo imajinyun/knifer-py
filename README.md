@@ -30,6 +30,7 @@ make install
 make format
 make check
 make taxonomy-check
+make facade-check
 make readme-smoke
 make examples-smoke
 make bench-smoke
