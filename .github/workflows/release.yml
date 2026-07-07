@@ -41,6 +41,7 @@ jobs:
           poetry run ruff check src tests
           poetry run mypy src tests
           poetry run python scripts/check_api_snapshot.py
+          poetry run python scripts/check_readme_smoke.py
           poetry run python examples/smoke.py
           poetry run pytest
           poetry run pytest --cov=kniferpy --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=95
