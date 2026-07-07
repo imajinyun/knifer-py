@@ -60,6 +60,7 @@ CHECK_STEPS = [
 DIST_STEPS = [
     Step("build", (POETRY, "build")),
     Step("twine", (PYTHON, "-m", "twine", "check", "dist/*")),
+    Step("SBOM smoke", (PYTHON, "scripts/check_sbom_smoke.py")),
 ]
 
 

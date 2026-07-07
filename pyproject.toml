@@ -62,6 +62,7 @@ mypy = "^1.10.0"
 pre-commit = "^3.8.0"
 hypothesis = "^6.156.1"
 twine = "^6.2.0"
+cyclonedx-bom = "7.3.0"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

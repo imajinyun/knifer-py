@@ -37,10 +37,13 @@ make examples-smoke
 make bench-smoke
 make changelog
 make check-dist
+make sbom-smoke
+make release-ready
 ```
 
 `make bench-smoke` writes `tmp/benchmark-smoke.json` and checks it against the
 committed benchmark baseline.
+`make sbom-smoke` writes `sbom.cdx.json` and validates the CycloneDX structure.
 
 Runtime installs can stay lean and opt into heavier domains as needed:
 
