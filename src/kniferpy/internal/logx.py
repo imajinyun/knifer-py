@@ -451,7 +451,7 @@ _log_factory: _LogFactory | None = None
 _logger_cache: dict[str, ConsoleLog] = {}
 
 
-def set_log_factory(factory: _LogFactory) -> None:
+def set_log_factory(factory: _LogFactory | None) -> None:
     global _log_factory
     _log_factory = factory
 

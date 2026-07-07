@@ -1,3 +1,5 @@
+from typing import cast
+
 from kniferpy import vmask
 
 
@@ -154,8 +156,8 @@ def test_masked_dispatch_all_types() -> None:
 
 
 def test_masked_unknown_type_and_pointer_helpers() -> None:
-    assert vmask.masked("value", 999) == "value"
+    assert vmask.masked("value", cast(vmask.MaskType, 999)) == "value"
     assert vmask.masked_ptr("secret", vmask.MaskType.CLEAR_TO_NULL) is None
     assert vmask.masked_ptr("secret", vmask.MaskType.FIRST_MASK) == "s*****"
-    assert vmask.clear_to_nil() is None
+    vmask.clear_to_nil()
     assert vmask.user_id_value() == 0

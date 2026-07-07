@@ -3,9 +3,20 @@ from __future__ import annotations
 import bisect
 import hashlib
 import struct
+from typing import Protocol
 
 _MASK32 = 0xFFFFFFFF
 _MASK64 = 0xFFFFFFFFFFFFFFFF
+
+
+class _HashLike(Protocol):
+    def update(self, data: bytes) -> None: ...
+
+    def digest(self) -> bytes: ...
+
+
+class _HashFactory(Protocol):
+    def __call__(self) -> _HashLike: ...
 
 
 def _i32(x: int) -> int:
@@ -199,12 +210,12 @@ def java_default_hash(s: str) -> int:
 # ── Hash32 with custom hash function ─────────────────────────────────────────
 
 
-def hash32(s: str, hash_func: object | None = None) -> int:
+def hash32(s: str, hash_func: _HashFactory | None = None) -> int:
     if hash_func is None:
         return fnv_hash(s)
     h = hash_func()
     h.update(s.encode("utf-8"))
-    return struct.unpack(">I", h.digest()[:4])[0]
+    return int(struct.unpack(">I", h.digest()[:4])[0])
 
 
 # ── Consistent Hash Ring ─────────────────────────────────────────────────────
@@ -215,7 +226,7 @@ _DEFAULT_VIRTUAL_NODES = 100
 
 def _fnv64a(data: bytes) -> int:
     h = hashlib.sha256(data).digest()[:8]
-    return struct.unpack(">Q", h)[0]
+    return int(struct.unpack(">Q", h)[0])
 
 
 def _avalanche64(x: int) -> int:

@@ -700,7 +700,7 @@
         },
         "init_from_file_with_options": {
           "kind": "function",
-          "signature": "(bloom: 'BitSetBloomFilter', path: 'str', opts: 'list | None' = None) -> 'None'",
+          "signature": "(bloom: 'BitSetBloomFilter', path: 'str', opts: 'list[FileOption] | None' = None) -> 'None'",
           "type": "builtins.function"
         },
         "init_from_reader": {
@@ -7864,7 +7864,7 @@
         },
         "hash32": {
           "kind": "function",
-          "signature": "(s: 'str', hash_func: 'object | None' = None) -> 'int'",
+          "signature": "(s: 'str', hash_func: '_HashFactory | None' = None) -> 'int'",
           "type": "builtins.function"
         },
         "hf_hash": {
@@ -12353,7 +12353,7 @@
         },
         "get_factory": {
           "kind": "function",
-          "signature": "()",
+          "signature": "() -> 'logx._LogFactory | None'",
           "type": "builtins.function"
         },
         "get_level": {
@@ -12428,7 +12428,7 @@
         },
         "set_log_factory": {
           "kind": "function",
-          "signature": "(factory) -> 'None'",
+          "signature": "(factory: 'logx._LogFactory | None') -> 'None'",
           "type": "builtins.function"
         },
         "set_log_level": {
@@ -17152,7 +17152,7 @@
         "JSONOption": {
           "kind": "value",
           "signature": "(*args, **kwargs)",
-          "type": "typing._CallableGenericAlias"
+          "type": "collections.abc._CallableGenericAlias"
         },
         "New": {
           "kind": "function",
@@ -17222,10 +17222,10 @@
               "signature": "(self, other: 'Set[T]') -> 'bool'"
             },
             "filter": {
-              "signature": "(self, fn) -> 'Set[T]'"
+              "signature": "(self, fn: 'Callable[[T], bool]') -> 'Set[T]'"
             },
             "for_each": {
-              "signature": "(self, fn) -> 'None'"
+              "signature": "(self, fn: 'Callable[[T], None]') -> 'None'"
             },
             "intersect": {
               "signature": "(self, other: 'Set[T]') -> 'Set[T]'"
@@ -17240,7 +17240,7 @@
               "signature": "(self, other: 'Set[T]') -> 'bool'"
             },
             "map": {
-              "signature": "(self, fn) -> 'Set'"
+              "signature": "(self, fn: 'Callable[[T], U]') -> 'Set[U]'"
             },
             "marshal_json": {
               "signature": "(self, opts: 'list[JSONOption] | None' = None) -> 'bytes'"
@@ -17252,7 +17252,7 @@
               "signature": "(self) -> 'list[T]'"
             },
             "reduce": {
-              "signature": "(self, fn, initial)"
+              "signature": "(self, fn: 'Callable[[R, T], R]', initial: 'R') -> 'R'"
             },
             "remove": {
               "signature": "(self, *items: 'T') -> 'None'"

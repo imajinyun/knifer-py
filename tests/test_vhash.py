@@ -3,6 +3,7 @@ import hashlib
 import pytest
 
 from kniferpy import vhash
+from kniferpy.internal import hashx
 
 # Reference values generated from the knifer-go internal/hash implementation.
 _EXPECTED = {
@@ -76,10 +77,10 @@ def test_edge_cases() -> None:
 
 
 def test_internal_integer_wrapping_helpers() -> None:
-    assert vhash.hashx._i32(0xFFFFFFFF) == -1
-    assert vhash.hashx._i32(0x7FFFFFFF) == 0x7FFFFFFF
-    assert vhash.hashx._i64(0xFFFFFFFFFFFFFFFF) == -1
-    assert vhash.hashx._i64(0x7FFFFFFFFFFFFFFF) == 0x7FFFFFFFFFFFFFFF
+    assert hashx._i32(0xFFFFFFFF) == -1
+    assert hashx._i32(0x7FFFFFFF) == 0x7FFFFFFF
+    assert hashx._i64(0xFFFFFFFFFFFFFFFF) == -1
+    assert hashx._i64(0x7FFFFFFFFFFFFFFF) == 0x7FFFFFFFFFFFFFFF
 
 
 # ── Hash32 ───────────────────────────────────────────────────────────────────

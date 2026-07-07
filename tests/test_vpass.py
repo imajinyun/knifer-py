@@ -133,11 +133,11 @@ def test_strength_str() -> None:
 
 
 def test_strength_int_values() -> None:
-    assert Strength.VERY_WEAK == 1
-    assert Strength.WEAK == 2
-    assert Strength.MEDIUM == 3
-    assert Strength.STRONG == 4
-    assert Strength.VERY_STRONG == 5
+    assert int(Strength.VERY_WEAK) == 1
+    assert int(Strength.WEAK) == 2
+    assert int(Strength.MEDIUM) == 3
+    assert int(Strength.STRONG) == 4
+    assert int(Strength.VERY_STRONG) == 5
 
 
 def test_analysis_attributes() -> None:

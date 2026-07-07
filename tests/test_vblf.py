@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import IO, cast
 
 import pytest
 
@@ -185,7 +186,7 @@ def test_internal_bitmap_and_file_options(tmp_path: Path) -> None:
     path.write_text("alpha\nbeta\n", encoding="utf-8")
     opened: list[str] = []
 
-    def open_file(p: str):
+    def open_file(p: str) -> IO[str]:
         opened.append(p)
         return open(p, encoding="utf-8")  # noqa: SIM115 - opener contract returns a handle
 
@@ -195,5 +196,5 @@ def test_internal_bitmap_and_file_options(tmp_path: Path) -> None:
     assert bloom.contains("alpha")
     assert bloom.contains("beta")
 
-    cfg = blfx._apply_file_options([None])
+    cfg = blfx._apply_file_options([cast(blfx._FileOption, None)])
     assert cfg.open_file is None

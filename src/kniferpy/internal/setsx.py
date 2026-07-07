@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Callable, Generic, TypeVar
+from collections.abc import Callable, Iterator
+from typing import Any, Generic, TypeVar
 
 T = TypeVar("T")
+U = TypeVar("U")
+R = TypeVar("R")
 
 
 # ---------------------------------------------------------------------------
@@ -104,7 +107,7 @@ class Set(Generic[T]):
     def __len__(self) -> int:
         return len(self._data)
 
-    def __iter__(self):
+    def __iter__(self) -> Iterator[T]:
         return iter(self._data)
 
     def __contains__(self, item: T) -> bool:
@@ -141,7 +144,7 @@ class Set(Generic[T]):
     def to_yaml(self) -> Any:
         """Return a YAML-serializable representation (list of members)."""
         try:
-            import yaml
+            import yaml  # type: ignore[import-untyped]
 
             return yaml.safe_dump(self.members(), default_flow_style=False)
         except ImportError:
@@ -190,24 +193,24 @@ class Set(Generic[T]):
     def symmetric_difference(self, other: Set[T]) -> Set[T]:
         return self.union(other).sub(self.intersect(other))
 
-    def for_each(self, fn) -> None:
+    def for_each(self, fn: Callable[[T], None]) -> None:
         for item in self._data:
             fn(item)
 
-    def filter(self, fn) -> Set[T]:
+    def filter(self, fn: Callable[[T], bool]) -> Set[T]:
         out: Set[T] = Set()
         for item in self._data:
             if fn(item):
                 out._data[item] = None
         return out
 
-    def map(self, fn) -> Set:
-        out: Set = Set()
+    def map(self, fn: Callable[[T], U]) -> Set[U]:
+        out: Set[U] = Set()
         for item in self._data:
             out._data[fn(item)] = None
         return out
 
-    def reduce(self, fn, initial):
+    def reduce(self, fn: Callable[[R, T], R], initial: R) -> R:
         result = initial
         for item in self._data:
             result = fn(result, item)

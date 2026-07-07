@@ -222,12 +222,12 @@ def fatalf(template: str, *args: object) -> None:
     logx.fatalf(template, *args)
 
 
-def set_log_factory(factory) -> None:
+def set_log_factory(factory: logx._LogFactory | None) -> None:
     """Set the logger factory used by the static logger."""
     logx.set_log_factory(factory)
 
 
-def get_factory():
+def get_factory() -> logx._LogFactory | None:
     """Return the current logger factory."""
     return logx.get_factory()
 
@@ -254,7 +254,7 @@ def set_color_factory(factory: ColorFactory | None) -> None:
 
 def get_color_factory() -> ColorFactory | None:
     """Return the current color factory."""
-    logx.get_color_factory()
+    return logx.get_color_factory()
 
 
 # Aliases for Go compat

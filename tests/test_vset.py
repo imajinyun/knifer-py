@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import json
 import sys
+from typing import cast
+
+import pytest
 
 from kniferpy import vset
 from kniferpy.internal import setsx
@@ -95,9 +98,9 @@ def test_str_repr() -> None:
 def test_json_roundtrip() -> None:
     s = vset.New(1, 2, 3)
     json_str = s.to_json()
-    s2 = vset.New().from_json(json_str)
+    s2: vset.Set[int] = vset.New().from_json(json_str)
     assert s.equal(s2)
-    s3 = vset.Set.from_json("[4, 5]")
+    s3: vset.Set[int] = vset.Set.from_json("[4, 5]")
     assert sorted(s3.members()) == [4, 5]
 
 
@@ -115,7 +118,7 @@ def test_typed_constructors() -> None:
 
 
 def test_empty() -> None:
-    s = vset.New()
+    s: vset.Set[int] = vset.New()
     assert len(s) == 0
     assert s.members() == []
     assert s.equal(vset.New())
@@ -136,14 +139,14 @@ def test_custom_json_unmarshal_and_marshal_json() -> None:
     assert s.marshal_json([marshal_opt]) == b"custom"
     s.unmarshal_json(b"ignored", [unmarshal_opt])
     assert sorted(s.members()) == [1, 2, 3, 4]
-    s2 = vset.Set.from_json("ignored", [unmarshal_opt])
+    s2: vset.Set[int] = vset.Set.from_json("ignored", [unmarshal_opt])
     assert sorted(s2.members()) == [3, 4]
     cfg = setsx._apply_json_options([marshal_opt, unmarshal_opt])
     assert cfg.marshal([1]) == b"custom"
     assert cfg.unmarshal(b"ignored") == [3, 4]
 
 
-def test_yaml_helpers_and_fallback(monkeypatch) -> None:
+def test_yaml_helpers_and_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     s = vset.New("a", "b")
 
     dumped = s.to_yaml()
@@ -151,14 +154,14 @@ def test_yaml_helpers_and_fallback(monkeypatch) -> None:
     assert sorted(vset.Set.from_yaml(dumped).members()) == ["a", "b"]
     assert sorted(s.marshal_yaml()) == ["a", "b"]
 
-    target = vset.New()
+    target: vset.Set[str] = vset.New()
     target.unmarshal_yaml(["x", "y"])
     assert sorted(target.members()) == ["x", "y"]
-    target.unmarshal_yaml("not-list")
+    target.unmarshal_yaml(cast(list[str], "not-list"))
     assert sorted(target.members()) == ["x", "y"]
 
 
-def test_yaml_helpers_without_yaml_module(monkeypatch) -> None:
+def test_yaml_helpers_without_yaml_module(monkeypatch: pytest.MonkeyPatch) -> None:
     s = vset.New("a", "b")
     monkeypatch.setitem(sys.modules, "yaml", None)
     assert sorted(s.to_yaml()) == ["a", "b"]

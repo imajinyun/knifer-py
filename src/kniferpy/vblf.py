@@ -224,7 +224,7 @@ def new_long_map(size: int) -> LongMap:
 
 
 def init_from_file_with_options(
-    bloom: BitSetBloomFilter, path: str, opts: list | None = None
+    bloom: BitSetBloomFilter, path: str, opts: list[FileOption] | None = None
 ) -> None:
     blfx.init_from_file_with_options(bloom, path, opts)
 

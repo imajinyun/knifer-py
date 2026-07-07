@@ -1,4 +1,6 @@
 import re
+from collections.abc import Callable
+from typing import cast
 
 from kniferpy import vregex
 
@@ -352,24 +354,25 @@ def test_replace_all_invalid_pattern() -> None:
 
 def test_internal_match_result_fallback_and_none_branches() -> None:
     regex = re.compile(r"\d+")
-    fallback = vregex.index_of_re(None, "abc")
+    none_regex = cast(re.Pattern[str], None)
+    fallback = vregex.index_of_re(none_regex, "abc")
     assert fallback is None
-    assert vregex.last_index_of_re(None, "abc") is None
-    assert vregex.get_all_groups_re(None, "abc", False, False) == []
-    assert vregex.get_all_group_names_re(None) == []
-    assert vregex.find_all_group_re(None, "abc", "x") == []
-    assert vregex.del_last_re(None, "abc") == "abc"
-    assert vregex.del_pre_re(None, "abc") == "abc"
-    assert vregex.extract_multi_re(None, "abc", "$1") == "abc"
-    assert vregex.extract_multi_and_del_pre_re(None, "abc", "$1") == "abc"
-    assert vregex.replace_all_re(None, "abc", "x") == "abc"
-    assert vregex.replace_all_func_re(None, "abc", lambda m: "x") == "abc"
-    assert vregex.contains_re(None, "abc") is False
-    assert vregex.count_re(None, "abc") == 0
-    assert vregex.is_match_re(None, "abc") is False
-    assert vregex.get_re(None, "abc", 0) == ""
-    assert vregex.get_re_ok(None, "abc", 0) == ("", False)
-    assert vregex.get_by_name_re(None, "abc", "x") == ""
+    assert vregex.last_index_of_re(none_regex, "abc") is None
+    assert vregex.get_all_groups_re(none_regex, "abc", False, False) == []
+    assert vregex.get_all_group_names_re(none_regex) == []
+    assert vregex.find_all_group_re(none_regex, "abc", "x") == []
+    assert vregex.del_last_re(none_regex, "abc") == "abc"
+    assert vregex.del_pre_re(none_regex, "abc") == "abc"
+    assert vregex.extract_multi_re(none_regex, "abc", "$1") == "abc"
+    assert vregex.extract_multi_and_del_pre_re(none_regex, "abc", "$1") == "abc"
+    assert vregex.replace_all_re(none_regex, "abc", "x") == "abc"
+    assert vregex.replace_all_func_re(none_regex, "abc", lambda m: "x") == "abc"
+    assert vregex.contains_re(none_regex, "abc") is False
+    assert vregex.count_re(none_regex, "abc") == 0
+    assert vregex.is_match_re(none_regex, "abc") is False
+    assert vregex.get_re(none_regex, "abc", 0) == ""
+    assert vregex.get_re_ok(none_regex, "abc", 0) == ("", False)
+    assert vregex.get_by_name_re(none_regex, "abc", "x") == ""
     assert vregex.get_by_name_re(regex, "abc", "") == ""
     assert vregex.get_re_ok(regex, "abc", -1) == ("", False)
 
@@ -418,15 +421,17 @@ def test_compiled_delete_extract_variants_and_empty_content() -> None:
 
 def test_each_first_escape_and_number_ok() -> None:
     regex = re.compile(r"(?P<num>\d+)")
+    none_regex = cast(re.Pattern[str], None)
+    none_func = cast(Callable[[object], None], None)
     each_seen: list[str] = []
     first_seen: list[str] = []
 
     vregex.each(regex, "a1b22", lambda mr: each_seen.append(mr.text))
     vregex.first(regex, "a1b22", lambda mr: first_seen.append(mr.group_names["num"]))
-    vregex.each(None, "a1", lambda mr: each_seen.append("bad"))
-    vregex.each(regex, "a1", None)
-    vregex.first(None, "a1", lambda mr: first_seen.append("bad"))
-    vregex.first(regex, "a1", None)
+    vregex.each(none_regex, "a1", lambda mr: each_seen.append("bad"))
+    vregex.each(regex, "a1", none_func)
+    vregex.first(none_regex, "a1", lambda mr: first_seen.append("bad"))
+    vregex.first(regex, "a1", none_func)
 
     assert each_seen == ["1", "22"]
     assert first_seen == ["1"]

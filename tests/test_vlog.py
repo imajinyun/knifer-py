@@ -264,13 +264,12 @@ def test_color_log_default_color_for_unmapped_level() -> None:
 def test_color_factory_accessors() -> None:
     try:
 
-        def factory(level):
+        def factory(level: Level) -> str:
             return f"color-{level.name}"
 
         vlog.set_color_factory(factory)
         assert logx.get_color_factory() is factory
-        # The facade currently forwards without returning the internal value.
-        assert vlog.get_color_factory() is None
+        assert vlog.get_color_factory() is factory
     finally:
         vlog.set_color_factory(None)
 

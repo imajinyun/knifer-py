@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from kniferpy.internal import hashx
+from kniferpy.internal.hashx import _HashFactory
 from kniferpy.verr import ValidationError
 
 # ── Go-compat Error type ────────────────────────────────────────────────────
@@ -95,7 +96,7 @@ def java_default_hash(s: str) -> int:
     return hashx.java_default_hash(s)
 
 
-def hash32(s: str, hash_func: object | None = None) -> int:
+def hash32(s: str, hash_func: _HashFactory | None = None) -> int:
     return hashx.hash32(s, hash_func)
 
 
