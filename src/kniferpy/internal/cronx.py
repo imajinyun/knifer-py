@@ -610,7 +610,7 @@ class Scheduler:
         return self._match_second
 
     def set_time_zone(self, loc: str) -> Scheduler:
-        with contextlib.suppress(ERR_SCHEDULER_STARTED):
+        with contextlib.suppress(_ErrSchedulerStarted):
             self.set_time_zone_e(loc)
         return self
 
@@ -855,7 +855,7 @@ def new_scheduler(match_second: bool = False) -> Scheduler:
 
 
 def new_cron_task(id: str, pattern: str, task: Task) -> CronTask:
-    return CronTask(id=id, pattern=pattern, task=task)
+    return CronTask(id=id, pattern=new_pattern(pattern), task=task)
 
 
 def new_task_table() -> TaskTable:

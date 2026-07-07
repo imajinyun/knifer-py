@@ -307,7 +307,9 @@ def test_task_func_cron_task_listener_and_task_table() -> None:
     assert not table.is_empty()
     assert table.items()[0].id == "id1"
     assert table.update_pattern("id1", vcron.new_pattern("0 2 * * *"))
-    assert table.get_pattern("id1").raw == "0 2 * * *"
+    updated_pattern = table.get_pattern("id1")
+    assert updated_pattern is not None
+    assert updated_pattern.raw == "0 2 * * *"
     assert not table.update_pattern("missing", pattern)
     assert table.remove("id1")
     assert not table.remove("id1")
@@ -359,8 +361,12 @@ def test_scheduler_management_and_synchronous_execution() -> None:
     assert not scheduler.is_empty()
     assert scheduler.update_pattern("ok", "0 * * * *")
     assert not scheduler.update_pattern("missing", "* * * * *")
-    scheduler._execute_task(scheduler._table.get("ok"))
-    scheduler._execute_task(scheduler._table.get("fail"))
+    ok_task = scheduler._table.get("ok")
+    fail_task = scheduler._table.get("fail")
+    assert ok_task is not None
+    assert fail_task is not None
+    scheduler._execute_task(ok_task)
+    scheduler._execute_task(fail_task)
     assert scheduler.running_count() == 0
     assert scheduler.launching_count() == 0
     assert "ok-task" in events
@@ -376,7 +382,9 @@ def test_scheduler_listener_failures_are_swallowed() -> None:
     scheduler.set_executor(lambda fn: fn())
     scheduler.add_listener(_Listener(events, fail=True))
     scheduler.schedule_pattern("ok", vcron.new_pattern("* * * * *"), _Task(events, "task"))
-    scheduler._execute_task(scheduler._table.get("ok"))
+    cron_task = scheduler._table.get("ok")
+    assert cron_task is not None
+    scheduler._execute_task(cron_task)
     assert "start:ok" in events
     assert "task" in events
     assert "ok:ok" in events
