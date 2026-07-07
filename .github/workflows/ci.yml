@@ -39,6 +39,9 @@ jobs:
       - name: API compatibility
         run: poetry run python scripts/check_api_snapshot.py
 
+      - name: Error taxonomy
+        run: poetry run python scripts/check_error_taxonomy.py
+
       - name: README smoke
         run: poetry run python scripts/check_readme_smoke.py
 
