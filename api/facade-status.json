@@ -1,0 +1,175 @@
+{
+  "modules": {
+    "vai": {
+      "status": "stable"
+    },
+    "vbean": {
+      "status": "stable"
+    },
+    "vblf": {
+      "status": "stable"
+    },
+    "vbool": {
+      "status": "stable"
+    },
+    "vcache": {
+      "status": "stable"
+    },
+    "vcli": {
+      "status": "stable"
+    },
+    "vcodec": {
+      "status": "stable"
+    },
+    "vconf": {
+      "status": "stable"
+    },
+    "vconv": {
+      "status": "stable"
+    },
+    "vcron": {
+      "status": "stable"
+    },
+    "vcrypto": {
+      "status": "stable"
+    },
+    "vcsv": {
+      "status": "stable"
+    },
+    "vdate": {
+      "status": "stable"
+    },
+    "vdb": {
+      "status": "stable"
+    },
+    "vdfa": {
+      "status": "stable"
+    },
+    "vdict": {
+      "replacement": "vmap",
+      "status": "deprecated"
+    },
+    "verr": {
+      "status": "stable"
+    },
+    "vfile": {
+      "status": "stable"
+    },
+    "vform": {
+      "status": "stable"
+    },
+    "vftp": {
+      "status": "stable"
+    },
+    "vgeo": {
+      "status": "stable"
+    },
+    "vhan": {
+      "status": "stable"
+    },
+    "vhash": {
+      "status": "stable"
+    },
+    "vhttp": {
+      "status": "stable"
+    },
+    "vid": {
+      "status": "stable"
+    },
+    "vident": {
+      "status": "stable"
+    },
+    "vimg": {
+      "status": "stable"
+    },
+    "vjob": {
+      "status": "stable"
+    },
+    "vjson": {
+      "status": "stable"
+    },
+    "vjwt": {
+      "status": "stable"
+    },
+    "vlog": {
+      "status": "stable"
+    },
+    "vmail": {
+      "status": "stable"
+    },
+    "vmap": {
+      "status": "stable"
+    },
+    "vmask": {
+      "status": "stable"
+    },
+    "vnet": {
+      "status": "stable"
+    },
+    "vnum": {
+      "status": "stable"
+    },
+    "vobj": {
+      "status": "stable"
+    },
+    "vpass": {
+      "status": "stable"
+    },
+    "vpoi": {
+      "status": "stable"
+    },
+    "vrand": {
+      "status": "stable"
+    },
+    "vref": {
+      "status": "stable"
+    },
+    "vregex": {
+      "status": "stable"
+    },
+    "vsem": {
+      "status": "stable"
+    },
+    "vseq": {
+      "replacement": "vslice",
+      "status": "deprecated"
+    },
+    "vset": {
+      "status": "stable"
+    },
+    "vskt": {
+      "status": "stable"
+    },
+    "vslice": {
+      "status": "stable"
+    },
+    "vssh": {
+      "status": "stable"
+    },
+    "vstr": {
+      "status": "stable"
+    },
+    "vsys": {
+      "status": "stable"
+    },
+    "vtok": {
+      "status": "stable"
+    },
+    "vtpl": {
+      "status": "stable"
+    },
+    "vurl": {
+      "status": "stable"
+    },
+    "vver": {
+      "status": "stable"
+    },
+    "vxml": {
+      "status": "stable"
+    },
+    "vzip": {
+      "status": "stable"
+    }
+  },
+  "schema_version": 1
+}

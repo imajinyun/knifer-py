@@ -46,6 +46,7 @@ jobs:
           poetry run python scripts/check_api_snapshot.py
           poetry run python scripts/check_error_taxonomy.py
           poetry run python scripts/check_facade_consistency.py
+          poetry run python scripts/check_facade_status.py
           poetry run python scripts/check_readme_smoke.py
           poetry run python examples/smoke.py
           poetry run python scripts/benchmark_smoke.py

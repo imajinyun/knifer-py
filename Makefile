@@ -1,4 +1,4 @@
-.PHONY: install test test-cov lint format typecheck api-check taxonomy-check facade-check readme-smoke examples-smoke bench-smoke changelog build check-dist check clean
+.PHONY: install test test-cov lint format typecheck api-check taxonomy-check facade-check facade-status-check readme-smoke examples-smoke bench-smoke changelog build check-dist check clean
 
 install:
 	.venv/bin/poetry install --all-extras
@@ -31,6 +31,9 @@ taxonomy-check:
 facade-check:
 	.venv/bin/python scripts/check_facade_consistency.py
 
+facade-status-check:
+	.venv/bin/python scripts/check_facade_status.py
+
 readme-smoke:
 	.venv/bin/python scripts/check_readme_smoke.py
 
@@ -49,7 +52,7 @@ build:
 check-dist: build
 	.venv/bin/python -m twine check dist/*
 
-check: lint typecheck api-check taxonomy-check facade-check readme-smoke examples-smoke bench-smoke test
+check: lint typecheck api-check taxonomy-check facade-check facade-status-check readme-smoke examples-smoke bench-smoke test
 
 clean:
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +

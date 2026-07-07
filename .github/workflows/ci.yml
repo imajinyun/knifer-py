@@ -46,6 +46,9 @@ jobs:
       - name: Facade consistency
         run: poetry run python scripts/check_facade_consistency.py
 
+      - name: Facade status
+        run: poetry run python scripts/check_facade_status.py
+
       - name: README smoke
         run: poetry run python scripts/check_readme_smoke.py
 
