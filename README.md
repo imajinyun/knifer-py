@@ -35,6 +35,7 @@ make readme-smoke
 make examples-smoke
 make bench-smoke
 make changelog
+make check-dist
 ```
 
 Runtime installs can stay lean and opt into heavier domains as needed:
@@ -50,6 +51,7 @@ CI runs `ruff`, `mypy`, and `pytest` on Python 3.11, 3.12, and 3.13.
 ```bash
 make check
 make build
+make check-dist
 ```
 
 Tagged releases such as `v0.1.0` run the release workflow and publish through
