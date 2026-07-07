@@ -1,4 +1,4 @@
-.PHONY: install test test-cov lint format typecheck api-check build check clean
+.PHONY: install test test-cov lint format typecheck api-check examples-smoke build check clean
 
 install:
 	.venv/bin/poetry install --all-extras
@@ -7,7 +7,7 @@ test:
 	.venv/bin/python -m pytest
 
 test-cov:
-	.venv/bin/python -m pytest --cov=kniferpy --cov-report=term-missing
+	.venv/bin/python -m pytest --cov=kniferpy --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=95
 
 lint:
 	.venv/bin/python -m ruff check src tests
@@ -25,10 +25,13 @@ api-check:
 		.venv/bin/python scripts/check_api_snapshot.py; \
 	fi
 
+examples-smoke:
+	.venv/bin/python examples/smoke.py
+
 build:
 	.venv/bin/poetry build
 
-check: lint typecheck api-check test
+check: lint typecheck api-check examples-smoke test
 
 clean:
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +

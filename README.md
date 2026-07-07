@@ -20,6 +20,7 @@ python3 -m venv .venv
 ```bash
 .venv/bin/python -m pytest
 make check
+make test-cov
 ```
 
 ## 🧰 Development
@@ -28,6 +29,7 @@ make check
 make install
 make format
 make check
+make examples-smoke
 ```
 
 Runtime installs can stay lean and opt into heavier domains as needed:

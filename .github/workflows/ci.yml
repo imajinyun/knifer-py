@@ -39,5 +39,11 @@ jobs:
       - name: API compatibility
         run: poetry run python scripts/check_api_snapshot.py
 
+      - name: Examples smoke
+        run: poetry run python examples/smoke.py
+
       - name: Test
         run: poetry run pytest
+
+      - name: Coverage gate
+        run: poetry run pytest --cov=kniferpy --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=95

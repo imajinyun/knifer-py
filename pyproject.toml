@@ -62,6 +62,15 @@ testpaths = ["tests"]
 pythonpath = ["src"]
 addopts = "-q"
 
+[tool.coverage.run]
+branch = true
+source = ["kniferpy"]
+
+[tool.coverage.report]
+fail_under = 95
+show_missing = true
+skip_covered = false
+
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
