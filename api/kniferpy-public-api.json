@@ -4194,12 +4194,12 @@
         },
         "for_each": {
           "kind": "function",
-          "signature": "(path: 'str', callback, delimiter: 'str' = ',', trim_leading_space: 'bool' = False, encoding: 'str' = 'utf-8') -> 'None'",
+          "signature": "(path: 'str', callback: 'Callable[[Record], None]', delimiter: 'str' = ',', trim_leading_space: 'bool' = False, encoding: 'str' = 'utf-8') -> 'None'",
           "type": "builtins.function"
         },
         "for_each_map": {
           "kind": "function",
-          "signature": "(path: 'str', callback, delimiter: 'str' = ',', trim_leading_space: 'bool' = False, encoding: 'str' = 'utf-8') -> 'None'",
+          "signature": "(path: 'str', callback: 'Callable[[Row], None]', delimiter: 'str' = ',', trim_leading_space: 'bool' = False, encoding: 'str' = 'utf-8') -> 'None'",
           "type": "builtins.function"
         },
         "maps_to_records": {
@@ -13002,7 +13002,7 @@
               "signature": "(self) -> 'None'"
             },
             "write_to": {
-              "signature": "(self, writer) -> 'int'"
+              "signature": "(self, writer: 'IO[bytes]') -> 'int'"
             }
           },
           "signature": "(from_: 'Address', to: 'tuple[Address, ...]' = (), cc: 'tuple[Address, ...]' = (), bcc: 'tuple[Address, ...]' = (), reply_to: 'tuple[Address, ...]' = (), subject: 'str' = '', text: 'str' = '', html: 'str' = '', headers: 'tuple[tuple[str, tuple[str, ...]], ...]' = (), attachments: 'tuple[Attachment, ...]' = (), inlines: 'tuple[Attachment, ...]' = (), date: 'datetime | None' = None, message_id: 'str' = '', charset: 'str' = 'utf-8', encoding: 'Encoding' = <Encoding.QUOTED_PRINTABLE: 'quoted-printable'>, envelope_from: 'str' = '', max_attachment_bytes: 'int' = 26214400) -> None",

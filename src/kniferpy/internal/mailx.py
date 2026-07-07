@@ -11,7 +11,7 @@ from email.message import EmailMessage
 from email.utils import format_datetime, formataddr, getaddresses, parseaddr
 from enum import Enum, StrEnum
 from pathlib import Path
-from typing import Any, cast
+from typing import IO, Any, cast
 
 from kniferpy.verr import KniferError, ValidationError
 
@@ -393,7 +393,7 @@ class Message:
     def to_bytes(self) -> bytes:
         return _render(self)
 
-    def write_to(self, writer) -> int:
+    def write_to(self, writer: IO[bytes]) -> int:
         """Write the rendered message to ``writer`` and return byte count."""
         data = _render(self)
         writer.write(data)

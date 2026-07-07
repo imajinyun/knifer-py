@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 
 from kniferpy.internal import csvx
 from kniferpy.internal.csvx import (
@@ -17,7 +17,7 @@ from kniferpy.internal.csvx import (
 
 # ── Go-compat type alias ────────────────────────────────────────────────────
 
-Error = CSVError  # type: ignore[assignment]
+Error = CSVError
 
 __all__ = [
     "CSVError",
@@ -128,7 +128,7 @@ def write_maps(
 
 def for_each(
     path: str,
-    callback,
+    callback: Callable[[Record], None],
     delimiter: str = ",",
     trim_leading_space: bool = False,
     encoding: str = "utf-8",
@@ -138,7 +138,7 @@ def for_each(
 
 def for_each_map(
     path: str,
-    callback,
+    callback: Callable[[Row], None],
     delimiter: str = ",",
     trim_leading_space: bool = False,
     encoding: str = "utf-8",

@@ -1,11 +1,12 @@
 import csv
 import io
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any, Iterator
 
 import pytest
 
 from kniferpy import vcsv
-from kniferpy.internal import csvx
 from kniferpy.verr import ValidationError
 
 
@@ -124,15 +125,15 @@ def test_csv_error_is_validation_error() -> None:
     assert vcsv.Error is vcsv.CSVError
 
 
-def test_read_string_wraps_csv_errors(monkeypatch) -> None:
+def test_read_string_wraps_csv_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     class FailingReader:
-        def __init__(self, *args, **kwargs) -> None:
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
             return None
 
-        def __iter__(self):
+        def __iter__(self) -> Iterator[list[str]]:
             raise csv.Error("bad csv")
 
-    monkeypatch.setattr(csvx.csv, "reader", FailingReader)
+    monkeypatch.setattr(csv, "reader", FailingReader)
 
     with pytest.raises(ValidationError) as exc_info:
         vcsv.read_string("bad")
@@ -140,7 +141,7 @@ def test_read_string_wraps_csv_errors(monkeypatch) -> None:
     assert exc_info.value.code == "knifer.csv.invalid_input"
 
 
-def test_file_read_write_and_map_variants(tmp_path) -> None:
+def test_file_read_write_and_map_variants(tmp_path: Path) -> None:
     records_path = tmp_path / "records.csv"
     maps_path = tmp_path / "maps.csv"
 
@@ -160,7 +161,7 @@ def test_file_read_write_and_map_variants(tmp_path) -> None:
     assert vcsv.read_maps(str(maps_path), delimiter=";") == [{"name": "bob", "age": "25"}]
 
 
-def test_for_each_and_for_each_map(tmp_path) -> None:
+def test_for_each_and_for_each_map(tmp_path: Path) -> None:
     path = tmp_path / "records.csv"
     path.write_text("name,age\nalice,30\nbob,25\n", encoding="utf-8")
     records: list[list[str]] = []

@@ -155,7 +155,7 @@ def write_maps(
 
 def for_each(
     path: str,
-    callback,
+    callback: Callable[[Record], None],
     delimiter: str = ",",
     trim_leading_space: bool = False,
     encoding: str = "utf-8",
@@ -168,7 +168,7 @@ def for_each(
 
 def for_each_map(
     path: str,
-    callback,
+    callback: Callable[[Row], None],
     delimiter: str = ",",
     trim_leading_space: bool = False,
     encoding: str = "utf-8",

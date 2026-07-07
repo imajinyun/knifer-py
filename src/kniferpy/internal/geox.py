@@ -206,10 +206,10 @@ def _convert_mct(lat: float) -> float:
     cs5 = cs4 * cs
     cs6 = cs5 * cs
     cs7 = cs6 * cs
-    result = 0
+    result = 0.0
     for i in range(len(c_f)):
         row = c_f[i]
-        term = row[0]
+        term = float(row[0])
         term += row[1] * t
         term += row[2] * cs
         term += row[3] * cs2
