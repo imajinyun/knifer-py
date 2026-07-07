@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import pytest
 
@@ -204,7 +205,12 @@ def test_json_object_for_each() -> None:
     obj = vjson.new_json_object()
     obj.set("a", 1).set("b", 2)
     items: list[tuple[str, object]] = []
-    obj.for_each(lambda k, v: items.append((k, v)) or True)
+
+    def collect_item(k: str, v: object) -> bool:
+        items.append((k, v))
+        return True
+
+    obj.for_each(collect_item)
     assert len(items) == 2
 
 
@@ -275,7 +281,12 @@ def test_json_array_range() -> None:
     arr = vjson.new_json_array()
     arr.add(1).add(2).add(3)
     items: list[int] = []
-    arr.range(lambda i, v: items.append(v) or True)
+
+    def collect_item(i: int, v: int) -> bool:
+        items.append(v)
+        return True
+
+    arr.range(collect_item)
     assert items == [1, 2, 3]
 
 
@@ -371,7 +382,12 @@ def test_json_object_ignore_case_put_remove_and_break_iteration() -> None:
     assert obj.get("name") == ("alice", True)
     assert obj.get_string("missing") == ""
     assert obj.get_string_or("missing", "fallback") == "fallback"
-    obj.for_each(lambda key, value: seen.append(key) or False)
+
+    def collect_key(key: str, value: object) -> bool:
+        seen.append(key)
+        return False
+
+    obj.for_each(collect_key)
     assert seen == ["Name"]
     assert obj.remove("age") is True
     assert obj.remove("age") is False
@@ -388,9 +404,13 @@ def test_json_object_nested_getters_and_put_by_path() -> None:
     obj.set("json_arr", arr)
 
     assert obj.get_json_object("child") is child
-    assert obj.get_json_object("dict_child").get_int("value") == 1
+    dict_child = obj.get_json_object("dict_child")
+    assert dict_child is not None
+    assert dict_child.get_int("value") == 1
     assert obj.get_json_object("missing") is None
-    assert obj.get_json_array("arr").get_int(0) == 1
+    array_child = obj.get_json_array("arr")
+    assert array_child is not None
+    assert array_child.get_int(0) == 1
     assert obj.get_json_array("json_arr") is arr
     obj.put_by_path("dict_child.value", 2)
     obj.put_by_path("child.name", "updated")
@@ -437,9 +457,15 @@ def test_json_array_nested_getters_put_by_path_and_defaults() -> None:
     assert arr.get_int64_or(99, 7) == 7
     assert arr.get_float64_or(99, 1.5) == 1.5
     assert arr.get_bool_or(99, True) is True
-    assert arr.get_json_object(0).get_string("name") == "dict"
+    first_obj = arr.get_json_object(0)
+    assert first_obj is not None
+    assert first_obj.get_string("name") == "dict"
     assert arr.get_json_object(1) is obj
-    assert arr.get_json_array(2).get_json_object(0).get_int("x") == 1
+    nested_array = arr.get_json_array(2)
+    assert nested_array is not None
+    nested_object = nested_array.get_json_object(0)
+    assert nested_object is not None
+    assert nested_object.get_int("x") == 1
     assert arr.get_json_array(3) is nested_arr
     assert arr.get_json_object(5) is None
     assert arr.get_json_array(5) is None
@@ -453,7 +479,12 @@ def test_json_array_nested_getters_put_by_path_and_defaults() -> None:
     assert obj.get_string("name") == "obj-updated"
     assert arr.get_by_path("2.0.x") == 2
     assert nested_arr.get_string(0) == "new"
-    arr.range(lambda index, value: seen.append(index) or index < 1)
+
+    def collect_index(index: int, value: object) -> bool:
+        seen.append(index)
+        return index < 1
+
+    arr.range(collect_index)
     assert seen == [0, 1]
     with pytest.raises(TypeError):
         arr.to_string_pretty()
@@ -558,7 +589,7 @@ def test_put_by_path() -> None:
 
 
 def test_put_by_path_new_nested() -> None:
-    obj: dict[str, object] = {}
+    obj: dict[str, Any] = {}
     vjson.put_by_path(obj, "x.y.z", 42)
     assert obj["x"]["y"]["z"] == 42
 

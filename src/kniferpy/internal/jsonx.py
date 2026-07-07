@@ -605,7 +605,7 @@ def is_valid(value: str | bytes | bytearray) -> bool:
     return is_json(value)
 
 
-def is_json(s: str) -> bool:
+def is_json(s: str | bytes | bytearray) -> bool:
     try:
         json.loads(s)
     except (json.JSONDecodeError, ValueError):
@@ -828,19 +828,19 @@ def parse_with_config(src: str, cfg: Config) -> Any:
     return loads(src)
 
 
-def parse_obj_with_options(src: str, **_opts: Any) -> JSONObject:
+def parse_obj_with_options(src: str, **_opts: Any) -> dict[str, Any]:
     return parse_obj(src)
 
 
-def parse_obj_with_config(src: str, cfg: Config) -> JSONObject:
+def parse_obj_with_config(src: str, cfg: Config) -> dict[str, Any]:
     return parse_obj(src)
 
 
-def parse_array_with_options(src: str, **_opts: Any) -> JSONArray:
+def parse_array_with_options(src: str, **_opts: Any) -> list[Any]:
     return parse_array(src)
 
 
-def parse_array_with_config(src: str, cfg: Config) -> JSONArray:
+def parse_array_with_config(src: str, cfg: Config) -> list[Any]:
     return parse_array(src)
 
 

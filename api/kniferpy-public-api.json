@@ -11138,7 +11138,7 @@
         },
         "is_json": {
           "kind": "function",
-          "signature": "(s: 'str') -> 'bool'",
+          "signature": "(s: 'str | bytes | bytearray') -> 'bool'",
           "type": "builtins.function"
         },
         "is_json_array": {
@@ -11223,12 +11223,12 @@
         },
         "parse_array_with_config": {
           "kind": "function",
-          "signature": "(src: 'str', cfg: 'Config') -> 'JSONArray'",
+          "signature": "(src: 'str', cfg: 'Config') -> 'list[Any]'",
           "type": "builtins.function"
         },
         "parse_array_with_options": {
           "kind": "function",
-          "signature": "(src: 'str', **_opts: 'Any') -> 'JSONArray'",
+          "signature": "(src: 'str', **_opts: 'Any') -> 'list[Any]'",
           "type": "builtins.function"
         },
         "parse_obj": {
@@ -11238,12 +11238,12 @@
         },
         "parse_obj_with_config": {
           "kind": "function",
-          "signature": "(src: 'str', cfg: 'Config') -> 'JSONObject'",
+          "signature": "(src: 'str', cfg: 'Config') -> 'dict[str, Any]'",
           "type": "builtins.function"
         },
         "parse_obj_with_options": {
           "kind": "function",
-          "signature": "(src: 'str', **_opts: 'Any') -> 'JSONObject'",
+          "signature": "(src: 'str', **_opts: 'Any') -> 'dict[str, Any]'",
           "type": "builtins.function"
         },
         "parse_with_config": {
