@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import sys
 
 from kniferpy import vset
+from kniferpy.internal import setsx
 
 
 def test_new_and_add() -> None:
@@ -95,6 +97,8 @@ def test_json_roundtrip() -> None:
     json_str = s.to_json()
     s2 = vset.New().from_json(json_str)
     assert s.equal(s2)
+    s3 = vset.Set.from_json("[4, 5]")
+    assert sorted(s3.members()) == [4, 5]
 
 
 def test_json_with_options() -> None:
@@ -134,6 +138,9 @@ def test_custom_json_unmarshal_and_marshal_json() -> None:
     assert sorted(s.members()) == [1, 2, 3, 4]
     s2 = vset.Set.from_json("ignored", [unmarshal_opt])
     assert sorted(s2.members()) == [3, 4]
+    cfg = setsx._apply_json_options([marshal_opt, unmarshal_opt])
+    assert cfg.marshal([1]) == b"custom"
+    assert cfg.unmarshal(b"ignored") == [3, 4]
 
 
 def test_yaml_helpers_and_fallback(monkeypatch) -> None:
@@ -149,6 +156,14 @@ def test_yaml_helpers_and_fallback(monkeypatch) -> None:
     assert sorted(target.members()) == ["x", "y"]
     target.unmarshal_yaml("not-list")
     assert sorted(target.members()) == ["x", "y"]
+
+
+def test_yaml_helpers_without_yaml_module(monkeypatch) -> None:
+    s = vset.New("a", "b")
+    monkeypatch.setitem(sys.modules, "yaml", None)
+    assert sorted(s.to_yaml()) == ["a", "b"]
+    assert sorted(vset.Set.from_yaml('["a", "b"]').members()) == ["a", "b"]
+    assert sorted(vset.Set.from_yaml('"single"').members()) == ["single"]
 
 
 def test_bulk_set_helpers_and_relationships() -> None:
