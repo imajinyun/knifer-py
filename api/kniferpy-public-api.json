@@ -962,7 +962,7 @@
           "kind": "class",
           "methods": {
             "on_remove": {
-              "signature": "(self, key: 'K', value: 'V') -> 'None'"
+              "signature": "(self, key: 'K_contra', value: 'V_contra') -> 'None'"
             }
           },
           "signature": "(*args, **kwargs)",

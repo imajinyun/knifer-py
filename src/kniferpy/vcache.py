@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from typing import TypeVar
+from typing import TYPE_CHECKING, TypeAlias, TypeVar
 
 from kniferpy.internal import cachex
 from kniferpy.internal.cachex import (
@@ -153,7 +153,10 @@ def new_no() -> NoCache[K, V]:
 # Re-export types
 Cache = cachex.Cache
 CacheObj = cachex.CacheObj
-Option = cachex.Option
+if TYPE_CHECKING:
+    Option: TypeAlias = cachex.Option[K, V]
+else:
+    Option = cachex.Option
 
 # Option builders
 with_capacity = cachex.with_capacity

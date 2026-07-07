@@ -12,6 +12,8 @@ from kniferpy.verr import ValidationError
 
 K = TypeVar("K")
 V = TypeVar("V")
+K_contra = TypeVar("K_contra", contravariant=True)
+V_contra = TypeVar("V_contra", contravariant=True)
 
 # A removal listener receives (key, value) when an entry leaves the cache.
 Listener = Callable[[K, V], None]
@@ -871,7 +873,11 @@ class WeakCache(Generic[K, V]):
 
     def put_with_timeout(self, key: K, value: V, timeout: float) -> None:
         ttl = timeout if timeout and timeout > 0 else 0.0
-        ref = weakref.ref(value, lambda r, k=key: self._on_finalize(k, value))
+
+        def _finalize(_: weakref.ReferenceType[V], k: K = key, v: V = value) -> None:
+            self._on_finalize(k, v)
+
+        ref = weakref.ref(value, _finalize)
         with self._mu:
             old = self._entries.get(key)
             if old is not None:
@@ -971,12 +977,13 @@ class WeakCache(Generic[K, V]):
                 if ttl > 0 and now - last_access > ttl:
                     expired_keys.append(key)
             for key in expired_keys:
-                entry = self._entries.pop(key, None)
-                if entry is not None:
-                    value = entry[0]()
-                    if value is not None:
-                        self._collect(key, value)
-                    count += 1
+                if key not in self._entries:
+                    continue
+                entry = self._entries.pop(key)
+                value = entry[0]()
+                if value is not None:
+                    self._collect(key, value)
+                count += 1
             events = self._drain_events()
         self._notify(events)
         return count
@@ -1115,13 +1122,13 @@ def new_no() -> NoCache[K, V]:
 
 # ── Option builders (Go-style functional options) ────────────────────────────
 
-Option = Callable[["_AbstractCache[K, V]"], None]  # type: ignore[misc]
+Option = Callable[["_AbstractCache[K, V]"], None]
 
 
-class CacheListener(Protocol[K, V]):
+class CacheListener(Protocol[K_contra, V_contra]):
     """Listener for cache eviction events (Go CacheListener equivalent)."""
 
-    def on_remove(self, key: K, value: V) -> None: ...
+    def on_remove(self, key: K_contra, value: V_contra) -> None: ...
 
 
 class CacheListenerFunc(Generic[K, V]):
@@ -1180,7 +1187,7 @@ def with_runner(runner: Callable[[Callable[[], None]], None]) -> Option[K, V]:
 
 
 def new_fifo_with_options(opts: list[Option[K, V]] | None = None) -> FIFOCache[K, V]:
-    c = FIFOCache(0)
+    c: FIFOCache[K, V] = FIFOCache(0, 0.0)
     for opt in opts or []:
         opt(c)
     return c
@@ -1191,7 +1198,7 @@ def new_fifo_with_timeout(capacity: int, timeout: float) -> FIFOCache[K, V]:
 
 
 def new_lru_with_options(opts: list[Option[K, V]] | None = None) -> LRUCache[K, V]:
-    c = LRUCache(0)
+    c: LRUCache[K, V] = LRUCache(0, 0.0)
     for opt in opts or []:
         opt(c)
     return c
@@ -1202,7 +1209,7 @@ def new_lru_with_timeout(capacity: int, timeout: float) -> LRUCache[K, V]:
 
 
 def new_lfu_with_options(opts: list[Option[K, V]] | None = None) -> LFUCache[K, V]:
-    c = LFUCache(0)
+    c: LFUCache[K, V] = LFUCache(0, 0.0)
     for opt in opts or []:
         opt(c)
     return c
@@ -1213,14 +1220,14 @@ def new_lfu_with_timeout(capacity: int, timeout: float) -> LFUCache[K, V]:
 
 
 def new_timed_with_options(opts: list[Option[K, V]] | None = None) -> TimedCache[K, V]:
-    c = TimedCache(0.0)
+    c: TimedCache[K, V] = TimedCache(0.0)
     for opt in opts or []:
         opt(c)  # type: ignore[arg-type]
     return c
 
 
 def new_weak_with_options(opts: list[Option[K, V]] | None = None) -> WeakCache[K, V]:
-    c = WeakCache(0.0)
+    c: WeakCache[K, V] = WeakCache(0.0)
     for opt in opts or []:
         opt(c)  # type: ignore[arg-type]
     return c

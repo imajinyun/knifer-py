@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import threading
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any, cast
+
 import pytest
 
 from kniferpy import vcache
@@ -23,6 +27,14 @@ class _Clock:
 class _Box:
     def __init__(self, value: int) -> None:
         self.value = value
+
+
+if TYPE_CHECKING:
+    IntOption = vcache.Option[str, int]
+    BoxOption = vcache.Option[str, _Box]
+else:
+    IntOption = Any
+    BoxOption = Any
 
 
 def test_put_and_get() -> None:
@@ -325,7 +337,9 @@ def test_base_cache_abstract_prune_must_be_overridden() -> None:
 def test_listener_can_be_cache_listener_func_and_reentrant() -> None:
     removed: list[tuple[str, int]] = []
     c: vcache.FIFOCache[str, int] = vcache.new_fifo(2)
-    listener = vcache.CacheListenerFunc(lambda key, value: removed.append((key, value)))
+    listener: vcache.CacheListenerFunc[str, int] = vcache.CacheListenerFunc(
+        lambda key, value: removed.append((key, value))
+    )
 
     vcache.with_listener(listener)(c)
     c.put("a", 1)
@@ -339,23 +353,26 @@ def test_listener_can_be_cache_listener_func_and_reentrant() -> None:
 def test_option_constructors_build_fifo_lru_lfu_and_timeout_variants() -> None:
     clock = _Clock()
     removed: list[tuple[str, int]] = []
-    listener = vcache.CacheListenerFunc(lambda key, value: removed.append((key, value)))
+    listener: vcache.CacheListenerFunc[str, int] = vcache.CacheListenerFunc(
+        lambda key, value: removed.append((key, value))
+    )
 
     fifo: cachex.FIFOCache[str, int] = cachex.FIFOCache(0, 0.0)
-    for option in (
+    options: tuple[IntOption, ...] = (
         vcache.with_capacity(2),
         vcache.with_timeout(5.0),
         vcache.with_clock(clock),
         vcache.with_listener(listener),
-    ):
+    )
+    for option in options:
         option(fifo)
     lru: cachex.LRUCache[str, int] = cachex.LRUCache(0, 0.0)
-    vcache.with_capacity(1)(lru)
+    cast(IntOption, vcache.with_capacity(1))(lru)
     lfu: cachex.LFUCache[str, int] = cachex.LFUCache(0, 0.0)
-    vcache.with_capacity(1)(lfu)
-    fifo_timeout = vcache.new_fifo_with_timeout(2, 3.0)
-    lru_timeout = vcache.new_lru_with_timeout(2, 3.0)
-    lfu_timeout = vcache.new_lfu_with_timeout(2, 3.0)
+    cast(IntOption, vcache.with_capacity(1))(lfu)
+    fifo_timeout: vcache.FIFOCache[str, int] = vcache.new_fifo_with_timeout(2, 3.0)
+    lru_timeout: vcache.LRUCache[str, int] = vcache.new_lru_with_timeout(2, 3.0)
+    lfu_timeout: vcache.LFUCache[str, int] = vcache.new_lfu_with_timeout(2, 3.0)
 
     fifo.put("a", 1)
     fifo.put("b", 2)
@@ -373,12 +390,9 @@ def test_option_constructors_build_fifo_lru_lfu_and_timeout_variants() -> None:
     assert fifo_timeout.timeout() == 3.0
     assert lru_timeout.timeout() == 3.0
     assert lfu_timeout.timeout() == 3.0
-    with pytest.raises(TypeError):
-        vcache.new_fifo_with_options([])
-    with pytest.raises(TypeError):
-        vcache.new_lru_with_options([])
-    with pytest.raises(TypeError):
-        vcache.new_lfu_with_options([])
+    assert isinstance(vcache.new_fifo_with_options([]), vcache.FIFOCache)
+    assert isinstance(vcache.new_lru_with_options([]), vcache.LRUCache)
+    assert isinstance(vcache.new_lfu_with_options([]), vcache.LFUCache)
 
 
 def test_timed_and_weak_option_constructors_with_runner_and_ticker() -> None:
@@ -386,17 +400,17 @@ def test_timed_and_weak_option_constructors_with_runner_and_ticker() -> None:
     runner_calls: list[str] = []
     stop_calls: list[str] = []
 
-    def ticker_factory(delay: float):
+    def ticker_factory(delay: float) -> tuple[object, Callable[[], None]]:
         return object(), lambda: stop_calls.append(f"stop:{delay}")
 
-    def runner(fn):
+    def runner(fn: Callable[[], None]) -> None:
         runner_calls.append("run")
 
-    timed = vcache.new_timed_with_options(
+    timed: vcache.TimedCache[str, int] = vcache.new_timed_with_options(
         [
             vcache.with_timeout(5.0),
             vcache.with_clock(clock),
-            vcache.with_ticker_factory(ticker_factory),
+            vcache.with_ticker_factory(cast(vcache.TickerFactory, ticker_factory)),
             vcache.with_runner(runner),
         ]
     )
@@ -404,7 +418,7 @@ def test_timed_and_weak_option_constructors_with_runner_and_ticker() -> None:
     timed.schedule_prune(1.0)
     timed.cancel_prune_schedule()
 
-    weak = vcache.new_weak_with_options(
+    weak: vcache.WeakCache[str, _Box] = vcache.new_weak_with_options(
         [
             vcache.with_timeout(5.0),
             vcache.with_clock(clock),
@@ -476,7 +490,7 @@ def test_timed_cache_values_skip_expired_entries() -> None:
 def test_timed_cache_get_or_load_e_and_options() -> None:
     clock = _Clock()
     err = RuntimeError("load failed")
-    timed = vcache.new_timed_with_options(
+    timed: vcache.TimedCache[str, int] = vcache.new_timed_with_options(
         [
             vcache.with_timeout(5.0),
             vcache.with_clock(clock),
@@ -494,7 +508,7 @@ def test_timed_cache_get_or_load_e_and_options() -> None:
 
 
 def test_timed_cache_get_or_load_cached_paths() -> None:
-    timed = vcache.new_timed(0.0)
+    timed: vcache.TimedCache[str, int] = vcache.new_timed(0.0)
     timed.put("a", 1)
     assert timed.get_or_load("a", lambda: 2) == 1
     assert timed.get_or_load_e("a", lambda: (2, None)) == (1, None)
@@ -505,13 +519,15 @@ def test_timed_scheduled_uses_runner_and_can_cancel() -> None:
     runner_calls: list[str] = []
     stop_calls: list[str] = []
 
-    def ticker_factory(delay: float):
+    def ticker_factory(delay: float) -> tuple[object, Callable[[], None]]:
         return object(), lambda: stop_calls.append(f"stop:{delay}")
 
-    def runner(fn):
+    def runner(fn: Callable[[], None]) -> None:
         runner_calls.append("run")
 
-    c = vcache.new_timed(5.0, clock=clock, ticker_factory=ticker_factory, runner=runner)
+    c: vcache.TimedCache[str, int] = vcache.new_timed(
+        5.0, clock=clock, ticker_factory=cast(vcache.TickerFactory, ticker_factory), runner=runner
+    )
     c.schedule_prune(0)
     c.schedule_prune(1.0)
     c.schedule_prune(1.0)
@@ -520,11 +536,11 @@ def test_timed_scheduled_uses_runner_and_can_cancel() -> None:
 
     assert runner_calls == ["run"]
     assert stop_calls == []
-    scheduled = vcache.new_timed_scheduled(
+    scheduled: vcache.TimedCache[str, int] = vcache.new_timed_scheduled(
         5.0,
         0.0,
         clock=clock,
-        ticker_factory=ticker_factory,
+        ticker_factory=cast(vcache.TickerFactory, ticker_factory),
         runner=runner,
     )
     assert isinstance(scheduled, vcache.TimedCache)
@@ -554,27 +570,27 @@ def test_timed_schedule_prune_loop_prunes_once_with_fake_event() -> None:
             self.stopped = True
 
     fake_event = FakeEvent()
-    original_event = cachex.threading.Event
+    original_event = threading.Event
 
-    def ticker_factory(delay: float):
+    def ticker_factory(delay: float) -> tuple[object, Callable[[], None]]:
         return object(), lambda: stop_calls.append(f"stop:{delay}")
 
-    def runner(fn):
+    def runner(fn: Callable[[], None]) -> None:
         fn()
 
     try:
-        cachex.threading.Event = lambda: fake_event  # type: ignore[assignment]
-        c = vcache.new_timed(
+        threading.Event = lambda: fake_event  # type: ignore[misc, assignment, return-value]
+        c: vcache.TimedCache[str, int] = vcache.new_timed(
             5.0,
             clock=clock,
             listener=lambda key, value: removed.append((key, value)),
-            ticker_factory=ticker_factory,
+            ticker_factory=cast(vcache.TickerFactory, ticker_factory),
             runner=runner,
         )
         c.put("a", 1)
         c.schedule_prune(1.0)
     finally:
-        cachex.threading.Event = original_event
+        threading.Event = original_event  # type: ignore[misc]
 
     assert removed == [("a", 1)]
     assert c.size() == 0
@@ -584,10 +600,10 @@ def test_timed_schedule_prune_loop_prunes_once_with_fake_event() -> None:
 def test_timed_scheduled_with_options_starts_schedule() -> None:
     runner_calls: list[str] = []
 
-    def ticker_factory(delay: float):
+    def ticker_factory(delay: float) -> tuple[object, Callable[[], None]]:
         return object(), lambda: None
 
-    def runner(fn):
+    def runner(fn: Callable[[], None]) -> None:
         runner_calls.append("run")
 
     with pytest.raises(AttributeError):
@@ -595,7 +611,7 @@ def test_timed_scheduled_with_options_starts_schedule() -> None:
             5.0,
             1.0,
             [
-                vcache.with_ticker_factory(ticker_factory),
+                vcache.with_ticker_factory(cast(vcache.TickerFactory, ticker_factory)),
                 vcache.with_runner(runner),
             ],
         )
@@ -663,8 +679,10 @@ def test_weak_cache_get_or_load_and_error_paths() -> None:
 
 def test_weak_cache_options_and_aliases() -> None:
     clock = _Clock()
-    weak = vcache.new_weak_with_options([vcache.with_timeout(5.0), vcache.with_clock(clock)])
-    no_cache = vcache.new_no()
+    weak: vcache.WeakCache[str, _Box] = vcache.new_weak_with_options(
+        [cast(BoxOption, vcache.with_timeout(5.0)), cast(BoxOption, vcache.with_clock(clock))]
+    )
+    no_cache: vcache.NoCache[str, _Box] = vcache.new_no()
     box = _Box(1)
 
     assert weak._timeout == 5.0
@@ -722,7 +740,7 @@ def test_default_ticker_factory_and_runner_smoke() -> None:
     assert isinstance(created, cachex._Ticker)
     assert calls == ["tick"]
 
-    event = cachex.threading.Event()
+    event = threading.Event()
 
     def mark() -> None:
         event.set()
@@ -732,12 +750,8 @@ def test_default_ticker_factory_and_runner_smoke() -> None:
 
 
 def test_constructor_options_accept_none_and_empty_lists() -> None:
-    for factory in (
-        vcache.new_fifo_with_options,
-        vcache.new_lru_with_options,
-        vcache.new_lfu_with_options,
-    ):
-        with pytest.raises(TypeError):
-            factory(None)
+    assert isinstance(vcache.new_fifo_with_options(None), vcache.FIFOCache)
+    assert isinstance(vcache.new_lru_with_options(None), vcache.LRUCache)
+    assert isinstance(vcache.new_lfu_with_options([]), vcache.LFUCache)
     assert isinstance(vcache.new_timed_with_options(None), vcache.TimedCache)
     assert isinstance(vcache.new_weak_with_options([]), vcache.WeakCache)
