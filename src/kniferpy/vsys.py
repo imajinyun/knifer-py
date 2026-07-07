@@ -9,10 +9,15 @@ than raising.
 from __future__ import annotations
 
 # ── Go-compat type aliases ─────────────────────────────────────────────────────
-from typing import Any, Callable
+from typing import Any, Callable, Protocol
 
 from kniferpy.internal import sysx
 from kniferpy.internal.sysx import HostInfo, OsInfo, PythonInfo, RuntimeInfo, UserInfo
+
+
+class _TextWriter(Protocol):
+    def write(self, value: str) -> object: ...
+
 
 GoInfo = PythonInfo  # Go: system.GoInfo
 HostInfoOption = Callable[[Any], None]
@@ -228,7 +233,7 @@ def dump_system_info() -> str:
     return sysx.dump_system_info()
 
 
-def dump_system_info_to(writer) -> None:
+def dump_system_info_to(writer: _TextWriter) -> None:
     """Write system information to ``writer``."""
     return sysx.dump_system_info_to(writer)
 

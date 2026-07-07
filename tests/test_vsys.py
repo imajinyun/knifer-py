@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import builtins
+import getpass
 import io
 import os
 import socket
 import sys
+import tempfile
+from types import TracebackType
+from typing import Any
 
 import pytest
 
@@ -153,16 +158,21 @@ def test_internal_path_locale_and_os_fallbacks(monkeypatch: pytest.MonkeyPatch) 
 
 def test_host_info_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
     class FakeSocket:
-        def __enter__(self):
+        def __enter__(self) -> FakeSocket:
             return self
 
-        def __exit__(self, exc_type, exc, tb):
+        def __exit__(
+            self,
+            exc_type: type[BaseException] | None,
+            exc: BaseException | None,
+            tb: TracebackType | None,
+        ) -> None:
             return None
 
-        def connect(self, addr) -> None:
+        def connect(self, addr: object) -> None:
             return None
 
-        def getsockname(self):
+        def getsockname(self) -> tuple[str, int]:
             return ("10.0.0.2", 12345)
 
     monkeypatch.setattr(socket, "socket", lambda *args, **kwargs: FakeSocket())
@@ -171,7 +181,7 @@ def test_host_info_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
     assert vsys.get_host_info() == vsys.HostInfo(name="host", address="10.0.0.2")
 
     class LoopbackSocket(FakeSocket):
-        def getsockname(self):
+        def getsockname(self) -> tuple[str, int]:
             return ("127.0.0.1", 12345)
 
     monkeypatch.setattr(socket, "socket", lambda *args, **kwargs: LoopbackSocket())
@@ -185,12 +195,12 @@ def test_host_info_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def test_user_info_fallbacks(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(sysx.getpass, "getuser", lambda: (_ for _ in ()).throw(KeyError()))
+    monkeypatch.setattr(getpass, "getuser", lambda: (_ for _ in ()).throw(KeyError()))
     monkeypatch.setenv("USER", "fallback-user")
-    monkeypatch.setattr(sysx.os.path, "expanduser", lambda path: "~")
+    monkeypatch.setattr(os.path, "expanduser", lambda path: "~")
     monkeypatch.setenv("HOME", "/tmp/home")
-    monkeypatch.setattr(sysx.os, "getcwd", lambda: (_ for _ in ()).throw(OSError()))
-    monkeypatch.setattr(sysx.tempfile, "gettempdir", lambda: "/tmp")
+    monkeypatch.setattr(os, "getcwd", lambda: (_ for _ in ()).throw(OSError()))
+    monkeypatch.setattr(tempfile, "gettempdir", lambda: "/tmp")
     monkeypatch.delenv("LANG", raising=False)
     monkeypatch.delenv("LC_ALL", raising=False)
 
@@ -242,11 +252,9 @@ def test_memory_runtime_and_python_info(monkeypatch: pytest.MonkeyPatch) -> None
 
 
 def test_memory_fallbacks_without_psutil(monkeypatch: pytest.MonkeyPatch) -> None:
-    original_import = (
-        __builtins__["__import__"] if isinstance(__builtins__, dict) else __builtins__.__import__
-    )
+    original_import = builtins.__import__
 
-    def fake_import(name, *args, **kwargs):
+    def fake_import(name: str, *args: Any, **kwargs: Any) -> Any:
         if name == "psutil":
             raise ImportError("missing")
         return original_import(name, *args, **kwargs)
@@ -257,11 +265,9 @@ def test_memory_fallbacks_without_psutil(monkeypatch: pytest.MonkeyPatch) -> Non
 
 
 def test_thread_count_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
-    original_import = (
-        __builtins__["__import__"] if isinstance(__builtins__, dict) else __builtins__.__import__
-    )
+    original_import = builtins.__import__
 
-    def fake_import(name, *args, **kwargs):
+    def fake_import(name: str, *args: Any, **kwargs: Any) -> Any:
         if name == "threading":
             raise RuntimeError("boom")
         return original_import(name, *args, **kwargs)
@@ -279,7 +285,7 @@ def test_network_env_dump_and_readable_helpers(monkeypatch: pytest.MonkeyPatch) 
     assert vsys.get_ip_by_host("localhost") == ["127.0.0.1", "::1"]
     assert vsys.get_ip_by_host("bad") == ["127.0.0.1", "::1"]
 
-    def raise_gaierror(*args, **kwargs):
+    def raise_gaierror(*args: Any, **kwargs: Any) -> None:
         raise socket.gaierror()
 
     monkeypatch.setattr(socket, "getaddrinfo", raise_gaierror)
@@ -388,7 +394,7 @@ def test_info_and_memory_with_options(monkeypatch: pytest.MonkeyPatch) -> None:
     assert isinstance(vsys.sys_runtime_info_with_options(), vsys.RuntimeInfo)
     assert isinstance(vsys.system_runtime_info_with_options(), vsys.RuntimeInfo)
     writer = io.StringIO()
-    assert vsys.dump_system_info_with_options(writer) is None
+    vsys.dump_system_info_with_options(writer)
     assert "=== System Info ===" in writer.getvalue()
     assert isinstance(vsys.new_host_info_with_options(), vsys.HostInfo)
     assert isinstance(vsys.new_os_info_with_options(), vsys.OsInfo)

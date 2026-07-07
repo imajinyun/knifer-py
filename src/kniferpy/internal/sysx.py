@@ -7,8 +7,13 @@ import socket
 import sys
 import tempfile
 from dataclasses import dataclass
+from typing import Protocol
 
 from kniferpy.internal import convx
+
+
+class _TextWriter(Protocol):
+    def write(self, value: str) -> object: ...
 
 
 @dataclass(frozen=True, slots=True)
@@ -295,9 +300,9 @@ def get_bool(key: str, default: bool = False) -> bool:
 def _get_total_memory() -> int:
     """Return total physical memory in bytes."""
     try:
-        import psutil
+        import psutil  # type: ignore[import-untyped]
 
-        return psutil.virtual_memory().total
+        return int(psutil.virtual_memory().total)
     except ImportError:
         return 0
 
@@ -307,7 +312,7 @@ def _get_free_memory() -> int:
     try:
         import psutil
 
-        return psutil.virtual_memory().available
+        return int(psutil.virtual_memory().available)
     except ImportError:
         return 0
 
@@ -363,7 +368,7 @@ def get_ip_by_host(host: str) -> list[str]:
     """Resolve hostname to IP addresses."""
     try:
         info = socket.getaddrinfo(host, None)
-        return sorted(set(a[4][0] for a in info))
+        return sorted(str(a[4][0]) for a in info)
     except (socket.gaierror, OSError):
         return []
 
@@ -408,11 +413,12 @@ def idn_to_ascii(domain: str) -> str:
 def _readable_size(byte_count: int) -> str:
     if byte_count < 1024:
         return f"{byte_count} B"
+    size = float(byte_count)
     for unit in ("KB", "MB", "GB", "TB"):
-        byte_count /= 1024.0
-        if byte_count < 1024:
-            return f"{byte_count:.1f} {unit}"
-    return f"{byte_count:.1f} PB"
+        size /= 1024.0
+        if size < 1024:
+            return f"{size:.1f} {unit}"
+    return f"{size:.1f} PB"
 
 
 def dump_system_info() -> str:
@@ -447,7 +453,7 @@ def dump_system_info() -> str:
     return "\n".join(lines)
 
 
-def dump_system_info_to(writer) -> None:
+def dump_system_info_to(writer: _TextWriter) -> None:
     """Write system information to ``writer`` (any object with a ``write`` method)."""
     writer.write(dump_system_info())
 

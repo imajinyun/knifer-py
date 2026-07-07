@@ -18828,7 +18828,7 @@
         },
         "dump_system_info_to": {
           "kind": "function",
-          "signature": "(writer) -> 'None'",
+          "signature": "(writer: '_TextWriter') -> 'None'",
           "type": "builtins.function"
         },
         "dump_system_info_with_options": {
