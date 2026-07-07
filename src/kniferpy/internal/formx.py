@@ -14,11 +14,11 @@ _RX_NUMBER = re.compile(r"^-?\d+(\.\d+)?$")
 
 class _ValidatorConfig:
     def __init__(self) -> None:
-        self.email: Callable[[str], bool] = _RX_EMAIL.match
-        self.mobile: Callable[[str], bool] = _RX_MOBILE.match
+        self.email: Callable[[str], bool] = lambda value: bool(_RX_EMAIL.match(value))
+        self.mobile: Callable[[str], bool] = lambda value: bool(_RX_MOBILE.match(value))
         self.id_card: Callable[[str], bool] = identx.is_valid_id_card
-        self.chinese: Callable[[str], bool] = _RX_CHINESE.match
-        self.number: Callable[[str], bool] = _RX_NUMBER.match
+        self.chinese: Callable[[str], bool] = lambda value: bool(_RX_CHINESE.match(value))
+        self.number: Callable[[str], bool] = lambda value: bool(_RX_NUMBER.match(value))
 
 
 ValidatorOption = Callable[[_ValidatorConfig], None]
