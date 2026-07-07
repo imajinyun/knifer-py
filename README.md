@@ -39,6 +39,9 @@ make changelog
 make check-dist
 ```
 
+`make bench-smoke` writes `tmp/benchmark-smoke.json` and checks it against the
+committed benchmark baseline.
+
 Runtime installs can stay lean and opt into heavier domains as needed:
 
 ```bash

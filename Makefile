@@ -1,5 +1,8 @@
 .PHONY: install test test-cov lint format typecheck api-check taxonomy-check facade-check facade-status-check readme-smoke examples-smoke bench-smoke changelog build check-dist check clean
 
+BENCH_SMOKE_OUTPUT ?= tmp/benchmark-smoke.json
+BENCH_SMOKE_BASELINE ?= api/benchmark-smoke-baseline.json
+
 install:
 	.venv/bin/poetry install --all-extras
 
@@ -41,7 +44,7 @@ examples-smoke:
 	.venv/bin/python examples/smoke.py
 
 bench-smoke:
-	.venv/bin/python scripts/benchmark_smoke.py
+	.venv/bin/python scripts/benchmark_smoke.py --output $(BENCH_SMOKE_OUTPUT) --baseline $(BENCH_SMOKE_BASELINE)
 
 changelog:
 	.venv/bin/python scripts/generate_changelog.py --check

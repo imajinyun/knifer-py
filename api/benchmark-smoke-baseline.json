@@ -1,0 +1,21 @@
+{
+  "results": [
+    {
+      "name": "codec_round_trip",
+      "ops_per_second": 1000.0
+    },
+    {
+      "name": "json_path_lookup",
+      "ops_per_second": 1000.0
+    },
+    {
+      "name": "string_case_conversion",
+      "ops_per_second": 1000.0
+    },
+    {
+      "name": "url_normalize",
+      "ops_per_second": 1000.0
+    }
+  ],
+  "schema_version": 1
+}

@@ -56,7 +56,15 @@ jobs:
         run: poetry run python examples/smoke.py
 
       - name: Benchmark smoke
-        run: poetry run python scripts/benchmark_smoke.py
+        run: poetry run python scripts/benchmark_smoke.py --output tmp/benchmark-smoke.json --baseline api/benchmark-smoke-baseline.json
+
+      - name: Upload benchmark artifact
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: benchmark-smoke-${{ matrix.os }}-py${{ matrix.python-version }}
+          path: tmp/benchmark-smoke.json
+          if-no-files-found: ignore
 
       - name: Test
         run: poetry run pytest
