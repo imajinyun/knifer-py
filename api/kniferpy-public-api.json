@@ -15465,12 +15465,12 @@
         },
         "deserialize_to": {
           "kind": "function",
-          "signature": "(data: 'bytes', *accepted_types: 'type') -> 'T'",
+          "signature": "(data: 'bytes', *accepted_types: 'type') -> 'object'",
           "type": "builtins.function"
         },
         "deserialize_to_with_options": {
           "kind": "function",
-          "signature": "(data: 'bytes', *accepted_types: 'type') -> 'T'",
+          "signature": "(data: 'bytes', *accepted_types: 'type') -> 'object'",
           "type": "builtins.function"
         },
         "deserialize_with_options": {
@@ -15575,7 +15575,7 @@
         },
         "must_deserialize": {
           "kind": "function",
-          "signature": "(data: 'bytes', *accepted_types: 'type') -> 'T'",
+          "signature": "(data: 'bytes', *accepted_types: 'type') -> 'object'",
           "type": "builtins.function"
         },
         "not_equal": {

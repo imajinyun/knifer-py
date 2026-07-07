@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 import pickle
 from collections.abc import Callable
-from typing import TypeVar
+from typing import TypeVar, cast
 
 T = TypeVar("T")
 R = TypeVar("R")
@@ -180,7 +180,7 @@ def is_not_nil(v: object) -> bool:
 # Clone / serialize / deserialize / register (mirrors Go vobj gob-based API)
 # ---------------------------------------------------------------------------
 
-_CODEC_CONFIG: dict[str, Callable] = {}
+_CODEC_CONFIG: dict[str, Callable[[], Callable[..., object]]] = {}
 
 
 def _default_encoder() -> Callable[[object], bytes]:
@@ -201,17 +201,17 @@ def with_decoder_factory(factory: Callable[[], Callable[[bytes], object]]) -> No
 
 def _get_encoder() -> Callable[[object], bytes]:
     factory = _CODEC_CONFIG.get("encoder_factory")
-    return factory() if factory else _default_encoder()
+    return cast(Callable[[object], bytes], factory()) if factory else _default_encoder()
 
 
 def _get_decoder() -> Callable[[bytes], object]:
     factory = _CODEC_CONFIG.get("decoder_factory")
-    return factory() if factory else _default_decoder()
+    return cast(Callable[[bytes], object], factory()) if factory else _default_decoder()
 
 
 def clone(src: T) -> T:
     """Deep copy through pickle serialization."""
-    return _get_decoder()(_get_encoder()(src))
+    return cast(T, _get_decoder()(_get_encoder()(src)))
 
 
 def clone_if_possible(src: T) -> T:
@@ -248,12 +248,12 @@ def deserialize(data: bytes, out_type: type, accepted_types: tuple[type, ...] = 
     return obj
 
 
-def deserialize_to(data: bytes, accepted_types: tuple[type, ...] = ()) -> T:
+def deserialize_to(data: bytes, accepted_types: tuple[type, ...] = ()) -> object:
     """Decode data into a new value."""
     return deserialize(data, object, accepted_types)
 
 
-def must_deserialize(data: bytes, accepted_types: tuple[type, ...] = ()) -> T:
+def must_deserialize(data: bytes, accepted_types: tuple[type, ...] = ()) -> object:
     """Decode data or raise."""
     return deserialize(data, object, accepted_types)
 

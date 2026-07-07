@@ -238,12 +238,12 @@ def deserialize(data: bytes, out_type: type, *accepted_types: type) -> object:
     return objx.deserialize(data, out_type, accepted_types)
 
 
-def deserialize_to(data: bytes, *accepted_types: type) -> T:
+def deserialize_to(data: bytes, *accepted_types: type) -> object:
     """Decode data into a new value."""
     return objx.deserialize_to(data, accepted_types)
 
 
-def must_deserialize(data: bytes, *accepted_types: type) -> T:
+def must_deserialize(data: bytes, *accepted_types: type) -> object:
     """Decode data or raise."""
     return objx.must_deserialize(data, accepted_types)
 
