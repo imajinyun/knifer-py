@@ -14142,7 +14142,7 @@
         },
         "get_network_interface_with_options": {
           "kind": "function",
-          "signature": "(name: 'str', **_opts: 'Any') -> 'dict | None'",
+          "signature": "(name: 'str', **_opts: 'Any') -> 'dict[str, Any] | None'",
           "type": "builtins.function"
         },
         "get_network_interfaces": {
@@ -14152,7 +14152,7 @@
         },
         "get_network_interfaces_with_options": {
           "kind": "function",
-          "signature": "(**_opts: 'Any') -> 'dict'",
+          "signature": "(**_opts: 'Any') -> 'dict[str, Any]'",
           "type": "builtins.function"
         },
         "get_remote_address": {
@@ -14397,7 +14397,7 @@
         },
         "local_address_list": {
           "kind": "function",
-          "signature": "(address_filter=None) -> 'list[str]'",
+          "signature": "(address_filter: 'Callable[[str], bool] | None' = None) -> 'list[str]'",
           "type": "builtins.function"
         },
         "local_address_list_by_interface": {
@@ -14407,7 +14407,7 @@
         },
         "local_address_list_with_options": {
           "kind": "function",
-          "signature": "(address_filter=None, **_opts: 'Any') -> 'list[str]'",
+          "signature": "(address_filter: 'Callable[[str], bool] | None' = None, **_opts: 'Any') -> 'list[str]'",
           "type": "builtins.function"
         },
         "local_ips": {

@@ -1,8 +1,11 @@
+# mypy: disable-error-code="no-untyped-def"
+
 import io
 import os
 import socket
 import ssl
 import uuid
+from typing import cast
 
 import pytest
 
@@ -322,13 +325,13 @@ class TestPingConnect:
         assert vnet.ping("127.0.0.1", 80)
         assert vnet.ping_with_options("127.0.0.1", 80)
         assert vnet.is_open_with_options("127.0.0.1", 80)
-        assert vnet.connect("127.0.0.1", 80) is fake
-        assert vnet.connect_with_options("127.0.0.1", 80) is fake
-        assert vnet.is_connected(fake) is True
+        assert vnet.connect("127.0.0.1", 80) is fake  # type: ignore[comparison-overlap]
+        assert vnet.connect_with_options("127.0.0.1", 80) is fake  # type: ignore[comparison-overlap]
+        assert vnet.is_connected(cast(socket.socket, fake)) is True
         vnet.netcat("127.0.0.1", 80, b"hello")
         vnet.netcat_with_options("127.0.0.1", 80, b"world")
         assert sent == [b"hello", b"world"]
-        assert vnet.get_remote_address(fake) == "127.0.0.1:8080"
+        assert vnet.get_remote_address(cast(socket.socket, fake)) == "127.0.0.1:8080"
 
         def fail_connection(*args, **kwargs):
             raise OSError("closed")
@@ -345,8 +348,8 @@ class TestPingConnect:
             def getpeername(self):
                 raise OSError("not connected")
 
-        assert not vnet.is_connected(BrokenSocket())
-        assert vnet.get_remote_address(BrokenSocket()) == ""
+        assert not vnet.is_connected(cast(socket.socket, BrokenSocket()))
+        assert vnet.get_remote_address(cast(socket.socket, BrokenSocket())) == ""
 
 
 def test_port_helpers_with_monkeypatched_socket(monkeypatch) -> None:

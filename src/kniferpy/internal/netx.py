@@ -248,7 +248,7 @@ class TLSConfigBuilder:
 
 
 def _ssl_version_code(proto: int) -> ssl.TLSVersion:
-    mapping = {
+    mapping: dict[int, ssl.TLSVersion] = {
         ssl.PROTOCOL_TLSv1: ssl.TLSVersion.TLSv1,
         ssl.PROTOCOL_TLSv1_1: ssl.TLSVersion.TLSv1_1,
         ssl.PROTOCOL_TLSv1_2: ssl.TLSVersion.TLSv1_2,
@@ -290,7 +290,7 @@ def get_dns_info(host: str, types: list[str] | None = None) -> dict[str, list[st
             answers = _socket.getaddrinfo(host, None, family=_socket.AF_UNSPEC)
             if t in ("A", "AAAA"):
                 af = _socket.AF_INET if t == "A" else _socket.AF_INET6
-                result[t] = sorted(set(a[4][0] for a in answers if a[0] == af))
+                result[t] = sorted({str(a[4][0]) for a in answers if a[0] == af})
             elif t == "MX":
                 # MX records not available via getaddrinfo — use a sentinel
                 result[t] = []
@@ -307,7 +307,7 @@ def get_ip_by_host(host: str) -> list[str]:
 
     try:
         answers = _socket.getaddrinfo(host, None)
-        return sorted(set(a[4][0] for a in answers))
+        return sorted({str(a[4][0]) for a in answers})
     except _socket.gaierror:
         return []
 
@@ -799,7 +799,7 @@ def _get_local_ips(version: int = 0) -> list[str]:
             else (socket.AF_INET6 if version == 6 else socket.AF_UNSPEC)
         )
         for info in socket.getaddrinfo(socket.gethostname(), None, family=family):
-            ip = info[4][0]
+            ip = str(info[4][0])
             if version == 4 and ":" in ip:
                 continue
             if version == 6 and ":" not in ip:
@@ -879,7 +879,7 @@ def get_local_hardware_address() -> str:
     return get_mac_address(get_localhost_str(), separator=":")
 
 
-def local_address_list(address_filter=None) -> list[str]:
+def local_address_list(address_filter: Callable[[str], bool] | None = None) -> list[str]:
     """Get local IPs, optionally filtered."""
     ips = local_ips()
     if address_filter is None:
@@ -1108,7 +1108,7 @@ def _get_interface_addresses() -> list[tuple[Any, list[str]]]:
     try:
         for info in _socket.getaddrinfo(hostname, None):
             name = info[0].name if hasattr(info[0], "name") else ""
-            ip = info[4][0]
+            ip = str(info[4][0])
             ips.append((name, [ip]))
     except Exception:
         pass
@@ -1244,11 +1244,11 @@ def create_address_with_options(host: str, port: int, **_opts: Any) -> tuple[str
     return create_address(host, port)
 
 
-def get_network_interface_with_options(name: str, **_opts: Any) -> dict | None:
+def get_network_interface_with_options(name: str, **_opts: Any) -> dict[str, Any] | None:
     return get_network_interface(name)
 
 
-def get_network_interfaces_with_options(**_opts: Any) -> dict:
+def get_network_interfaces_with_options(**_opts: Any) -> dict[str, Any]:
     return get_network_interfaces()
 
 
@@ -1264,7 +1264,9 @@ def local_ips_with_options(**_opts: Any) -> list[str]:
     return local_ips()
 
 
-def local_address_list_with_options(address_filter=None, **_opts: Any) -> list[str]:
+def local_address_list_with_options(
+    address_filter: Callable[[str], bool] | None = None, **_opts: Any
+) -> list[str]:
     return local_address_list(address_filter)
 
 
