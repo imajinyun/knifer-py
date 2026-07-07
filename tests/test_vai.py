@@ -1,3 +1,5 @@
+# mypy: disable-error-code="no-untyped-def, arg-type"
+
 import pytest
 
 from kniferpy.vai import (

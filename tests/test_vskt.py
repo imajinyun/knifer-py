@@ -1,3 +1,5 @@
+# mypy: disable-error-code="no-untyped-def"
+
 import socket
 import time
 
@@ -360,11 +362,11 @@ def test_more_socket_config_options() -> None:
             with_runner(runner),
             with_read_timeout(1),
             with_write_timeout(2),
-            None,
+            None,  # type: ignore[list-item]
         ]
     )
 
-    assert cfg.thread_pool_size_func() == 3
+    assert cfg.thread_pool_size_func() == 3  # type: ignore[misc]
     assert cfg.runner is runner
     assert cfg.read_timeout_ms == 1
     assert cfg.write_timeout_ms == 2
@@ -383,10 +385,10 @@ def test_nio_client_connect_and_close_with_fake_dialer() -> None:
     fake = FakeSocket()
     client = new_nio_client_addr_with_options(
         ("127.0.0.1", 12345),
-        [with_connect_dialer(lambda host, port: fake)],
+        [with_connect_dialer(lambda host, port: fake)],  # type: ignore[list-item]
     )
     # NioClient.connect uses socket_connect, so exercise close branch directly.
-    client._conn = fake
+    client._conn = fake  # type: ignore[assignment]
     client.close()
     assert fake.closed
 
@@ -395,7 +397,9 @@ def test_aio_session_read_write_and_zero_read() -> None:
     action = RecordingAction()
     sock = FakeSocket(b"hello")
     session = new_aio_session(
-        sock, action, new_socket_config_with_options([with_read_buffer_size(10)])
+        sock,  # type: ignore[arg-type]
+        action,
+        new_socket_config_with_options([with_read_buffer_size(10)]),
     )
 
     session.read()
@@ -407,7 +411,7 @@ def test_aio_session_read_write_and_zero_read() -> None:
     assert sock.closed
 
     empty_action = RecordingAction()
-    empty = new_aio_session(FakeSocket(b""), empty_action, new_socket_config())
+    empty = new_aio_session(FakeSocket(b""), empty_action, new_socket_config())  # type: ignore[arg-type]
     empty.read()
     assert empty_action.reads == []
 
@@ -429,8 +433,8 @@ def test_aio_server_client_constructor_variants() -> None:
         1,
     )
     assert new_aio_client_with_config(("127.0.0.1", 1), action, cfg)._config is cfg
-    client = new_aio_client_with_conn(fake, action, cfg)
-    assert client._conn is fake
+    client = new_aio_client_with_conn(fake, action, cfg)  # type: ignore[arg-type]
+    assert client._conn is fake  # type: ignore[comparison-overlap]
     assert client._session is not None
     client.close()
     assert fake.closed
@@ -443,7 +447,7 @@ def test_aio_server_thread_pool_size_func() -> None:
 
 
 def test_protocol_encoder_decoder_defaults_and_funcs() -> None:
-    session = new_aio_session(FakeSocket(), SimpleIoAction(), new_socket_config())
+    session = new_aio_session(FakeSocket(), SimpleIoAction(), new_socket_config())  # type: ignore[arg-type]
     msg_decoder = MsgDecoder()
     msg_encoder = MsgEncoder()
     io_action = IoAction()
@@ -452,11 +456,15 @@ def test_protocol_encoder_decoder_defaults_and_funcs() -> None:
     encoded_calls: list[bytes] = []
 
     assert msg_decoder.decode(session, b"data") == (None, False)
-    assert msg_encoder.encode(session, bytearray(), object()) is None
-    assert io_action.on_read(session, b"data") is None
+    msg_encoder.encode(session, bytearray(), object())
+    io_action.on_read(session, b"data")
     assert isinstance(protocol, AppProtocol)
 
-    decoder = FuncDecoder(lambda sess, buf: (decoded_calls.append(buf), True))
+    def decode(sess, buf: bytes):
+        decoded_calls.append(buf)
+        return None, True
+
+    decoder = FuncDecoder(decode)
     encoder = FuncEncoder(lambda sess, buf, msg: encoded_calls.append(bytes(buf) + msg))
 
     assert decoder.decode(session, b"in") == (None, True)
@@ -468,5 +476,5 @@ def test_protocol_encoder_decoder_defaults_and_funcs() -> None:
 def test_channel_dial_with_options_and_remote_address() -> None:
     fake = FakeSocket()
     sock = channel_dial_with_options(("127.0.0.1", 1), [with_connect_dialer(lambda h, p: fake)])
-    assert sock is fake
-    assert get_remote_address(fake) == ("127.0.0.1", 12345)
+    assert sock is fake  # type: ignore[comparison-overlap]
+    assert get_remote_address(fake) == ("127.0.0.1", 12345)  # type: ignore[arg-type]
