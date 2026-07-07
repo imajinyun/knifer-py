@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from dataclasses import dataclass as _dc
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from typing import Any, Callable, Protocol, TypeAlias
+from typing import Any, Callable, Protocol, TypeAlias, cast
 from typing import Callable as _Callable
 from urllib.parse import urlencode
 
@@ -23,10 +23,17 @@ JSONValue: TypeAlias = None | bool | int | float | str | list["JSONValue"] | dic
 
 
 class ResponseLike(Protocol):
-    text: str
-    content: bytes
-    status_code: int
-    headers: Any
+    @property
+    def text(self) -> str: ...
+
+    @property
+    def content(self) -> bytes: ...
+
+    @property
+    def status_code(self) -> int: ...
+
+    @property
+    def headers(self) -> Any: ...
 
     def raise_for_status(self) -> None: ...
 
@@ -34,15 +41,23 @@ class ResponseLike(Protocol):
 class SessionLike(Protocol):
     headers: Any
 
+    def request(self, method: str, url: str, **kwargs: Any) -> ResponseLike: ...
+
     def get(self, url: str, timeout: float, **kwargs: Any) -> ResponseLike: ...
 
-    def post(self, url: str, json: JSONValue, timeout: float, **kwargs: Any) -> ResponseLike: ...
+    def post(
+        self, url: str, json: JSONValue | None = None, timeout: float = ..., **kwargs: Any
+    ) -> ResponseLike: ...
 
-    def put(self, url: str, json: JSONValue, timeout: float, **kwargs: Any) -> ResponseLike: ...
+    def put(
+        self, url: str, json: JSONValue | None = None, timeout: float = ..., **kwargs: Any
+    ) -> ResponseLike: ...
 
     def delete(self, url: str, timeout: float, **kwargs: Any) -> ResponseLike: ...
 
-    def patch(self, url: str, json: JSONValue, timeout: float, **kwargs: Any) -> ResponseLike: ...
+    def patch(
+        self, url: str, json: JSONValue | None = None, timeout: float = ..., **kwargs: Any
+    ) -> ResponseLike: ...
 
     def head(self, url: str, timeout: float, **kwargs: Any) -> ResponseLike: ...
 
@@ -206,7 +221,7 @@ def with_tls_config(cfg: ssl.SSLContext) -> RequestOption:
     return _apply
 
 
-def with_session(session: requests.Session) -> RequestOption:
+def with_session(session: SessionLike) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.session = session
 
@@ -243,16 +258,20 @@ def with_max_response_bytes(max_bytes: int) -> RequestOption:
 
 def with_url_policy(policy: URLPolicy) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
-        r.url_policy = policy
+        _set_request_url_policy(r, policy)
 
     return _apply
 
 
 def with_allowed_hosts(*hosts: str) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
-        r.url_policy = URLPolicy(allowed_hosts=list(hosts))
+        _set_request_url_policy(r, URLPolicy(allowed_hosts=list(hosts)))
 
     return _apply
+
+
+def _set_request_url_policy(request: HTTPRequest, policy: URLPolicy | None) -> None:
+    request.__dict__["url_policy"] = policy
 
 
 def with_global_config(cfg: GlobalConfig) -> RequestOption:
@@ -313,8 +332,8 @@ class HTTPRequest:
         self.follow_redirects: bool = True
         self.charset: str = ""
         self.tls_config: ssl.SSLContext | None = None
-        self.session: requests.Session | None = None
-        self.url_policy: URLPolicy | None = None
+        self.session: SessionLike | None = None
+        _set_request_url_policy(self, None)
         self._safe: bool = False
         self._allowed_hosts: set[str] = set()
         self._resolver: urlx.Resolver | None = None
@@ -431,7 +450,7 @@ class HTTPRequest:
 
     def url_policy(self, p: URLPolicy) -> HTTPRequest:
         """Set the URL policy (Go compat)."""
-        self.url_policy = p
+        _set_request_url_policy(self, p)
         return self
 
     def form_file_reader(self, field: str, file_name: str, reader: Any) -> HTTPRequest:
@@ -459,7 +478,7 @@ class HTTPRequest:
         r.charset = self.charset
         r.tls_config = self.tls_config
         r.session = self.session
-        r.url_policy = self.url_policy
+        _set_request_url_policy(r, self.__dict__.get("url_policy"))
         r._safe = self._safe
         r._allowed_hosts = set(self._allowed_hosts)
         r._resolver = self._resolver
@@ -564,7 +583,7 @@ class HTTPResponse:
 
     def header(self, name: str) -> str:
         if self._raw:
-            return self._raw.headers.get(name, "")
+            return cast(str, self._raw.headers.get(name, ""))
         return ""
 
     def headers(self) -> dict[str, str]:
@@ -632,7 +651,7 @@ class HTTPResponse:
         n = w.write(b)
         if hasattr(w, "flush"):
             w.flush()
-        return n
+        return cast(int, n)
 
     def save_as(self, dest: str | Path, overwrite: bool = True) -> int:
         """Save response body to a file. Returns bytes written."""
@@ -659,7 +678,7 @@ class Client:
     def __init__(self) -> None:
         self.global_config: GlobalConfig | None = None
         self.default_options: list[RequestOption] = []
-        self.session: requests.Session | None = None
+        self.session: SessionLike | None = None
 
     def _apply_global(self, r: HTTPRequest) -> None:
         if self.global_config:
@@ -733,7 +752,7 @@ def new_client(*opts: ClientOption) -> Client:
 
 def new_isolated_client(*opts: ClientOption) -> Client:
     c = new_client(*opts)
-    c.session = requests.Session()
+    c.session = cast(SessionLike, requests.Session())
     return c
 
 
@@ -842,7 +861,7 @@ def new_safe_request(method: str, raw_url: str, *opts: RequestOption) -> HTTPReq
 
 def new_isolated_request(method: str, raw_url: str, *opts: RequestOption) -> HTTPRequest:
     r = _new_request(method, raw_url, *opts)
-    r.session = requests.Session()
+    r.session = cast(SessionLike, requests.Session())
     return r
 
 
@@ -1098,7 +1117,7 @@ def download_file_with_options(
     )
 
 
-def download_file_safe(
+def _download_file_safe_legacy(
     raw_url: str, dest: str | Path, *save_opts: SaveOption
 ) -> tuple[int, HTTPError | None]:
     return _download_file_impl(raw_url, dest, list(save_opts), safe=True)
@@ -1242,18 +1261,18 @@ class SimpleServer:
     def __init__(self, addr: str, server: HTTPServer | None = None) -> None:
         self._addr = addr
         self._server = server
-        self._handlers: dict[str, Callable] = {}
+        self._handlers: dict[str, Callable[[Any], None]] = {}
         self._root_dir: str = ""
-        self._static_handler: Callable | None = None
+        self._static_handler: Callable[[Any], None] | None = None
         self._thread: threading.Thread | None = None
         self._stop_event = threading.Event()
         self._err_chan: list[Exception] = []
 
-    def add_action(self, path: str, handler: Callable) -> SimpleServer:
+    def add_action(self, path: str, handler: Callable[[Any], None]) -> SimpleServer:
         self._handlers[path] = handler
         return self
 
-    def add_handler(self, path: str, handler: Callable) -> SimpleServer:
+    def add_handler(self, path: str, handler: Callable[[Any], None]) -> SimpleServer:
         self._handlers[path] = handler
         return self
 
@@ -1301,7 +1320,7 @@ class SimpleServer:
                 pass
 
         server = HTTPServer((host, port), _Handler)
-        server._handlers = self._handlers
+        server._handlers = self._handlers  # type: ignore[attr-defined]
         self._server = server
         try:
             server.serve_forever()
@@ -1458,7 +1477,7 @@ def get_bytes_safe(
     )
 
 
-def download_file_safe(  # noqa: F811
+def download_file_safe(
     raw_url: str,
     dst: str | Path,
     *,
@@ -1716,11 +1735,11 @@ def parse_content_type(header: str) -> tuple[str, dict[str, str]]:
 
 # ========== Default Transport Provider ==========
 
-_default_transport_provider: Callable[[], requests.Session | None] | None = None
+_default_transport_provider: Callable[[], SessionLike | None] | None = None
 
 
 def configure_default_transport_provider(
-    provider: Callable[[], requests.Session | None] | None,
+    provider: Callable[[], SessionLike | None] | None,
 ) -> None:
     """Set a custom transport provider for default HTTP sessions (Go compat)."""
     global _default_transport_provider
@@ -1986,7 +2005,7 @@ def post_form_safe(
 ) -> str:
     urlx.validate_http_url(raw_url, allowed_hosts=allowed_hosts, resolver=resolver)
     client = session or requests.Session()
-    response = client.post(raw_url, data=data, timeout=timeout)
+    response = client.post(raw_url, json=None, data=data, timeout=timeout)
     response.raise_for_status()
     if len(response.content) > max_bytes:
         raise SecurityError(
@@ -2012,6 +2031,7 @@ def post_multipart_safe(
     client = session or requests.Session()
     response = client.post(
         raw_url,
+        json=None,
         files=files,
         data=fields,
         timeout=timeout,
@@ -2049,9 +2069,9 @@ def decode_response_body(data: bytes, content_encoding: str = "") -> bytes:
             return data
     if enc == "br":
         try:
-            import brotli
+            import brotli  # type: ignore[import-not-found]
 
-            return brotli.decompress(data)
+            return cast(bytes, brotli.decompress(data))
         except ImportError:
             pass
         except Exception:
@@ -2064,8 +2084,8 @@ def decode_response_body(data: bytes, content_encoding: str = "") -> bytes:
 
 @_dc
 class HTMLCleanConfig:
-    tag_re: re.Pattern | None = None
-    comment_re: re.Pattern | None = None
+    tag_re: re.Pattern[str] | None = None
+    comment_re: re.Pattern[str] | None = None
 
 
 HTMLCleanOption: TypeAlias = _Callable[["HTMLCleanConfig"], None]
@@ -2074,14 +2094,14 @@ _DEFAULT_TAG_RE = re.compile(r"<[^>]+>", re.DOTALL | re.IGNORECASE)
 _DEFAULT_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL | re.IGNORECASE)
 
 
-def with_html_tag_regexp(regex: re.Pattern) -> HTMLCleanOption:
+def with_html_tag_regexp(regex: re.Pattern[str]) -> HTMLCleanOption:
     def _apply(cfg: HTMLCleanConfig) -> None:
         cfg.tag_re = regex
 
     return _apply
 
 
-def with_html_comment_regexp(regex: re.Pattern) -> HTMLCleanOption:
+def with_html_comment_regexp(regex: re.Pattern[str]) -> HTMLCleanOption:
     def _apply(cfg: HTMLCleanConfig) -> None:
         cfg.comment_re = regex
 
@@ -2105,13 +2125,15 @@ def _apply_html_clean_options(opts: list[HTMLCleanOption]) -> HTMLCleanConfig:
 
 @_dc
 class HTMLFilterConfig:
-    compile: _Callable[[str], re.Pattern] = re.compile
+    compile: _Callable[[str], re.Pattern[str]] = re.compile
 
 
 HTMLFilterOption: TypeAlias = _Callable[["HTMLFilterConfig"], None]
 
 
-def with_html_filter_compile_func(compile_fn: _Callable[[str], re.Pattern]) -> HTMLFilterOption:
+def with_html_filter_compile_func(
+    compile_fn: _Callable[[str], re.Pattern[str]]
+) -> HTMLFilterOption:
     def _apply(cfg: HTMLFilterConfig) -> None:
         if compile_fn is not None:
             cfg.compile = compile_fn
@@ -2305,8 +2327,8 @@ def is_redirected(status_code: int) -> bool:
 
 @_dc
 class CharsetConfig:
-    charset_pattern: re.Pattern | None = None
-    meta_charset_pattern: re.Pattern | None = None
+    charset_pattern: re.Pattern[str] | None = None
+    meta_charset_pattern: re.Pattern[str] | None = None
 
 
 CharsetOption: TypeAlias = _Callable[["CharsetConfig"], None]
@@ -2321,14 +2343,14 @@ _DEFAULT_META_CHARSET_PATTERN = re.compile(
 )
 
 
-def with_charset_regexp(regex: re.Pattern) -> CharsetOption:
+def with_charset_regexp(regex: re.Pattern[str]) -> CharsetOption:
     def _apply(cfg: CharsetConfig) -> None:
         cfg.charset_pattern = regex
 
     return _apply
 
 
-def with_meta_charset_regexp(regex: re.Pattern) -> CharsetOption:
+def with_meta_charset_regexp(regex: re.Pattern[str]) -> CharsetOption:
     def _apply(cfg: CharsetConfig) -> None:
         cfg.meta_charset_pattern = regex
 

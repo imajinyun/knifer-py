@@ -5,13 +5,23 @@ import ssl
 import time
 import zlib
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable, TypedDict
 
 import pytest
 
 from kniferpy import vhttp
 from kniferpy.internal import httpx
 from kniferpy.verr import DecodeError, SecurityError
+
+
+class SafeKwargs(TypedDict):
+    allowed_hosts: set[str]
+    resolver: Callable[[str], list[str]]
+    session: httpx.SessionLike
+
+
+class SafeKwargsWithMaxBytes(SafeKwargs):
+    max_bytes: int
 
 
 class FakeResponse:
@@ -38,6 +48,7 @@ class FakeResponse:
 
 class FakeSession:
     def __init__(self, response: FakeResponse | None = None) -> None:
+        self.headers: dict[str, str] = {}
         self.response = response or FakeResponse()
         self.called_with: str | None = None
         self.timeout: float | None = None
@@ -311,8 +322,9 @@ def test_request_options_apply_expected_builder_state() -> None:
     assert request.session is session
     assert request.charset == "utf-8"
     assert request.max_response_bytes == 99
-    assert request.url_policy is not None
-    assert request.url_policy.allowed_hosts == ["allowed.example.com"]
+    policy_value = request.__dict__["url_policy"]
+    assert isinstance(policy_value, vhttp.URLPolicy)
+    assert policy_value.allowed_hosts == ["allowed.example.com"]
 
 
 def test_client_options_apply_global_config_and_defaults() -> None:
@@ -419,7 +431,7 @@ def test_http_request_execute_success_and_response_methods(tmp_path: Path) -> No
         .set_url("https://api.example.com/items")
         .set_query("a", "1")
     )
-    request.session = session  # type: ignore[assignment]
+    request.session = session
 
     response = request.execute()
     writer = io.BytesIO()
@@ -455,7 +467,7 @@ def test_http_request_execute_returns_error_for_request_exception() -> None:
             raise requests.RequestException("network down")
 
     request = vhttp.HTTPRequest().set_url("https://api.example.com")
-    request.session = FailingSession()  # type: ignore[assignment]
+    request.session = FailingSession()
 
     response = request.execute()
 
@@ -468,7 +480,7 @@ def test_http_request_execute_returns_error_for_request_exception() -> None:
 
 def test_http_request_execute_rejects_oversized_response() -> None:
     request = vhttp.HTTPRequest().set_url("https://api.example.com")
-    request.session = FakeSession(FakeResponse(content=b"abcdef"))  # type: ignore[assignment]
+    request.session = FakeSession(FakeResponse(content=b"abcdef"))
     request.max_response_bytes = 3
 
     with pytest.raises(SecurityError) as exc_info:
@@ -479,7 +491,7 @@ def test_http_request_execute_rejects_oversized_response() -> None:
 
 def test_http_request_execute_string_and_bytes() -> None:
     request = vhttp.HTTPRequest().set_url("https://api.example.com")
-    request.session = FakeSession(FakeResponse(text="ok", content=b"ok"))  # type: ignore[assignment]
+    request.session = FakeSession(FakeResponse(text="ok", content=b"ok"))
 
     assert request.execute_string() == ("ok", None)
     assert request.execute_bytes() == (b"ok", None)
@@ -566,7 +578,7 @@ def test_client_factories_and_methods() -> None:
 
 def test_shortcut_wrappers_execute_with_fake_session() -> None:
     session = FakeSession(FakeResponse(text="ok", content=b"ok"))
-    opts = [vhttp.with_session(session)]  # type: ignore[list-item]
+    opts = [vhttp.with_session(session)]
 
     assert vhttp.get_string_e("https://api.example.com", *opts) == ("ok", None)
     assert vhttp.get_string_e_with_options("https://api.example.com", *opts) == ("ok", None)
@@ -594,7 +606,7 @@ def test_shortcut_wrappers_execute_with_fake_session() -> None:
 def test_safe_shortcut_wrappers_execute_after_url_validation() -> None:
     session = FakeSession(FakeResponse(text="ok", content=b"ok"))
     opts = [
-        vhttp.with_session(session),  # type: ignore[list-item]
+        vhttp.with_session(session),
         allow_example_host,
     ]
 
@@ -606,7 +618,7 @@ def test_safe_shortcut_wrappers_execute_after_url_validation() -> None:
 
 def test_download_wrappers_to_writer_string_bytes_and_file(tmp_path: Path) -> None:
     session = FakeSession(FakeResponse(text="hello", content=b"hello"))
-    opts = [vhttp.with_session(session)]  # type: ignore[list-item]
+    opts = [vhttp.with_session(session)]
     writer = io.BytesIO()
 
     assert vhttp.download("https://api.example.com/file", writer, *opts) == (5, None)
@@ -636,7 +648,7 @@ def test_download_wrappers_to_writer_string_bytes_and_file(tmp_path: Path) -> No
     assert httpx.download_file_with_options(
         "https://api.example.com/file",
         target,
-        [vhttp.with_session(session)],  # type: ignore[list-item]
+        [vhttp.with_session(session)],
         vhttp.with_save_file_perm(0o600),
     ) == (5, None)
     assert target.read_bytes() == b"hello"
@@ -649,7 +661,7 @@ def test_download_file_save_options_handle_default_name_and_overwrite(tmp_path: 
     written, err = httpx.download_file_with_options(
         "https://api.example.com/file",
         target_dir,
-        [vhttp.with_session(session)],  # type: ignore[list-item]
+        [vhttp.with_session(session)],
         vhttp.with_save_default_filename("fallback.txt"),
         vhttp.with_save_dir_perm(0o755),
         vhttp.with_save_create_parents(True),
@@ -661,7 +673,7 @@ def test_download_file_save_options_handle_default_name_and_overwrite(tmp_path: 
     written_again, err_again = httpx.download_file_with_options(
         "https://api.example.com/file",
         target_dir / "fallback.txt",
-        [vhttp.with_session(session)],  # type: ignore[list-item]
+        [vhttp.with_session(session)],
         vhttp.with_save_overwrite(False),
     )
     assert written_again == 0
@@ -747,7 +759,7 @@ def test_scoped_global_config_restores_previous_values() -> None:
 
 def test_safe_json_methods_for_put_delete_patch_head_options_and_params() -> None:
     session = FakeSession(FakeResponse(text='{"ok": true}', content=b'{"ok": true}'))
-    kwargs = {
+    kwargs: SafeKwargs = {
         "allowed_hosts": {"api.example.com"},
         "resolver": lambda host: ["93.184.216.34"],
         "session": session,
@@ -769,7 +781,7 @@ def test_safe_json_methods_for_put_delete_patch_head_options_and_params() -> Non
 
 def test_safe_json_methods_reject_non_object_for_put_and_patch() -> None:
     session = FakeSession(FakeResponse(text="[1]", content=b"[1]"))
-    kwargs = {
+    kwargs: SafeKwargs = {
         "allowed_hosts": {"api.example.com"},
         "resolver": lambda host: ["93.184.216.34"],
         "session": session,
@@ -783,7 +795,7 @@ def test_safe_json_methods_reject_non_object_for_put_and_patch() -> None:
 
 def test_safe_form_and_multipart_methods_use_session_payloads() -> None:
     session = FakeSession(FakeResponse(text="accepted", content=b"accepted"))
-    kwargs = {
+    kwargs: SafeKwargs = {
         "allowed_hosts": {"api.example.com"},
         "resolver": lambda host: ["93.184.216.34"],
         "session": session,
@@ -971,7 +983,7 @@ def test_cookie_jar_and_global_flags() -> None:
 def test_transport_provider_configuration_and_go_compat_aliases() -> None:
     session = FakeSession()
 
-    vhttp.configure_default_transport_provider(lambda: session)  # type: ignore[return-value]
+    vhttp.configure_default_transport_provider(lambda: session)
     assert httpx._default_transport_provider is not None
     assert httpx._default_transport_provider() is session
     vhttp.reset_default_transport()
@@ -982,7 +994,7 @@ def test_transport_provider_configuration_and_go_compat_aliases() -> None:
     assert vhttp.get_with_timeout_e_with_options(
         "https://api.example.com",
         0.1,
-        vhttp.with_session(FakeSession()),  # type: ignore[arg-type]
+        vhttp.with_session(FakeSession()),
     ) == ("ok", None)
     assert vhttp.reset_server_starters() is None
 
@@ -994,7 +1006,7 @@ def test_http_request_url_policy_alias_can_be_invoked_unbound() -> None:
     returned = vhttp.HTTPRequest.url_policy(request, policy)
 
     assert returned is request
-    assert request.url_policy is policy
+    assert request.__dict__["url_policy"] is policy
 
 
 def test_http_response_empty_raw_invalid_headers_and_body_fallbacks(tmp_path: Path) -> None:
@@ -1034,7 +1046,7 @@ def test_execute_string_and_bytes_return_error_tuple() -> None:
             raise requests.RequestException("network down")
 
     request = vhttp.HTTPRequest().set_url("https://api.example.com")
-    request.session = RequestFailingSession()  # type: ignore[assignment]
+    request.session = RequestFailingSession()
 
     text, text_err = request.execute_string()
     body, body_err = request.execute_bytes()
@@ -1059,7 +1071,7 @@ def test_download_helpers_cover_error_paths(tmp_path: Path) -> None:
     session = FakeSession(FakeResponse(text="hello", content=b"hello"))
     failing_status_session = RequestFailingSession()
     oversize_session = FakeSession(FakeResponse(text="hello", content=b"hello"))
-    opts = [vhttp.with_session(session)]  # type: ignore[list-item]
+    opts = [vhttp.with_session(session)]
 
     assert vhttp.download_string_e(
         "https://api.example.com/file",
@@ -1091,7 +1103,7 @@ def test_download_helpers_cover_error_paths(tmp_path: Path) -> None:
         vhttp.download(
             "https://api.example.com/file",
             io.BytesIO(),
-            vhttp.with_session(failing_status_session),  # type: ignore[arg-type]
+            vhttp.with_session(failing_status_session),
         )[1]
         is not None
     )
@@ -1106,14 +1118,14 @@ def test_download_helpers_cover_error_paths(tmp_path: Path) -> None:
     assert httpx.download_file_safe_with_options(
         "https://api.example.com/file",
         tmp_path / "safe-options.txt",
-        [allow_example_host, vhttp.with_session(session)],  # type: ignore[list-item]
+        [allow_example_host, vhttp.with_session(session)],
     ) == (5, None)
     with pytest.raises(SecurityError):
         httpx.download_file_with_options(
             "https://api.example.com/file",
             tmp_path / "oversize.txt",
             [
-                vhttp.with_session(oversize_session),  # type: ignore[list-item]
+                vhttp.with_session(oversize_session),
                 vhttp.with_max_response_bytes(3),
             ],
         )
@@ -1168,7 +1180,7 @@ def test_json_value_internal_rejects_non_string_keys_and_non_json_values() -> No
 
 def test_safe_form_and_multipart_reject_oversized_response() -> None:
     session = FakeSession(FakeResponse(text="hello", content=b"hello"))
-    kwargs = {
+    kwargs: SafeKwargsWithMaxBytes = {
         "allowed_hosts": {"api.example.com"},
         "resolver": lambda host: ["93.184.216.34"],
         "session": session,
@@ -1191,7 +1203,7 @@ def test_safe_form_and_multipart_reject_oversized_response() -> None:
 
 def test_content_decoding_brotli_and_option_default_fallbacks() -> None:
     try:
-        import brotli
+        import brotli  # type: ignore[import-not-found]
     except ImportError:
         compressed = b"body"
         expected = b"body"

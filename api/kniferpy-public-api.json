@@ -7918,7 +7918,7 @@
       "exports": {
         "CharsetConfig": {
           "kind": "class",
-          "signature": "(charset_pattern: 're.Pattern | None' = None, meta_charset_pattern: 're.Pattern | None' = None) -> None",
+          "signature": "(charset_pattern: 're.Pattern[str] | None' = None, meta_charset_pattern: 're.Pattern[str] | None' = None) -> None",
           "type": "builtins.type"
         },
         "CharsetOption": {
@@ -8046,7 +8046,7 @@
         },
         "HTMLCleanConfig": {
           "kind": "class",
-          "signature": "(tag_re: 're.Pattern | None' = None, comment_re: 're.Pattern | None' = None) -> None",
+          "signature": "(tag_re: 're.Pattern[str] | None' = None, comment_re: 're.Pattern[str] | None' = None) -> None",
           "type": "builtins.type"
         },
         "HTMLCleanOption": {
@@ -8061,7 +8061,7 @@
               "signature": "(pattern, flags=0)"
             }
           },
-          "signature": "(compile: '_Callable[[str], re.Pattern]' = <function compile at 0x...>) -> None",
+          "signature": "(compile: '_Callable[[str], re.Pattern[str]]' = <function compile at 0x...>) -> None",
           "type": "builtins.type"
         },
         "HTMLFilterOption": {
@@ -8318,13 +8318,16 @@
               "signature": "(self, url: 'str', timeout: 'float', **kwargs: 'Any') -> 'ResponseLike'"
             },
             "patch": {
-              "signature": "(self, url: 'str', json: 'JSONValue', timeout: 'float', **kwargs: 'Any') -> 'ResponseLike'"
+              "signature": "(self, url: 'str', json: 'JSONValue | None' = None, timeout: 'float' = Ellipsis, **kwargs: 'Any') -> 'ResponseLike'"
             },
             "post": {
-              "signature": "(self, url: 'str', json: 'JSONValue', timeout: 'float', **kwargs: 'Any') -> 'ResponseLike'"
+              "signature": "(self, url: 'str', json: 'JSONValue | None' = None, timeout: 'float' = Ellipsis, **kwargs: 'Any') -> 'ResponseLike'"
             },
             "put": {
-              "signature": "(self, url: 'str', json: 'JSONValue', timeout: 'float', **kwargs: 'Any') -> 'ResponseLike'"
+              "signature": "(self, url: 'str', json: 'JSONValue | None' = None, timeout: 'float' = Ellipsis, **kwargs: 'Any') -> 'ResponseLike'"
+            },
+            "request": {
+              "signature": "(self, method: 'str', url: 'str', **kwargs: 'Any') -> 'ResponseLike'"
             }
           },
           "signature": "(*args, **kwargs)",
@@ -8334,10 +8337,10 @@
           "kind": "class",
           "methods": {
             "add_action": {
-              "signature": "(self, path: 'str', handler: 'Callable') -> 'SimpleServer'"
+              "signature": "(self, path: 'str', handler: 'Callable[[Any], None]') -> 'SimpleServer'"
             },
             "add_handler": {
-              "signature": "(self, path: 'str', handler: 'Callable') -> 'SimpleServer'"
+              "signature": "(self, path: 'str', handler: 'Callable[[Any], None]') -> 'SimpleServer'"
             },
             "set_root": {
               "signature": "(self, dir_path: 'str') -> 'SimpleServer'"
@@ -8423,7 +8426,7 @@
         },
         "configure_default_transport_provider": {
           "kind": "function",
-          "signature": "(provider: 'Callable[[], requests.Session | None] | None') -> 'None'",
+          "signature": "(provider: 'Callable[[], SessionLike | None] | None') -> 'None'",
           "type": "builtins.function"
         },
         "configure_global_config": {
@@ -9093,7 +9096,7 @@
         },
         "with_charset_regexp": {
           "kind": "function",
-          "signature": "(regex: 're.Pattern') -> 'CharsetOption'",
+          "signature": "(regex: 're.Pattern[str]') -> 'CharsetOption'",
           "type": "builtins.function"
         },
         "with_client_global_config": {
@@ -9133,17 +9136,17 @@
         },
         "with_html_comment_regexp": {
           "kind": "function",
-          "signature": "(regex: 're.Pattern') -> 'HTMLCleanOption'",
+          "signature": "(regex: 're.Pattern[str]') -> 'HTMLCleanOption'",
           "type": "builtins.function"
         },
         "with_html_filter_compile_func": {
           "kind": "function",
-          "signature": "(compile_fn: '_Callable[[str], re.Pattern]') -> 'HTMLFilterOption'",
+          "signature": "(compile_fn: '_Callable[[str], re.Pattern[str]]') -> 'HTMLFilterOption'",
           "type": "builtins.function"
         },
         "with_html_tag_regexp": {
           "kind": "function",
-          "signature": "(regex: 're.Pattern') -> 'HTMLCleanOption'",
+          "signature": "(regex: 're.Pattern[str]') -> 'HTMLCleanOption'",
           "type": "builtins.function"
         },
         "with_max_redirects": {
@@ -9158,7 +9161,7 @@
         },
         "with_meta_charset_regexp": {
           "kind": "function",
-          "signature": "(regex: 're.Pattern') -> 'CharsetOption'",
+          "signature": "(regex: 're.Pattern[str]') -> 'CharsetOption'",
           "type": "builtins.function"
         },
         "with_save_create_parents": {
@@ -9193,7 +9196,7 @@
         },
         "with_session": {
           "kind": "function",
-          "signature": "(session: 'requests.Session') -> 'RequestOption'",
+          "signature": "(session: 'SessionLike') -> 'RequestOption'",
           "type": "builtins.function"
         },
         "with_timeout": {
