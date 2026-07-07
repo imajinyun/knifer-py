@@ -55,7 +55,8 @@ make check-dist
 ```
 
 Tagged releases such as `v0.1.0` run the release workflow and publish through
-PyPI trusted publishing. See [`docs/release.md`](docs/release.md).
+PyPI trusted publishing. Release builds also upload a CycloneDX SBOM artifact.
+See [`docs/release.md`](docs/release.md).
 
 ## ⭐ Start With These Modules
 
