@@ -12,10 +12,15 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, cast
 
-from argon2.low_level import Type, hash_secret_raw, verify_secret
-from cryptography.hazmat.primitives import hashes, serialization
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
-from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+try:
+    from argon2.low_level import Type, hash_secret_raw, verify_secret
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding, rsa
+    from cryptography.hazmat.primitives.ciphers.aead import AESGCM
+except ImportError as exc:  # pragma: no cover - exercised with import hooks
+    from kniferpy.internal.optionalx import require_extra
+
+    raise require_extra(exc.name or "cryptography", "crypto", exc) from exc
 
 from kniferpy.verr import CryptoError, ValidationError
 

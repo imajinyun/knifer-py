@@ -16,8 +16,13 @@ import os
 from dataclasses import dataclass
 from typing import Any, Callable
 
-import openpyxl  # type: ignore[import-untyped]
-from openpyxl.utils import get_column_letter  # type: ignore[import-untyped]
+try:
+    import openpyxl  # type: ignore[import-untyped]
+    from openpyxl.utils import get_column_letter  # type: ignore[import-untyped]
+except ImportError as exc:  # pragma: no cover - exercised with import hooks
+    from kniferpy.internal.optionalx import require_extra
+
+    raise require_extra("openpyxl", "poi", exc) from exc
 
 from kniferpy.verr import KniferError
 

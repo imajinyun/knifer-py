@@ -21,7 +21,12 @@ from dataclasses import dataclass, field
 from enum import IntEnum
 from typing import Any, Callable, Sequence
 
-from PIL import Image
+try:
+    from PIL import Image
+except ImportError as exc:  # pragma: no cover - exercised with import hooks
+    from kniferpy.internal.optionalx import require_extra
+
+    raise require_extra("PIL", "img", exc) from exc
 
 from kniferpy.verr import KniferError
 

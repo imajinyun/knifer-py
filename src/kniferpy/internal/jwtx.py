@@ -7,9 +7,14 @@ from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
-import jwt
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+try:
+    import jwt
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
+except ImportError as exc:  # pragma: no cover - exercised with import hooks
+    from kniferpy.internal.optionalx import require_extra
+
+    raise require_extra(exc.name or "jwt", "jwt", exc) from exc
 
 from kniferpy.verr import CryptoError
 

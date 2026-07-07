@@ -14,7 +14,12 @@ from typing import Any, Callable, Protocol, TypeAlias, cast
 from typing import Callable as _Callable
 from urllib.parse import urlencode
 
-import requests
+try:
+    import requests
+except ImportError as exc:  # pragma: no cover - exercised with import hooks
+    from kniferpy.internal.optionalx import require_extra
+
+    raise require_extra("requests", "http", exc) from exc
 
 from kniferpy.internal import filex, urlx
 from kniferpy.verr import DecodeError, SecurityError
