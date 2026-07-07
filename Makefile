@@ -10,13 +10,13 @@ test-cov:
 	.venv/bin/python -m pytest --cov=kniferpy --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=95
 
 lint:
-	.venv/bin/python -m ruff check src tests
+	.venv/bin/python -m ruff check src tests examples
 
 format:
-	.venv/bin/python -m ruff format src tests
+	.venv/bin/python -m ruff format src tests examples
 
 typecheck:
-	.venv/bin/python -m mypy src tests
+	.venv/bin/python -m mypy src tests examples
 
 api-check:
 	@if [ "$(UPDATE_API)" = "1" ]; then \

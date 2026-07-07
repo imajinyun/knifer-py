@@ -231,7 +231,7 @@ def sliding(a: list[T], size: int, step: int) -> list[list[T]]:
 
 
 def zip2(a: list[A], b: list[B]) -> list[tuple[A, B]]:
-    return list(zip(a, b))
+    return list(zip(a, b, strict=False))
 
 
 def unzip2(pairs: list[tuple[A, B]]) -> tuple[list[A], list[B]]:

@@ -1251,7 +1251,7 @@ def scan_rows(cursor: CursorLike | None) -> list[dict[str, Any]]:
             return []
         cols = [desc[0] for desc in cursor.description]
         rows = cursor.fetchall()
-        return [dict(zip(cols, row)) for row in rows]
+        return [dict(zip(cols, row, strict=False)) for row in rows]
     finally:
         with contextlib.suppress(Exception):
             cursor.close()
@@ -1267,7 +1267,7 @@ def scan_one(cursor: CursorLike | None) -> tuple[dict[str, Any] | None, bool]:
         if row is None:
             return None, False
         cols = [desc[0] for desc in cursor.description]
-        return dict(zip(cols, row)), True
+        return dict(zip(cols, row, strict=False)), True
     finally:
         with contextlib.suppress(Exception):
             cursor.close()

@@ -32,10 +32,10 @@ jobs:
         run: poetry install --all-extras
 
       - name: Lint
-        run: poetry run ruff check src tests
+        run: poetry run ruff check src tests examples
 
       - name: Typecheck
-        run: poetry run mypy src tests
+        run: poetry run mypy src tests examples
 
       - name: API compatibility
         run: poetry run python scripts/check_api_snapshot.py

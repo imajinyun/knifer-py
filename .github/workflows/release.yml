@@ -41,8 +41,8 @@ jobs:
 
       - name: Check
         run: |
-          poetry run ruff check src tests
-          poetry run mypy src tests
+          poetry run ruff check src tests examples
+          poetry run mypy src tests examples
           poetry run python scripts/check_api_snapshot.py
           poetry run python scripts/check_error_taxonomy.py
           poetry run python scripts/check_facade_consistency.py

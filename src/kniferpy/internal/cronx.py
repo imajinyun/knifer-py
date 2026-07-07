@@ -310,7 +310,7 @@ def _new_pattern_matchers(expr: str) -> tuple[_Matcher, ...]:
         raise _cron_error(f"invalid cron expression {expr!r} (parts={count})")
 
     matchers: list[_Matcher] = []
-    for part, raw in zip(_PART_ORDER, parts):
+    for part, raw in zip(_PART_ORDER, parts, strict=False):
         if raw in ("*", "?"):
             matchers.append(_AlwaysMatcher())
         else:

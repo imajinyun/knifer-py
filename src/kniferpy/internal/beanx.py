@@ -303,7 +303,7 @@ def _convert_seq(value: Any, target: Any, origin: Any, cfg: Options) -> Any:
         raise _convert_error(f"cannot assign {type(value).__name__} to {origin.__name__}")
     args = typing.get_args(target)
     if origin is tuple and args and args[-1] is not Ellipsis and len(args) == len(value):
-        return tuple(_convert(item, arg, cfg) for item, arg in zip(value, args))
+        return tuple(_convert(item, arg, cfg) for item, arg in zip(value, args, strict=False))
     elem_type: Any = None
     if args:
         elem_type = args[0]

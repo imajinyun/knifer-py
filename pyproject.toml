@@ -1,19 +1,15 @@
-[tool.poetry]
+[project]
 name = "kniferpy"
 version = "0.1.0"
 description = "A Python utility toolkit with focused v* domain facades."
-authors = ["imajinyun"]
 readme = "README.md"
 license = "MIT"
-packages = [{ include = "kniferpy", from = "src" }]
-homepage = "https://github.com/imajinyun/kniferpy"
-repository = "https://github.com/imajinyun/kniferpy"
-documentation = "https://github.com/imajinyun/kniferpy#readme"
+authors = [{ name = "imajinyun" }]
+requires-python = ">=3.11,<4.0"
 keywords = ["utility", "json", "http", "crypto", "security"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
@@ -21,6 +17,7 @@ classifiers = [
     "Topic :: Software Development :: Libraries",
     "Typing :: Typed",
 ]
+dependencies = []
 
 [tool.poetry.dependencies]
 python = ">=3.11,<4.0"
@@ -32,23 +29,30 @@ openpyxl = { version = "^3.1.0", optional = true }
 cryptography = { version = "^49.0.0", optional = true }
 argon2-cffi = { version = "^25.1.0", optional = true }
 gmssl = { version = "^3.2.0", optional = true }
+[project.urls]
+Homepage = "https://github.com/imajinyun/kniferpy"
+Repository = "https://github.com/imajinyun/kniferpy"
+Documentation = "https://github.com/imajinyun/kniferpy#readme"
 
-[tool.poetry.extras]
-http = ["requests"]
-jwt = ["PyJWT", "cryptography"]
-crypto = ["cryptography", "argon2-cffi", "gmssl"]
-img = ["pillow", "qrcode"]
-poi = ["openpyxl"]
+[project.optional-dependencies]
+http = ["requests>=2.32.0,<3.0.0"]
+jwt = ["PyJWT>=2.8.0,<3.0.0", "cryptography>=49.0.0,<50.0.0"]
+crypto = ["cryptography>=49.0.0,<50.0.0", "argon2-cffi>=25.1.0,<26.0.0", "gmssl>=3.2.0,<4.0.0"]
+img = ["pillow>=10.0.0,<11.0.0", "qrcode>=7.4.0,<8.0.0"]
+poi = ["openpyxl>=3.1.0,<4.0.0"]
 all = [
-    "requests",
-    "PyJWT",
-    "pillow",
-    "qrcode",
-    "openpyxl",
-    "cryptography",
-    "argon2-cffi",
-    "gmssl",
+    "requests>=2.32.0,<3.0.0",
+    "PyJWT>=2.8.0,<3.0.0",
+    "pillow>=10.0.0,<11.0.0",
+    "qrcode>=7.4.0,<8.0.0",
+    "openpyxl>=3.1.0,<4.0.0",
+    "cryptography>=49.0.0,<50.0.0",
+    "argon2-cffi>=25.1.0,<26.0.0",
+    "gmssl>=3.2.0,<4.0.0",
 ]
+
+[tool.poetry]
+packages = [{ include = "kniferpy", from = "src" }]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.2.0"
@@ -76,9 +80,11 @@ skip_covered = false
 [tool.ruff]
 line-length = 100
 src = ["src", "tests"]
+target-version = "py311"
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "SIM"]
+ignore = ["UP017", "UP035", "UP036", "UP038", "UP041"]
 
 [tool.mypy]
 python_version = "3.11"
