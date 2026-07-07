@@ -943,7 +943,7 @@
               "signature": "(self, key: 'K') -> 'None'"
             },
             "set_listener": {
-              "signature": "(self, listener: 'Listener[K, V] | None') -> \"'Cache[K, V]'\""
+              "signature": "(self, listener: 'Listener[K, V] | None') -> 'Cache[K, V]'"
             },
             "size": {
               "signature": "(self) -> 'int'"
@@ -2420,6 +2420,10 @@
           "signature": "(*args, **kwargs)",
           "type": "typing._CallableGenericAlias"
         },
+        "DefaultMaxBytes": {
+          "kind": "value",
+          "type": "builtins.int"
+        },
         "ExpandOption": {
           "kind": "value",
           "signature": "(*args, **kwargs)",
@@ -2454,6 +2458,26 @@
           "kind": "value",
           "signature": "(*args, **kwargs)",
           "type": "typing._CallableGenericAlias"
+        },
+        "TypeBool": {
+          "kind": "value",
+          "type": "builtins.str"
+        },
+        "TypeFloat": {
+          "kind": "value",
+          "type": "builtins.str"
+        },
+        "TypeInt": {
+          "kind": "value",
+          "type": "builtins.str"
+        },
+        "TypeList": {
+          "kind": "value",
+          "type": "builtins.str"
+        },
+        "TypeString": {
+          "kind": "value",
+          "type": "builtins.str"
         },
         "ValueOption": {
           "kind": "value",

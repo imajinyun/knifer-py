@@ -31,9 +31,13 @@ class Cache(Protocol[K, V]):
     def put(self, key: K, value: V) -> None: ...
     def put_with_timeout(self, key: K, value: V, timeout: float) -> None: ...
     def get(self, key: K, default: V | None = None) -> V | None: ...
-    def get_with_update(self, key: K, update_last_access: bool, default: V | None = None) -> V | None: ...
+    def get_with_update(
+        self, key: K, update_last_access: bool, default: V | None = None
+    ) -> V | None: ...
     def get_or_load(self, key: K, supplier: Supplier[V] | None) -> V | None: ...
-    def get_or_load_with(self, key: K, supplier: Supplier[V] | None, update_last_access: bool, timeout: float) -> V | None: ...
+    def get_or_load_with(
+        self, key: K, supplier: Supplier[V] | None, update_last_access: bool, timeout: float
+    ) -> V | None: ...
     def remove(self, key: K) -> None: ...
     def contains_key(self, key: K) -> bool: ...
     def size(self) -> int: ...
@@ -43,7 +47,7 @@ class Cache(Protocol[K, V]):
     def clear(self) -> None: ...
     def keys(self) -> list[K]: ...
     def values(self) -> list[V]: ...
-    def set_listener(self, listener: Listener[K, V] | None) -> "Cache[K, V]": ...
+    def set_listener(self, listener: Listener[K, V] | None) -> Cache[K, V]: ...
     def hit_count(self) -> int: ...
     def miss_count(self) -> int: ...
 
@@ -240,7 +244,9 @@ class _AbstractCache(Generic[K, V]):
     def get_or_load(self, key: K, supplier: Supplier[V] | None) -> V | None:
         return self.get_or_load_with(key, supplier, True, self._timeout)
 
-    def get_or_load_e(self, key: K, supplier: SupplierE[V] | None) -> tuple[V | None, Exception | None]:
+    def get_or_load_e(
+        self, key: K, supplier: SupplierE[V] | None
+    ) -> tuple[V | None, Exception | None]:
         return self.get_or_load_with_e(key, supplier, True, self._timeout)
 
     def get_or_load_with(
@@ -590,7 +596,9 @@ class TimedCache(Generic[K, V]):
         self._hits = 0
         self._misses = 0
         self._clock = clock if clock is not None else time.monotonic
-        self._ticker_factory = ticker_factory if ticker_factory is not None else _default_ticker_factory
+        self._ticker_factory = (
+            ticker_factory if ticker_factory is not None else _default_ticker_factory
+        )
         self._runner = runner if runner is not None else _default_runner
         self._prune_mu = threading.Lock()
         self._prune_stop: threading.Event | None = None
@@ -736,7 +744,9 @@ class TimedCache(Generic[K, V]):
     def get_or_load(self, key: K, supplier: Supplier[V] | None) -> V | None:
         return self._get_or_load_with(key, supplier, self._timeout)
 
-    def get_or_load_e(self, key: K, supplier: SupplierE[V] | None) -> tuple[V | None, Exception | None]:
+    def get_or_load_e(
+        self, key: K, supplier: SupplierE[V] | None
+    ) -> tuple[V | None, Exception | None]:
         return self._get_or_load_with_e(key, supplier, self._timeout)
 
     def _get_or_load_with(self, key: K, supplier: Supplier[V] | None, timeout: float) -> V | None:
@@ -749,7 +759,9 @@ class TimedCache(Generic[K, V]):
         self.put_with_timeout(key, loaded, timeout)
         return loaded
 
-    def _get_or_load_with_e(self, key: K, supplier: SupplierE[V] | None, timeout: float) -> tuple[V | None, Exception | None]:
+    def _get_or_load_with_e(
+        self, key: K, supplier: SupplierE[V] | None, timeout: float
+    ) -> tuple[V | None, Exception | None]:
         value = self.get(key)
         if value is not None:
             return value, None
@@ -803,7 +815,16 @@ class WeakCache(Generic[K, V]):
     the referenced object is garbage-collected or when TTL expires.
     """
 
-    __slots__ = ("_mu", "_entries", "_timeout", "_listener", "_hits", "_misses", "_clock", "_pending")
+    __slots__ = (
+        "_mu",
+        "_entries",
+        "_timeout",
+        "_listener",
+        "_hits",
+        "_misses",
+        "_clock",
+        "_pending",
+    )
 
     def __init__(
         self,
@@ -814,7 +835,9 @@ class WeakCache(Generic[K, V]):
     ) -> None:
         self._timeout = timeout if timeout and timeout > 0 else 0.0
         self._mu = threading.Lock()
-        self._entries: dict[K, tuple[weakref.ReferenceType[V], float, float]] = {}  # key -> (ref, last_access, ttl)
+        self._entries: dict[
+            K, tuple[weakref.ReferenceType[V], float, float]
+        ] = {}  # key -> (ref, last_access, ttl)
         self._listener = listener
         self._hits = 0
         self._misses = 0
@@ -986,7 +1009,9 @@ class WeakCache(Generic[K, V]):
     def get_or_load(self, key: K, supplier: Supplier[V] | None) -> V | None:
         return self._get_or_load_with(key, supplier, self._timeout)
 
-    def get_or_load_e(self, key: K, supplier: SupplierE[V] | None) -> tuple[V | None, Exception | None]:
+    def get_or_load_e(
+        self, key: K, supplier: SupplierE[V] | None
+    ) -> tuple[V | None, Exception | None]:
         return self._get_or_load_with_e(key, supplier, self._timeout)
 
     def _get_or_load_with(self, key: K, supplier: Supplier[V] | None, timeout: float) -> V | None:
@@ -999,7 +1024,9 @@ class WeakCache(Generic[K, V]):
         self.put_with_timeout(key, loaded, timeout)
         return loaded
 
-    def _get_or_load_with_e(self, key: K, supplier: SupplierE[V] | None, timeout: float) -> tuple[V | None, Exception | None]:
+    def _get_or_load_with_e(
+        self, key: K, supplier: SupplierE[V] | None, timeout: float
+    ) -> tuple[V | None, Exception | None]:
         value = self.get(key)
         if value is not None:
             return value, None
@@ -1042,6 +1069,7 @@ def new_weak(
 
 
 # ── CacheObj introspection type ──────────────────────────────────────────────
+
 
 @dataclass(frozen=True, slots=True)
 class CacheObj(Generic[K, V]):
@@ -1109,36 +1137,42 @@ class CacheListenerFunc(Generic[K, V]):
 def with_capacity(capacity: int) -> Option[K, V]:
     def _apply(c: _AbstractCache[K, V]) -> None:
         c._capacity = capacity
+
     return _apply
 
 
 def with_timeout(timeout: float) -> Option[K, V]:
     def _apply(c: _AbstractCache[K, V]) -> None:
         c._timeout = timeout
+
     return _apply
 
 
 def with_listener(listener: CacheListener[K, V]) -> Option[K, V]:
     def _apply(c: _AbstractCache[K, V]) -> None:
         c.set_listener(listener.on_remove)
+
     return _apply
 
 
 def with_clock(clock: Callable[[], float]) -> Option[K, V]:
     def _apply(c: _AbstractCache[K, V]) -> None:
         c._clock = clock
+
     return _apply
 
 
 def with_ticker_factory(factory: TickerFactory) -> Option[K, V]:
     def _apply(c: _AbstractCache[K, V]) -> None:
         c._ticker_factory = factory  # type: ignore[attr-defined]
+
     return _apply
 
 
 def with_runner(runner: Callable[[Callable[[], None]], None]) -> Option[K, V]:
     def _apply(c: _AbstractCache[K, V]) -> None:
         c._runner = runner  # type: ignore[attr-defined]
+
     return _apply
 
 
@@ -1147,7 +1181,7 @@ def with_runner(runner: Callable[[Callable[[], None]], None]) -> Option[K, V]:
 
 def new_fifo_with_options(opts: list[Option[K, V]] | None = None) -> FIFOCache[K, V]:
     c = FIFOCache(0)
-    for opt in (opts or []):
+    for opt in opts or []:
         opt(c)
     return c
 
@@ -1158,7 +1192,7 @@ def new_fifo_with_timeout(capacity: int, timeout: float) -> FIFOCache[K, V]:
 
 def new_lru_with_options(opts: list[Option[K, V]] | None = None) -> LRUCache[K, V]:
     c = LRUCache(0)
-    for opt in (opts or []):
+    for opt in opts or []:
         opt(c)
     return c
 
@@ -1169,7 +1203,7 @@ def new_lru_with_timeout(capacity: int, timeout: float) -> LRUCache[K, V]:
 
 def new_lfu_with_options(opts: list[Option[K, V]] | None = None) -> LFUCache[K, V]:
     c = LFUCache(0)
-    for opt in (opts or []):
+    for opt in opts or []:
         opt(c)
     return c
 
@@ -1180,14 +1214,14 @@ def new_lfu_with_timeout(capacity: int, timeout: float) -> LFUCache[K, V]:
 
 def new_timed_with_options(opts: list[Option[K, V]] | None = None) -> TimedCache[K, V]:
     c = TimedCache(0.0)
-    for opt in (opts or []):
+    for opt in opts or []:
         opt(c)  # type: ignore[arg-type]
     return c
 
 
 def new_weak_with_options(opts: list[Option[K, V]] | None = None) -> WeakCache[K, V]:
     c = WeakCache(0.0)
-    for opt in (opts or []):
+    for opt in opts or []:
         opt(c)  # type: ignore[arg-type]
     return c
 

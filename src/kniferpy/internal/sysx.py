@@ -296,6 +296,7 @@ def _get_total_memory() -> int:
     """Return total physical memory in bytes."""
     try:
         import psutil
+
         return psutil.virtual_memory().total
     except ImportError:
         return 0
@@ -305,6 +306,7 @@ def _get_free_memory() -> int:
     """Return free physical memory in bytes."""
     try:
         import psutil
+
         return psutil.virtual_memory().available
     except ImportError:
         return 0
@@ -329,7 +331,6 @@ def get_max_memory() -> int:
 
 def get_runtime_info() -> RuntimeInfo:
     """Return Python runtime information."""
-    import sysconfig
     return RuntimeInfo(
         python_version=sys.version,
         python_implementation=platform.python_implementation(),
@@ -344,6 +345,7 @@ def get_total_thread_count() -> int:
     """Return the number of threads in the current process."""
     try:
         import threading
+
         return threading.active_count()
     except Exception:
         return 0
@@ -428,11 +430,12 @@ def dump_system_info() -> str:
     lines.append(f"Temp:    {user_info.temp_dir}")
     lines.append(f"PID:     {get_current_pid()}")
     lines.append(f"Threads: {get_total_thread_count()}")
-    lines.append(f"Memory:  {_readable_size(get_total_memory())} total, {_readable_size(get_free_memory())} free")
+    total_memory = _readable_size(get_total_memory())
+    free_memory = _readable_size(get_free_memory())
+    lines.append(f"Memory:  {total_memory} total, {free_memory} free")
     lines.append("")
 
     try:
-        import sysconfig
         lines.append("=== Python Info ===")
         lines.append(f"Version: {sys.version}")
         lines.append(f"Platform: {sys.platform}")
@@ -468,7 +471,12 @@ _cached_runtime_info: RuntimeInfo | None = None
 
 
 def reset_info_cache() -> None:
-    global _cached_os_info, _cached_host_info, _cached_user_info, _cached_runtime_info, _cached_python_info
+    global \
+        _cached_os_info, \
+        _cached_host_info, \
+        _cached_user_info, \
+        _cached_runtime_info, \
+        _cached_python_info
     _cached_os_info = None
     _cached_host_info = None
     _cached_user_info = None
@@ -506,6 +514,7 @@ def _cached_get_runtime_info() -> RuntimeInfo:
 
 # ── New* constructors (Go compat: always create fresh instances) ────────────
 
+
 def new_host_info() -> HostInfo:
     """Create a fresh HostInfo instance (never cached)."""
     return get_host_info()
@@ -528,6 +537,7 @@ def new_runtime_info() -> RuntimeInfo:
 
 # ── System* cached accessors (Go compat: singleton cache) ───────────────────
 
+
 def system_host_info() -> HostInfo:
     """Return cached HostInfo (singleton, cleared by reset_info_cache)."""
     return _cached_get_host_info()
@@ -549,6 +559,7 @@ def system_runtime_info() -> RuntimeInfo:
 
 
 # ── Short aliases (Go compat naming) ─────────────────────────────────────────
+
 
 def env(key: str) -> str:
     """Short alias for ``get(key, quiet=True)``."""
@@ -597,6 +608,7 @@ def total_goroutine_count() -> int:
 
 # ── PythonInfo type (GoInfo equivalent) ──────────────────────────────────────
 
+
 @dataclass(frozen=True, slots=True)
 class PythonInfo:
     """Python runtime metadata (knifer-go GoInfo equivalent)."""
@@ -643,6 +655,7 @@ _cached_python_info: PythonInfo | None = None
 
 
 # ── Sys* short aliases ───────────────────────────────────────────────────────
+
 
 def sys_host_info() -> HostInfo:
     """Short alias for ``system_host_info``."""

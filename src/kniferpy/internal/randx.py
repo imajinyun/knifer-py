@@ -6,7 +6,7 @@ import sys
 import threading
 from typing import Any, Callable, Sequence, TypeVar
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 BaseNumber = "0123456789"
 BaseChar = "abcdefghijklmnopqrstuvwxyz"
@@ -40,27 +40,35 @@ def _apply_options(opts: Sequence[Callable[[_RandomOptions], None]]) -> _RandomO
 
 def with_random_source(source: random.Random) -> Callable[[_RandomOptions], None]:
     """Set the pseudo-random source for numeric, string, and element helpers."""
+
     def _opt(cfg: _RandomOptions) -> None:
         cfg.source = source
+
     return _opt
 
 
 def with_random_reader(reader: Callable[[int], bytes]) -> Callable[[_RandomOptions], None]:
     """Set the byte source for RandomBytesWithOptions and SecureRandomBytesWithOptions."""
+
     def _opt(cfg: _RandomOptions) -> None:
         cfg.reader = reader
+
     return _opt
 
 
 def with_strict_crypto_random() -> Callable[[_RandomOptions], None]:
     """Make RandomBytesWithOptions return reader errors instead of falling back."""
+
     def _opt(cfg: _RandomOptions) -> None:
         cfg.strict_crypto = True
+
     return _opt
 
 
 _default_rand_lock = threading.Lock()
 _default_rand: random.Random | None = None
+
+
 def _default_rand_provider() -> random.Random:
     return random.Random()
 
@@ -119,7 +127,9 @@ def random_int_range(min_val: int, max_val: int) -> int:
     return random_int_range_with_options(min_val, max_val)
 
 
-def random_int_range_with_options(min_val: int, max_val: int, *opts: Callable[[_RandomOptions], None]) -> int:
+def random_int_range_with_options(
+    min_val: int, max_val: int, *opts: Callable[[_RandomOptions], None]
+) -> int:
     """Return a random integer in [min, max) with per-call options."""
     if max_val <= min_val:
         return min_val
@@ -240,7 +250,9 @@ def random_string_from(charset: str, n: int) -> str:
     return random_string_from_with_options(charset, n)
 
 
-def random_string_from_with_options(charset: str, n: int, *opts: Callable[[_RandomOptions], None]) -> str:
+def random_string_from_with_options(
+    charset: str, n: int, *opts: Callable[[_RandomOptions], None]
+) -> str:
     """Build a random string by sampling runes from charset with per-call options."""
     if n <= 0 or not charset:
         return ""
@@ -285,16 +297,20 @@ def _apply_weighted_options(opts: Sequence[Callable[[_WeightedConfig], None]]) -
 
 def with_weighted_rand_source(source: random.Random) -> Callable[[_WeightedConfig], None]:
     """Set the pseudo-random source for weighted helpers."""
+
     def _opt(cfg: _WeightedConfig) -> None:
         cfg.source = source
+
     return _opt
 
 
 def with_weighted_precision(precision: float) -> Callable[[_WeightedConfig], None]:
     """Set the minimum positive total-weight tolerance."""
+
     def _opt(cfg: _WeightedConfig) -> None:
         if precision > 0:
             cfg.precision = precision
+
     return _opt
 
 
@@ -324,7 +340,7 @@ class _AliasPicker:
         n = len(self._items)
         total = 0.0
         for w in weights:
-            if w != w or w == float('inf') or w == float('-inf') or w < 0:
+            if w != w or w == float("inf") or w == float("-inf") or w < 0:
                 raise ValueError("weighted pick weights must be finite and non-negative")
             total += w
         if total <= self._cfg.precision:
@@ -364,7 +380,9 @@ class _AliasPicker:
         return self._alias[idx]
 
 
-def weighted_pick(items: list[T], weights: list[float], *opts: Callable[[_WeightedConfig], None]) -> T:
+def weighted_pick(
+    items: list[T], weights: list[float], *opts: Callable[[_WeightedConfig], None]
+) -> T:
     """Pick one item according to weights using the alias method."""
     if len(items) == 0:
         raise ValueError("weighted pick items are empty")
@@ -374,7 +392,9 @@ def weighted_pick(items: list[T], weights: list[float], *opts: Callable[[_Weight
     return picker.pick()
 
 
-def weighted_pick_n(items: list[T], weights: list[float], n: int, *opts: Callable[[_WeightedConfig], None]) -> list[T]:
+def weighted_pick_n(
+    items: list[T], weights: list[float], n: int, *opts: Callable[[_WeightedConfig], None]
+) -> list[T]:
     """Pick n items with replacement according to weights."""
     if n < 0:
         raise ValueError("weighted pick count must be non-negative")
@@ -386,7 +406,9 @@ def weighted_pick_n(items: list[T], weights: list[float], n: int, *opts: Callabl
     return [picker.pick() for _ in range(n)]
 
 
-def weighted_pick_unique_n(items: list[T], weights: list[float], n: int, *opts: Callable[[_WeightedConfig], None]) -> list[T]:
+def weighted_pick_unique_n(
+    items: list[T], weights: list[float], n: int, *opts: Callable[[_WeightedConfig], None]
+) -> list[T]:
     """Pick n unique items without replacement according to weights."""
     if n < 0:
         raise ValueError("weighted pick count must be non-negative")

@@ -27,30 +27,35 @@ ValidatorOption = Callable[[_ValidatorConfig], None]
 def with_email_matcher(matcher: Callable[[str], bool]) -> ValidatorOption:
     def _opt(c: _ValidatorConfig) -> None:
         c.email = matcher
+
     return _opt
 
 
 def with_mobile_matcher(matcher: Callable[[str], bool]) -> ValidatorOption:
     def _opt(c: _ValidatorConfig) -> None:
         c.mobile = matcher
+
     return _opt
 
 
 def with_id_card_matcher(matcher: Callable[[str], bool]) -> ValidatorOption:
     def _opt(c: _ValidatorConfig) -> None:
         c.id_card = matcher
+
     return _opt
 
 
 def with_chinese_matcher(matcher: Callable[[str], bool]) -> ValidatorOption:
     def _opt(c: _ValidatorConfig) -> None:
         c.chinese = matcher
+
     return _opt
 
 
 def with_number_matcher(matcher: Callable[[str], bool]) -> ValidatorOption:
     def _opt(c: _ValidatorConfig) -> None:
         c.number = matcher
+
     return _opt
 
 

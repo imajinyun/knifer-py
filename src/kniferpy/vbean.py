@@ -109,7 +109,9 @@ def merge_with_options(dst: Any, sources: list[Any], options: Options | None = N
     beanx.merge(dst, *sources, options=options)
 
 
-def merge_result_with_options(dst: Any, sources: list[Any], options: Options | None = None) -> Result:
+def merge_result_with_options(
+    dst: Any, sources: list[Any], options: Options | None = None
+) -> Result:
     """Go-compat: ``MergeResultWithOptions(dst, sources, opts...)``."""
     return beanx.merge_result(dst, *sources, options=options)
 

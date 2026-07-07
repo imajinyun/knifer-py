@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import socket
-import ssl
 from typing import Any, Callable
 
 from kniferpy.internal import netx
@@ -14,7 +12,6 @@ from kniferpy.internal.netx import (
 
 # ── Go-compat type aliases ─────────────────────────────────────────────────────
 
-from typing import Any, Callable
 
 Dialer = Any
 ConnectOption = Callable[[Any], None]

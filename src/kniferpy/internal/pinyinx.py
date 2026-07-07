@@ -19,6 +19,7 @@ from kniferpy.verr import KniferError
 
 # --- errors --------------------------------------------------------------------
 
+
 class ErrInvalidConvertRequest(KniferError):
     pass
 
@@ -44,12 +45,11 @@ ToneStylePlain: ToneStyle = "plain"
 ToneStyleNumber: ToneStyle = "number"
 ToneStyleMark: ToneStyle = "mark"
 
-_VALID_TONE_STYLES = frozenset(
-    {ToneStyleDefault, ToneStylePlain, ToneStyleNumber, ToneStyleMark}
-)
+_VALID_TONE_STYLES = frozenset({ToneStyleDefault, ToneStylePlain, ToneStyleNumber, ToneStyleMark})
 
 
 # --- types ---------------------------------------------------------------------
+
 
 @dataclass
 class Token:
@@ -70,9 +70,7 @@ class ConvertRequest:
     def validate(self) -> None:
         _validate_text(self.Text, self.MaxInputRunes, ErrInvalidConvertRequest)
         if self.ToneStyle not in _VALID_TONE_STYLES:
-            raise ErrInvalidConvertRequest(
-                f"unsupported tone style {self.ToneStyle!r}"
-            )
+            raise ErrInvalidConvertRequest(f"unsupported tone style {self.ToneStyle!r}")
 
     def clone(self) -> ConvertRequest:
         return ConvertRequest(
@@ -145,6 +143,7 @@ class InitialsResponse:
 
 # --- validation helpers --------------------------------------------------------
 
+
 def _validate_text(text: str, max_runes: int, sentinel: type[KniferError]) -> None:
     if not text.strip():
         raise sentinel("text is required")
@@ -153,22 +152,20 @@ def _validate_text(text: str, max_runes: int, sentinel: type[KniferError]) -> No
     if max_runes < 0:
         raise sentinel("max input runes must be non-negative")
     if max_runes > 0 and len(text) > max_runes:
-        raise ErrInputLimitExceeded(
-            f"input has {len(text)} runes, max {max_runes}"
-        )
+        raise ErrInputLimitExceeded(f"input has {len(text)} runes, max {max_runes}")
 
 
 # --- provider interface --------------------------------------------------------
 
-class Provider(Protocol):
-    def convert(self, request: ConvertRequest) -> ConvertResponse:
-        ...
 
-    def initials(self, request: InitialsRequest) -> InitialsResponse:
-        ...
+class Provider(Protocol):
+    def convert(self, request: ConvertRequest) -> ConvertResponse: ...
+
+    def initials(self, request: InitialsRequest) -> InitialsResponse: ...
 
 
 # --- client --------------------------------------------------------------------
+
 
 class Client:
     def __init__(self, provider: Provider | None = None):

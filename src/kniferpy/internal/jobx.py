@@ -21,6 +21,7 @@ from kniferpy.verr import KniferError
 
 # --- errors --------------------------------------------------------------------
 
+
 class ErrNilJob(KniferError):
     pass
 
@@ -41,16 +42,13 @@ T = TypeVar("T")
 
 
 class Sliceable(Protocol):
-    def len(self) -> int:
-        ...
+    def len(self) -> int: ...
 
-    def run(self, start: int, end: int) -> Merge | None:
-        ...
+    def run(self, start: int, end: int) -> Merge | None: ...
 
 
 class OptionCarrier(Protocol):
-    def job_options(self) -> Options:
-        ...
+    def job_options(self) -> Options: ...
 
 
 @dataclass
@@ -71,6 +69,7 @@ def chunks(length: int, batch_size: int) -> int:
 
 
 # --- run -----------------------------------------------------------------------
+
 
 def _replay_merges(job: Sliceable, merges: list[Merge | None]) -> None:
     for _idx, merge in enumerate(merges):
@@ -208,6 +207,7 @@ def new_slice_single(fn: Callable[[int], Merge | None], length: int) -> Slice:
 
 # --- Batch adapter -------------------------------------------------------------
 
+
 class Batch:
     def __init__(self, fn: Callable[[list[Any]], Merge | None], vals: list[Any]):
         self._run = fn
@@ -250,6 +250,7 @@ def new_batch_single(fn: Callable[[Any], Merge | None], vals: list[Any]) -> Batc
 
 
 # --- Map adapter ---------------------------------------------------------------
+
 
 def new_map(fn: Any, data: dict[Any, Any]) -> Slice:
     if not callable(fn):

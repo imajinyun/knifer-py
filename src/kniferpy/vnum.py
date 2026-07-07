@@ -400,11 +400,15 @@ def ToStr(number: float, opts: Sequence[FormatOption] | None = None) -> str:
     return numx._to_str(number, opts)
 
 
-def ToStrDefault(number: float | None, default_value: str, opts: Sequence[FormatOption] | None = None) -> str:
+def ToStrDefault(
+    number: float | None, default_value: str, opts: Sequence[FormatOption] | None = None
+) -> str:
     return numx._to_str_default(number, default_value, opts)
 
 
-def ToStrStrip(number: float, strip_trailing_zeros: bool, opts: Sequence[FormatOption] | None = None) -> str:
+def ToStrStrip(
+    number: float, strip_trailing_zeros: bool, opts: Sequence[FormatOption] | None = None
+) -> str:
     return numx._to_str_strip(number, strip_trailing_zeros, opts)
 
 
@@ -486,19 +490,27 @@ def ParseNumber(number_str: str, opts: Sequence[ParseOption] | None = None) -> f
     return numx._parse_number(number_str, opts)
 
 
-def ParseIntDefault(number_str: str, default_value: int, opts: Sequence[ParseOption] | None = None) -> int:
+def ParseIntDefault(
+    number_str: str, default_value: int, opts: Sequence[ParseOption] | None = None
+) -> int:
     return numx._parse_int_default(number_str, default_value, opts)
 
 
-def ParseLongDefault(number_str: str, default_value: int, opts: Sequence[ParseOption] | None = None) -> int:
+def ParseLongDefault(
+    number_str: str, default_value: int, opts: Sequence[ParseOption] | None = None
+) -> int:
     return numx._parse_long_default(number_str, default_value, opts)
 
 
-def ParseFloatDefault(number_str: str, default_value: float, opts: Sequence[ParseOption] | None = None) -> float:
+def ParseFloatDefault(
+    number_str: str, default_value: float, opts: Sequence[ParseOption] | None = None
+) -> float:
     return numx._parse_float_default(number_str, default_value, opts)
 
 
-def ParseDoubleDefault(number_str: str, default_value: float, opts: Sequence[ParseOption] | None = None) -> float:
+def ParseDoubleDefault(
+    number_str: str, default_value: float, opts: Sequence[ParseOption] | None = None
+) -> float:
     return numx._parse_double_default(number_str, default_value, opts)
 
 
@@ -507,17 +519,25 @@ def ParseDoubleDefault(number_str: str, default_value: float, opts: Sequence[Par
 # ---------------------------------------------------------------------------
 
 
-def GenRandomNumber(begin: int, end: int, size: int, opts: Sequence[RandomNumberOption] | None = None) -> list[int]:
+def GenRandomNumber(
+    begin: int, end: int, size: int, opts: Sequence[RandomNumberOption] | None = None
+) -> list[int]:
     return numx._gen_random_number(begin, end, size, opts)
 
 
 def GenRandomNumberWithSeed(
-    begin: int, end: int, size: int, seed: list[int], opts: Sequence[RandomNumberOption] | None = None
+    begin: int,
+    end: int,
+    size: int,
+    seed: list[int],
+    opts: Sequence[RandomNumberOption] | None = None,
 ) -> list[int]:
     return numx._gen_random_number_with_seed(begin, end, size, seed, opts)
 
 
-def GenBySet(begin: int, end: int, size: int, opts: Sequence[RandomNumberOption] | None = None) -> list[int]:
+def GenBySet(
+    begin: int, end: int, size: int, opts: Sequence[RandomNumberOption] | None = None
+) -> list[int]:
     return numx._gen_by_set(begin, end, size, opts)
 
 

@@ -133,9 +133,7 @@ def test_info_and_debug_go_to_stdout() -> None:
 def test_log_e_appends_error() -> None:
     logger, _, err = _make_logger()
     logger.log_e(Level.ERROR, ValueError("bad input"), "failed")
-    assert err.getvalue() == (
-        "[2026-07-03 09:30:00] [ERROR] app: failed | error: bad input\n"
-    )
+    assert err.getvalue() == ("[2026-07-03 09:30:00] [ERROR] app: failed | error: bad input\n")
 
 
 def test_custom_time_layout() -> None:
@@ -265,7 +263,10 @@ def test_color_log_default_color_for_unmapped_level() -> None:
 
 def test_color_factory_accessors() -> None:
     try:
-        factory = lambda level: f"color-{level.name}"
+
+        def factory(level):
+            return f"color-{level.name}"
+
         vlog.set_color_factory(factory)
         assert logx.get_color_factory() is factory
         # The facade currently forwards without returning the internal value.

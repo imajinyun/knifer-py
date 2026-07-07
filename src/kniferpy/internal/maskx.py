@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from enum import IntEnum
+
 
 def hide(value: str, start: int, end: int) -> str:
     runes = list(value)
@@ -135,8 +137,6 @@ def clear() -> str:
 
 
 # --- Type-based masked dispatch ----------------------------------------------
-
-from enum import IntEnum
 
 
 class MaskType(IntEnum):

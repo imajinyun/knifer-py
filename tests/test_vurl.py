@@ -129,9 +129,7 @@ def test_remove_query_all() -> None:
 
 
 def test_redact_userinfo_custom_replacement() -> None:
-    result = vurl.redact_userinfo(
-        "https://user:pass@example.com/path", replacement="REDACTED"
-    )
+    result = vurl.redact_userinfo("https://user:pass@example.com/path", replacement="REDACTED")
     assert result == "https://REDACTED@example.com/path"
 
 
@@ -200,7 +198,9 @@ def test_url_builder_builds_and_exposes_components() -> None:
     assert builder.query() == {"a": "1", "blank": "", "enabled": "true"}
     assert builder.query_string() == "a=1&blank=&enabled=true"
     assert builder.fragment() == "section"
-    assert str(builder) == "https://api.example.com:8443/v1/users/42?a=1&blank=&enabled=true#section"
+    assert (
+        str(builder) == "https://api.example.com:8443/v1/users/42?a=1&blank=&enabled=true#section"
+    )
 
 
 def test_url_builder_defaults_and_parse_url_builder() -> None:
@@ -225,8 +225,7 @@ def test_data_uri_and_query_helpers() -> None:
         "data:text/plain;charset=utf-8,hello"
     )
     assert (
-        vurl.data_uri("text/plain", "", "base64", "aGVsbG8=")
-        == "data:text/plain;base64,aGVsbG8="
+        vurl.data_uri("text/plain", "", "base64", "aGVsbG8=") == "data:text/plain;base64,aGVsbG8="
     )
     assert vurl.data_uri_base64("text/plain", "hello") == "data:text/plain;base64,aGVsbG8="
     assert vurl.build_query({"a": 1, "flag": False, "skip": None}) == "a=1&flag=false"

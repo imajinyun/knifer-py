@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import random
-import sys
 
 import pytest
 
@@ -90,9 +89,10 @@ class TestRandomBytes:
         assert vrand.secure_random_bytes(0) == b""
 
     def test_reader_option_and_fallback(self) -> None:
-        assert vrand.random_bytes_with_options(
-            4, vrand.with_random_reader(lambda n: b"x" * n)
-        ) == b"xxxx"
+        assert (
+            vrand.random_bytes_with_options(4, vrand.with_random_reader(lambda n: b"x" * n))
+            == b"xxxx"
+        )
 
         def failing_reader(_n: int) -> bytes:
             raise RuntimeError("reader failed")
@@ -280,11 +280,14 @@ class TestWeightedPick:
                 [1e-13],
                 vrand.with_weighted_precision(-1),
             )
-        assert vrand.weighted_pick(
-            ["a"],
-            [1e-13],
-            vrand.with_weighted_precision(1e-15),
-        ) == "a"
+        assert (
+            vrand.weighted_pick(
+                ["a"],
+                [1e-13],
+                vrand.with_weighted_precision(1e-15),
+            )
+            == "a"
+        )
 
     def test_negative_weight_raises(self) -> None:
         with pytest.raises(ValueError, match="non-negative"):

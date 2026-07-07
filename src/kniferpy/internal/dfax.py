@@ -315,7 +315,7 @@ def filter(text: str, greed_match: bool = True, processor: Processor | None = No
 
 
 def contains_any(text: str) -> bool:
-    """Report whether ``text`` contains any word from the package-level matcher (alias for contains)."""
+    """Report whether ``text`` contains any package-level matcher word."""
     return contains(text)
 
 
@@ -329,8 +329,9 @@ def get_found_all_any(text: str) -> list[FoundWord]:
     return get_found_all(text)
 
 
-def filter_mode(text: str, density_match: bool, greed_match: bool,
-                processor: Processor | None = None) -> str:
+def filter_mode(
+    text: str, density_match: bool, greed_match: bool, processor: Processor | None = None
+) -> str:
     """Replace words found by the package-level matcher with density/greedy controls."""
     matcher = _current_matcher()
     if text == "":
@@ -364,14 +365,20 @@ def filter_any(text: str, greed_match: bool = True, processor: Processor | None 
 # --- Async runner ------------------------------------------------------------
 
 _threading_lock = threading.Lock()
-_async_runner: Callable[[Callable[[], None]], None] = lambda fn: threading.Thread(target=fn, daemon=True).start()
+
+
+def _default_async_runner(fn: Callable[[], None]) -> None:
+    threading.Thread(target=fn, daemon=True).start()
+
+
+_async_runner: Callable[[Callable[[], None]], None] = _default_async_runner
 
 
 def configure_async_runner(runner: Callable[[Callable[[], None]], None] | None) -> None:
     global _async_runner
     with _threading_lock:
         if runner is None:
-            _async_runner = lambda fn: threading.Thread(target=fn, daemon=True).start()
+            _async_runner = _default_async_runner
             return
         _async_runner = runner
 
@@ -390,5 +397,7 @@ def init_async(words: list[str], *, char_filter: CharFilter | None = None) -> No
     _run_async(lambda: init(words, char_filter=char_filter))
 
 
-def init_string_async(words: str, separator: str = DEFAULT_SEPARATOR, *, char_filter: CharFilter | None = None) -> None:
+def init_string_async(
+    words: str, separator: str = DEFAULT_SEPARATOR, *, char_filter: CharFilter | None = None
+) -> None:
     _run_async(lambda: init_string(words, separator, char_filter=char_filter))

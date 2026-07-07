@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import os
+import random as _random
 import secrets
 import threading
+import threading as _threading
 import time
 import uuid
 from typing import Callable
@@ -205,20 +207,25 @@ def get_worker_id(datacenter_id: int, max_worker_id: int = _MAX_WORKER_ID) -> in
 
 # --- Fallback random source --------------------------------------------------
 
-import random as _random
-import threading as _threading
-
 _fallback_random_lock = _threading.Lock()
 _fallback_random: _random.Random | None = None
-_fallback_random_provider: Callable[[], _random.Random] = lambda: _random.Random()
 
 
-def configure_default_fallback_random_source_provider(provider: Callable[[], _random.Random] | None) -> None:
+def _default_fallback_random_provider() -> _random.Random:
+    return _random.Random()
+
+
+_fallback_random_provider: Callable[[], _random.Random] = _default_fallback_random_provider
+
+
+def configure_default_fallback_random_source_provider(
+    provider: Callable[[], _random.Random] | None,
+) -> None:
     global _fallback_random, _fallback_random_provider
     with _fallback_random_lock:
         _fallback_random = None
         if provider is None:
-            _fallback_random_provider = lambda: _random.Random()
+            _fallback_random_provider = _default_fallback_random_provider
             return
         _fallback_random_provider = provider
 

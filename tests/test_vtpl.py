@@ -164,7 +164,9 @@ def test_render_with_options_executor_error():
         render_with_options(
             "ok",
             None,
-            with_template_executor(lambda tpl, data: (_ for _ in ()).throw(RuntimeError("execute failed"))),
+            with_template_executor(
+                lambda tpl, data: (_ for _ in ()).throw(RuntimeError("execute failed"))
+            ),
         )
 
 

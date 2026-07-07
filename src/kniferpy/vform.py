@@ -7,6 +7,7 @@ Supports:
 - WithOptions variants for custom matchers
 - With*Matcher options for per-call customization
 """
+
 from __future__ import annotations
 
 from typing import Any, Callable

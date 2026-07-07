@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from collections.abc import Callable
 from typing import Any
 
 from kniferpy.verr import ValidationError
@@ -56,6 +55,7 @@ def to_int_e(value: Any) -> int:
         return value
     if isinstance(value, float):
         import math
+
         if math.isnan(value) or math.isinf(value):
             raise _fail(value, "int")
         return int(value)
@@ -237,7 +237,5 @@ def to_bool_with_options(value: Any, default: bool = False, **kwargs: Any) -> bo
     return to_bool(value, default)
 
 
-def to_bytes_with_options(
-    value: Any, *, encoding: str = "utf-8", **kwargs: Any
-) -> bytes:
+def to_bytes_with_options(value: Any, *, encoding: str = "utf-8", **kwargs: Any) -> bytes:
     return to_bytes(value, encoding=encoding)

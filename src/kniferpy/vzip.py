@@ -8,14 +8,13 @@ bounded to guard against zip bombs.
 
 from __future__ import annotations
 
-from pathlib import Path
-from typing import IO, Any, Callable
+from typing import Any, Callable
 
 from kniferpy.internal import zipx
 from kniferpy.internal.zipx import (
     DEFAULT_UNZIP_MAX_BYTES,
-    EntryData,
     CreateTempFunc,
+    EntryData,
     EvalSymlinksFunc,
     LstatFunc,
     MkdirAllFunc,
@@ -28,7 +27,6 @@ from kniferpy.internal.zipx import (
     RemoveFunc,
     RenameFunc,
     StatFunc,
-    gunzip,
 )
 
 # ── Go-compat type aliases ─────────────────────────────────────────────────────
@@ -152,7 +150,7 @@ gzip_bytes = zipx.gzip_bytes
 gzip_string = zipx.gzip_string
 gzip_file = zipx.gzip_file
 ungzip = zipx.ungzip
-gunzip = zipx.gunzip
+gunzip = zipx.gunzip  # noqa: F811
 ungzip_string = zipx.ungzip_string
 gzip_reader = zipx.gzip_reader
 gunzip_reader = zipx.gunzip_reader

@@ -1,14 +1,22 @@
 from __future__ import annotations
 
 import ipaddress
-import os
 import re
 import socket
 import unicodedata
-from collections.abc import Callable, Mapping
+from collections.abc import Callable
 from io import IOBase
 from pathlib import Path
-from urllib.parse import ParseResult, parse_qsl, quote, unquote, urlencode, urljoin, urlparse, urlunparse
+from urllib.parse import (
+    ParseResult,
+    parse_qsl,
+    quote,
+    unquote,
+    urlencode,
+    urljoin,
+    urlparse,
+    urlunparse,
+)
 
 from kniferpy.verr import SecurityError, ValidationError
 
@@ -258,14 +266,16 @@ class URLBuilder:
 
         netloc = self.authority()
         fragment = self._fragment
-        return urlunparse((
-            self._scheme,
-            netloc,
-            self._path,
-            "",
-            self.query_string(),
-            fragment,
-        ))
+        return urlunparse(
+            (
+                self._scheme,
+                netloc,
+                self._path,
+                "",
+                self.query_string(),
+                fragment,
+            )
+        )
 
     def __str__(self) -> str:
         return self.build()
@@ -331,7 +341,9 @@ def is_absolute_url(raw: str) -> bool:
 
 
 def build_query(params: dict[str, str | int | float | bool | None]) -> str:
-    return urlencode({k: _format_query_value(v) for k, v in params.items() if v is not None}, doseq=True)
+    return urlencode(
+        {k: _format_query_value(v) for k, v in params.items() if v is not None}, doseq=True
+    )
 
 
 def append_query(raw_url: str, params: dict[str, str | int | float | bool | None]) -> str:
@@ -520,7 +532,9 @@ def normalize(raw: str, *, encode_path: bool = False, replace_slash: bool = Fals
     return urlunparse(parsed._replace(path=path))
 
 
-def normalize_with_options(raw: str, *, encode_path: bool = False, replace_slash: bool = False) -> str:
+def normalize_with_options(
+    raw: str, *, encode_path: bool = False, replace_slash: bool = False
+) -> str:
     """Normalize a URL string (alias for normalize)."""
     return normalize(raw, encode_path=encode_path, replace_slash=replace_slash)
 
@@ -600,7 +614,9 @@ def open_url(raw: str, *, timeout: float | None = None, check_status: bool = Tru
     if parsed.scheme == "file" or (not parsed.scheme and Path(raw).exists()):
         path = parsed.path if parsed.scheme == "file" else raw
         return _open_file(path)
-    raise ValidationError(message=f"unsupported scheme: {parsed.scheme}", code="url.unsupported_scheme")
+    raise ValidationError(
+        message=f"unsupported scheme: {parsed.scheme}", code="url.unsupported_scheme"
+    )
 
 
 def open_safe(raw: str, *, timeout: float | None = None, check_status: bool = True) -> IOBase:

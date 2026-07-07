@@ -29,6 +29,7 @@ _INVALID_SHEET_NAME_CHARS = frozenset(":\\/?*[]")
 
 # --- errors -------------------------------------------------------------------
 
+
 class ErrNoSheet(KniferError):
     pass
 
@@ -67,6 +68,7 @@ class Cell:
 
 # --- sheet name validation ----------------------------------------------------
 
+
 def is_valid_sheet_name(sheet: str) -> bool:
     return validate_sheet_name(sheet) is None
 
@@ -82,6 +84,7 @@ def validate_sheet_name(sheet: str) -> Exception | None:
 
 
 # --- read config --------------------------------------------------------------
+
 
 @dataclass
 class _ReadConfig:
@@ -101,6 +104,7 @@ def with_read_sheet(sheet: str) -> ReadOption:
     def apply(c: _ReadConfig) -> None:
         if sheet:
             c.sheet = sheet
+
     return apply
 
 
@@ -110,6 +114,7 @@ def with_read_start_cell(row: int, col: int) -> ReadOption:
             c.start_row = row
         if col > 0:
             c.start_col = col
+
     return apply
 
 
@@ -119,6 +124,7 @@ def with_read_limit(max_rows: int, max_cols: int) -> ReadOption:
             c.max_rows = max_rows
         if max_cols > 0:
             c.max_cols = max_cols
+
     return apply
 
 
@@ -126,6 +132,7 @@ def with_open_file_func(open_file: Callable[..., Any]) -> ReadOption:
     def apply(c: _ReadConfig) -> None:
         if open_file is not None:
             c.open_file = open_file
+
     return apply
 
 
@@ -133,6 +140,7 @@ def with_open_reader_func(open_reader: Callable[..., Any]) -> ReadOption:
     def apply(c: _ReadConfig) -> None:
         if open_reader is not None:
             c.open_reader = open_reader
+
     return apply
 
 
@@ -149,6 +157,7 @@ def _apply_read_options(opts: list[ReadOption]) -> _ReadConfig:
 
 
 # --- write config -------------------------------------------------------------
+
 
 @dataclass
 class _WriteConfig:
@@ -173,6 +182,7 @@ def with_write_sheet(sheet: str) -> WriteOption:
     def apply(c: _WriteConfig) -> None:
         if sheet:
             c.sheet = sheet
+
     return apply
 
 
@@ -182,30 +192,35 @@ def with_start_cell(row: int, col: int) -> WriteOption:
             c.start_row = row
         if col > 0:
             c.start_col = col
+
     return apply
 
 
 def with_dir_perm(perm: int) -> WriteOption:
     def apply(c: _WriteConfig) -> None:
         c.dir_perm = perm
+
     return apply
 
 
 def with_file_perm(perm: int) -> WriteOption:
     def apply(c: _WriteConfig) -> None:
         c.file_perm = perm
+
     return apply
 
 
 def with_overwrite(overwrite: bool) -> WriteOption:
     def apply(c: _WriteConfig) -> None:
         c.overwrite = overwrite
+
     return apply
 
 
 def with_create_parents(create: bool) -> WriteOption:
     def apply(c: _WriteConfig) -> None:
         c.create_parents = create
+
     return apply
 
 
@@ -231,6 +246,7 @@ def _apply_write_options(opts: list[WriteOption]) -> _WriteConfig:
 
 # --- sheet names --------------------------------------------------------------
 
+
 def sheet_names(path: str) -> list[str]:
     return sheet_names_with_options(path)
 
@@ -242,6 +258,7 @@ def sheet_names_with_options(path: str, *opts: ReadOption) -> list[str]:
 
 
 # --- read rows ----------------------------------------------------------------
+
 
 def read_rows(path: str, *opts: ReadOption) -> list[list[str]]:
     cfg = _apply_read_options(list(opts))
@@ -269,6 +286,7 @@ def read_rows_from_reader(data: bytes, *opts: ReadOption) -> list[list[str]]:
 
 # --- read cells ---------------------------------------------------------------
 
+
 def read_cells(path: str, *opts: ReadOption) -> list[list[Cell]]:
     cfg = _apply_read_options(list(opts))
     wb = _open_workbook(path, cfg)
@@ -294,6 +312,7 @@ def read_cells_from_reader(data: bytes, *opts: ReadOption) -> list[list[Cell]]:
 
 
 # --- write rows ---------------------------------------------------------------
+
 
 def write_rows(path: str, rows: list[list[str]], *opts: WriteOption) -> None:
     cfg = _apply_write_options(list(opts))
@@ -359,6 +378,7 @@ def write_any_rows_to_buffer(sheet: str, rows: list[list[Any]], *opts: WriteOpti
 
 # --- internal helpers ---------------------------------------------------------
 
+
 def _open_workbook(path: str, cfg: _ReadConfig) -> Any:
     if cfg.open_file is not None:
         return cfg.open_file(path)
@@ -393,13 +413,15 @@ def _read_cells_from_sheet(wb: Any, sheet: str, cfg: _ReadConfig) -> list[list[C
         for col_idx, cell in enumerate(row, start=1):
             column_letter = get_column_letter(col_idx)
             axis = f"{column_letter}{row_idx}"
-            row_cells.append(Cell(
-                Value=str(cell.value) if cell.value is not None else "",
-                Type=_map_cell_type(cell.data_type),
-                Axis=axis,
-                Row=row_idx,
-                Col=col_idx,
-            ))
+            row_cells.append(
+                Cell(
+                    Value=str(cell.value) if cell.value is not None else "",
+                    Type=_map_cell_type(cell.data_type),
+                    Axis=axis,
+                    Row=row_idx,
+                    Col=col_idx,
+                )
+            )
         cells.append(row_cells)
     return _limit_cells(cells, cfg)
 
@@ -426,18 +448,18 @@ def _limit_rows(rows: list[list[str]], cfg: _ReadConfig) -> list[list[str]]:
     if start_row > len(rows):
         return []
 
-    out = rows[start_row - 1:]
+    out = rows[start_row - 1 :]
     if cfg.max_rows > 0 and cfg.max_rows < len(out):
-        out = out[:cfg.max_rows]
+        out = out[: cfg.max_rows]
 
     result: list[list[str]] = []
     for row in out:
         if start_col - 1 >= len(row):
             result.append([])
             continue
-        cell_values = row[start_col - 1:]
+        cell_values = row[start_col - 1 :]
         if cfg.max_cols > 0 and cfg.max_cols < len(cell_values):
-            cell_values = cell_values[:cfg.max_cols]
+            cell_values = cell_values[: cfg.max_cols]
         result.append(cell_values)
     return result
 
@@ -452,18 +474,18 @@ def _limit_cells(cells: list[list[Cell]], cfg: _ReadConfig) -> list[list[Cell]]:
     if start_row > len(cells):
         return []
 
-    out = cells[start_row - 1:]
+    out = cells[start_row - 1 :]
     if cfg.max_rows > 0 and cfg.max_rows < len(out):
-        out = out[:cfg.max_rows]
+        out = out[: cfg.max_rows]
 
     result: list[list[Cell]] = []
     for row in out:
         if start_col - 1 >= len(row):
             result.append([])
             continue
-        cell_values = row[start_col - 1:]
+        cell_values = row[start_col - 1 :]
         if cfg.max_cols > 0 and cfg.max_cols < len(cell_values):
-            cell_values = cell_values[:cfg.max_cols]
+            cell_values = cell_values[: cfg.max_cols]
         result.append(cell_values)
     return result
 

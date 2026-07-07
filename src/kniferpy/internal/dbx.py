@@ -171,7 +171,9 @@ class NamedSQL:
 class DBError(KniferError):
     """Database error with error code and optional cause."""
 
-    def __init__(self, message: str, code: str = "knifer.db.error", cause: BaseException | None = None) -> None:
+    def __init__(
+        self, message: str, code: str = "knifer.db.error", cause: BaseException | None = None
+    ) -> None:
         super().__init__(message=message, code=code)
         self.cause = cause
 
@@ -384,6 +386,7 @@ def _wrap_condition(
 ) -> Condition:
     def _cond(dialect: Dialect) -> tuple[str, list[Any]]:
         return f"{field} {op} {_placeholder(dialect)}", [value]
+
     return _cond
 
 
@@ -419,24 +422,28 @@ def in_list(field: str, values: Sequence[Any]) -> Condition:
     def _cond(dialect: Dialect) -> tuple[str, list[Any]]:
         placeholders = ", ".join([_placeholder(dialect)] * len(values))
         return f"{field} IN ({placeholders})", list(values)
+
     return _cond
 
 
 def between(field: str, begin: Any, end: Any) -> Condition:
     def _cond(dialect: Dialect) -> tuple[str, list[Any]]:
         return f"{field} BETWEEN {_placeholder(dialect)} AND {_placeholder(dialect)}", [begin, end]
+
     return _cond
 
 
 def is_null(field: str) -> Condition:
     def _cond(_: Dialect) -> tuple[str, list[Any]]:
         return f"{field} IS NULL", []
+
     return _cond
 
 
 def is_not_null(field: str) -> Condition:
     def _cond(_: Dialect) -> tuple[str, list[Any]]:
         return f"{field} IS NOT NULL", []
+
     return _cond
 
 
@@ -451,6 +458,7 @@ def and_group(conds: Sequence[Condition]) -> Condition:
             parts.append(f"({sql})")
             args.extend(cond_args)
         return " AND ".join(parts), args
+
     return _cond
 
 
@@ -465,6 +473,7 @@ def or_group(conds: Sequence[Condition]) -> Condition:
             parts.append(f"({sql})")
             args.extend(cond_args)
         return " OR ".join(parts), args
+
     return _cond
 
 
@@ -537,9 +546,9 @@ class Wrapper:
         """Remove identifier quoting (Go compat)."""
         result = name
         if name.startswith(self.prefix):
-            result = result[len(self.prefix):]
+            result = result[len(self.prefix) :]
         if name.endswith(self.suffix):
-            result = result[:-len(self.suffix)]
+            result = result[: -len(self.suffix)]
         return result
 
 
@@ -556,7 +565,7 @@ def wrapper_for_dialect(dialect: Dialect) -> Wrapper:
         return new_wrapper('"', '"')
     if dialect == Dialect.SQL_SERVER:
         return new_wrapper("[", "]")
-    return new_wrapper("\"", "\"")
+    return new_wrapper('"', '"')
 
 
 def normalize_dialect(driver_name: str) -> Dialect:
@@ -604,42 +613,49 @@ def new_options() -> Options:
 def with_dialect(d: Dialect) -> Callable[[Options], None]:
     def _apply(opts: Options) -> None:
         opts.dialect = d
+
     return _apply
 
 
 def with_wrapper(w: Wrapper) -> Callable[[Options], None]:
     def _apply(opts: Options) -> None:
         opts.wrapper = w
+
     return _apply
 
 
 def with_max_open_conns(n: int) -> Callable[[Options], None]:
     def _apply(opts: Options) -> None:
         opts.max_open_conns = n
+
     return _apply
 
 
 def with_max_idle_conns(n: int) -> Callable[[Options], None]:
     def _apply(opts: Options) -> None:
         opts.max_idle_conns = n
+
     return _apply
 
 
 def with_conn_max_lifetime(d: int) -> Callable[[Options], None]:
     def _apply(opts: Options) -> None:
         opts.conn_max_lifetime = d
+
     return _apply
 
 
 def with_conn_max_idle_time(d: int) -> Callable[[Options], None]:
     def _apply(opts: Options) -> None:
         opts.conn_max_idle_time = d
+
     return _apply
 
 
 def with_sql_open_func(open_func: SQLOpenFunc) -> Callable[[Options], None]:
     def _apply(opts: Options) -> None:
         opts.sql_open_func = open_func
+
     return _apply
 
 
@@ -649,6 +665,7 @@ def with_sql_open_func(open_func: SQLOpenFunc) -> Callable[[Options], None]:
 @dataclass
 class DB:
     """Wrapper around a DB-API 2.0 connection pool."""
+
     _conn: Any  # DB-API connection or pool
     _dialect: Dialect
     _wrapper: Wrapper
@@ -717,10 +734,8 @@ class DB:
                 return None, False
             return row[0], True
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 cursor.close()
-            except Exception:
-                pass
 
     def insert(self, entity: Entity) -> Any:
         """Insert entity values."""
@@ -738,9 +753,13 @@ class DB:
         b = insert(entity)
         sql, args = b.to_sql(self._dialect)
         if self._dialect == Dialect.MYSQL:
-            upsert_sql = _build_mysql_upsert(sql, entity, conflict_fields, update_fields, self._wrapper)
+            upsert_sql = _build_mysql_upsert(
+                sql, entity, conflict_fields, update_fields, self._wrapper
+            )
         elif self._dialect in (Dialect.POSTGRES, Dialect.SQLITE):
-            upsert_sql = _build_pg_upsert(sql, entity, conflict_fields, update_fields, self._wrapper)
+            upsert_sql = _build_pg_upsert(
+                sql, entity, conflict_fields, update_fields, self._wrapper
+            )
         else:
             raise DBError(f"upsert is not implemented for dialect {self._dialect}")
         return self._conn.execute(upsert_sql, args)
@@ -890,7 +909,8 @@ class DB:
         """List user tables."""
         if self._dialect == Dialect.SQLITE:
             cursor = self._conn.execute(
-                "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%' ORDER BY name"
+                "SELECT name FROM sqlite_master WHERE type='table' "
+                "AND name NOT LIKE 'sqlite_%' ORDER BY name"
             )
             return [row[0] for row in cursor.fetchall()]
         raise DBError(f"list_tables is not implemented for dialect {self._dialect}")
@@ -901,13 +921,15 @@ class DB:
             cursor = self._conn.execute(f"PRAGMA table_info({self._wrapper.wrap(table)})")
             columns = []
             for row in cursor.fetchall():
-                columns.append(Column(
-                    name=row[1],
-                    data_type=row[2],
-                    nullable=not row[3],
-                    auto_increment=False,
-                    primary_key=row[5] > 0,
-                ))
+                columns.append(
+                    Column(
+                        name=row[1],
+                        data_type=row[2],
+                        nullable=not row[3],
+                        auto_increment=False,
+                        primary_key=row[5] > 0,
+                    )
+                )
             return columns
         raise DBError(f"list_columns is not implemented for dialect {self._dialect}")
 
@@ -930,6 +952,7 @@ class DB:
 @dataclass
 class Session:
     """Active database session (transaction wrapper)."""
+
     _db: DB
     _conn: Any  # DB-API connection
 
@@ -1003,10 +1026,8 @@ class Session:
                 return None, False
             return row[0], True
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 cursor.close()
-            except Exception:
-                pass
 
     def insert(self, entity: Entity) -> Any:
         """Insert entity in the transaction."""
@@ -1044,7 +1065,13 @@ class Session:
 # ── internal helpers for DB CRUD ────────────────────────────────────────────
 
 
-def _build_mysql_upsert(insert_sql: str, entity: Entity, conflict_fields: list[str], update_fields: tuple[str, ...], wrapper: Wrapper) -> str:
+def _build_mysql_upsert(
+    insert_sql: str,
+    entity: Entity,
+    conflict_fields: list[str],
+    update_fields: tuple[str, ...],
+    wrapper: Wrapper,
+) -> str:
     """Build MySQL ON DUPLICATE KEY UPDATE clause."""
     fields = sorted(entity.fields.keys()) if hasattr(entity, "fields") and entity.fields else []
     if not update_fields:
@@ -1055,13 +1082,20 @@ def _build_mysql_upsert(insert_sql: str, entity: Entity, conflict_fields: list[s
     return f"{insert_sql} ON DUPLICATE KEY UPDATE {', '.join(sets)}"
 
 
-def _build_pg_upsert(insert_sql: str, entity: Entity, conflict_fields: list[str], update_fields: tuple[str, ...], wrapper: Wrapper) -> str:
+def _build_pg_upsert(
+    insert_sql: str,
+    entity: Entity,
+    conflict_fields: list[str],
+    update_fields: tuple[str, ...],
+    wrapper: Wrapper,
+) -> str:
     """Build PostgreSQL/SQLite ON CONFLICT DO UPDATE clause."""
     fields = sorted(entity.fields.keys()) if hasattr(entity, "fields") and entity.fields else []
     if not update_fields:
         update_fields = tuple(f for f in fields if f not in conflict_fields)
     if not update_fields:
-        return f"{insert_sql} ON CONFLICT ({', '.join(wrapper.wrap(f) for f in conflict_fields)}) DO NOTHING"
+        conflict = ", ".join(wrapper.wrap(f) for f in conflict_fields)
+        return f"{insert_sql} ON CONFLICT ({conflict}) DO NOTHING"
     conflict = ", ".join(wrapper.wrap(f) for f in conflict_fields)
     sets = [f"{wrapper.wrap(f)} = excluded.{wrapper.wrap(f)}" for f in update_fields]
     return f"{insert_sql} ON CONFLICT ({conflict}) DO UPDATE SET {', '.join(sets)}"
@@ -1159,13 +1193,18 @@ def _join(builder: SQLBuilder, join_sql: str) -> SQLBuilder:
 # --- DB open helper ------------------------------------------------------------
 
 
-def open_db(driver_name: str, data_source_name: str, opts: list[Callable[[Options], None]] | None = None) -> DB:
+def open_db(
+    driver_name: str, data_source_name: str, opts: list[Callable[[Options], None]] | None = None
+) -> DB:
     import sqlite3
+
     options = new_options()
     if opts:
         for opt in opts:
             opt(options)
-    dialect = normalize_dialect(driver_name) if options.dialect == Dialect.UNKNOWN else options.dialect
+    dialect = (
+        normalize_dialect(driver_name) if options.dialect == Dialect.UNKNOWN else options.dialect
+    )
     wrapper = options.wrapper or wrapper_for_dialect(dialect)
     conn = sqlite3.connect(data_source_name)
     return DB(_conn=conn, _dialect=dialect, _wrapper=wrapper)
@@ -1199,10 +1238,8 @@ def scan_rows(cursor: object) -> list[dict]:
         rows = cursor.fetchall()
         return [dict(zip(cols, row)) for row in rows]
     finally:
-        try:
+        with contextlib.suppress(Exception):
             cursor.close()
-        except Exception:
-            pass
 
 
 def scan_one(cursor: object) -> tuple[dict | None, bool]:
@@ -1217,7 +1254,5 @@ def scan_one(cursor: object) -> tuple[dict | None, bool]:
         cols = [desc[0] for desc in cursor.description]
         return dict(zip(cols, row)), True
     finally:
-        try:
+        with contextlib.suppress(Exception):
             cursor.close()
-        except Exception:
-            pass

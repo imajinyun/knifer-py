@@ -209,7 +209,9 @@ def Map(m: dict[K1, V1], transform: Callable[[K1, V1], tuple[K2, V2]]) -> dict[K
     return mapsx.map_items(m, transform)
 
 
-def MapErr(m: dict[K1, V1], transform: Callable[[K1, V1], tuple[K2, V2, Exception | None]]) -> tuple[dict[K2, V2], Exception | None]:
+def MapErr(
+    m: dict[K1, V1], transform: Callable[[K1, V1], tuple[K2, V2, Exception | None]]
+) -> tuple[dict[K2, V2], Exception | None]:
     _deprecated("MapErr", "map_err")
     return mapsx.map_err(m, transform)  # type: ignore[arg-type,return-value]
 
@@ -219,7 +221,9 @@ def MapKeys(m: dict[K1, V], transform: Callable[[K1, V], K2]) -> dict[K2, V]:
     return mapsx.map_keys(m, transform)
 
 
-def MapKeysErr(m: dict[K1, V], transform: Callable[[K1, V], tuple[K2, Exception | None]]) -> tuple[dict[K2, V], Exception | None]:
+def MapKeysErr(
+    m: dict[K1, V], transform: Callable[[K1, V], tuple[K2, Exception | None]]
+) -> tuple[dict[K2, V], Exception | None]:
     _deprecated("MapKeysErr", "map_keys_err")
     return mapsx.map_keys_err(m, transform)  # type: ignore[arg-type,return-value]
 
@@ -229,7 +233,9 @@ def MapValues(m: dict[K, V1], transform: Callable[[K, V1], V2]) -> dict[K, V2]:
     return mapsx.map_values(m, transform)
 
 
-def MapValuesErr(m: dict[K, V1], transform: Callable[[K, V1], tuple[V2, Exception | None]]) -> tuple[dict[K, V2], Exception | None]:
+def MapValuesErr(
+    m: dict[K, V1], transform: Callable[[K, V1], tuple[V2, Exception | None]]
+) -> tuple[dict[K, V2], Exception | None]:
     _deprecated("MapValuesErr", "map_values_err")
     return mapsx.map_values_err(m, transform)  # type: ignore[arg-type,return-value]
 
@@ -251,7 +257,9 @@ def Filter(m: dict[K, V], pred: Callable[[K, V], bool]) -> dict[K, V]:
     return mapsx.filter_items(m, pred)
 
 
-def FilterErr(m: dict[K, V], pred: Callable[[K, V], tuple[bool, Exception | None]]) -> tuple[dict[K, V], Exception | None]:
+def FilterErr(
+    m: dict[K, V], pred: Callable[[K, V], tuple[bool, Exception | None]]
+) -> tuple[dict[K, V], Exception | None]:
     _deprecated("FilterErr", "filter_err")
     return mapsx.filter_err(m, pred)  # type: ignore[arg-type,return-value]
 
@@ -299,7 +307,9 @@ def Reduce(m: dict[K, V], initial: R, fn: Callable[[R, K, V], R]) -> R:
     return mapsx.reduce(m, initial, fn)
 
 
-def ReduceErr(m: dict[K, V], initial: R, fn: Callable[[R, K, V], tuple[R, Exception | None]]) -> tuple[R, Exception | None]:
+def ReduceErr(
+    m: dict[K, V], initial: R, fn: Callable[[R, K, V], tuple[R, Exception | None]]
+) -> tuple[R, Exception | None]:
     _deprecated("ReduceErr", "reduce_err")
     return mapsx.reduce_err(m, initial, fn)  # type: ignore[arg-type,return-value]
 

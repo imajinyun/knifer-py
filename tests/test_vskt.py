@@ -84,10 +84,12 @@ def test_new_socket_config_defaults():
 
 
 def test_new_socket_config_with_options():
-    cfg = new_socket_config_with_options([
-        with_thread_pool_size(16),
-        with_read_buffer_size(8192),
-    ])
+    cfg = new_socket_config_with_options(
+        [
+            with_thread_pool_size(16),
+            with_read_buffer_size(8192),
+        ]
+    )
     assert cfg.thread_pool_size == 16
     assert cfg.read_buffer_size == 8192
 
@@ -144,7 +146,8 @@ def test_socket_connect_failure():
 def test_socket_connect_with_options():
     with pytest.raises(OSError):
         socket_connect_with_options(
-            "127.0.0.1", 19999,
+            "127.0.0.1",
+            19999,
             [with_connect_timeout(0.5), with_connect_network("tcp")],
         )
 
@@ -158,7 +161,8 @@ def test_socket_connect_with_custom_dialer():
         return sock
 
     sock = socket_connect_with_options(
-        "127.0.0.1", 12345,
+        "127.0.0.1",
+        12345,
         [with_connect_dialer(dialer)],
     )
     assert called == [("127.0.0.1", 12345)]
@@ -309,8 +313,10 @@ def test_connect_network_option():
 
 def test_connect_dialer_option():
     cfg = type("_cfg", (), {"dialer": None})()
+
     def fn(h, p):
         return None
+
     with_connect_dialer(fn)(cfg)
     assert cfg.dialer is fn
 

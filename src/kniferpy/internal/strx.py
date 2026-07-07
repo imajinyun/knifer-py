@@ -34,7 +34,7 @@ def has_bom(data: bytes) -> str:
 def strip_bom(data: bytes) -> bytes:
     for _typ, prefix in _BOM_PREFIXES:
         if data.startswith(prefix):
-            return data[len(prefix):]
+            return data[len(prefix) :]
     return data
 
 
@@ -175,7 +175,7 @@ def sub_after(value: str, separator: str, *, last: bool = False) -> str:
     if separator == "":
         return ""
     index = value.rfind(separator) if last else value.find(separator)
-    return "" if index < 0 else value[index + len(separator):]
+    return "" if index < 0 else value[index + len(separator) :]
 
 
 # ── Split / Repeat / Pad ─────────────────────────────────────────────────────
@@ -299,13 +299,13 @@ def format(template: str, *args: object) -> str:  # noqa: A001
 
 def remove_prefix(value: str, prefix: str) -> str:
     if value.startswith(prefix):
-        return value[len(prefix):]
+        return value[len(prefix) :]
     return value
 
 
 def remove_suffix(value: str, suffix: str) -> str:
     if value.endswith(suffix):
-        return value[:-len(suffix)]
+        return value[: -len(suffix)]
     return value
 
 
@@ -494,9 +494,7 @@ def _split_path_segments(value: str, separator: str) -> list[str]:
     return trimmed.split(separator)
 
 
-def _match_ant_segments(
-    pattern: list[str], path: list[str], pi: int, si: int
-) -> bool:
+def _match_ant_segments(pattern: list[str], path: list[str], pi: int, si: int) -> bool:
     if pi == len(pattern):
         return si == len(path)
     if pattern[pi] == "**":

@@ -460,7 +460,7 @@ def test_equal_by() -> None:
 # --- for_each ----------------------------------------------------------------
 
 
-def test_for_each() -> None:
+def test_for_each_callback_order() -> None:
     seen: list[str] = []
     vmap.for_each({"a": 1, "b": 2}, lambda k, v: seen.append(f"{k}={v}"))
     assert set(seen) == {"a=1", "b=2"}

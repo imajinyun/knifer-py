@@ -200,13 +200,9 @@ def get_bytes(
         try:
             info = zf.getinfo(name)
         except KeyError as exc:
-            raise ValidationError(
-                f"vzip: entry not found: {name!r}", code="zip.no_entry"
-            ) from exc
+            raise ValidationError(f"vzip: entry not found: {name!r}", code="zip.no_entry") from exc
         if max_bytes > 0 and info.file_size > max_bytes:
-            raise SecurityError(
-                f"vzip: entry exceeds max bytes: {max_bytes}", code="zip.too_large"
-            )
+            raise SecurityError(f"vzip: entry exceeds max bytes: {max_bytes}", code="zip.too_large")
         with zf.open(info, "r") as src:
             return src.read()
 
@@ -223,7 +219,7 @@ def list_file_names(zip_file: str | Path, dir: str = "") -> list[str]:
             if prefix:
                 if not name.startswith(prefix):
                     continue
-                name = name[len(prefix):]
+                name = name[len(prefix) :]
             if name and "/" not in name and not info.is_dir():
                 names.append(name)
     return names
@@ -534,7 +530,9 @@ def gzip_reader_from_stream(reader: IO[bytes], *, level: int = 6) -> bytes:
     return gzip_bytes(reader.read(), level=level)
 
 
-def ungzip_reader_from_stream(reader: IO[bytes], *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES) -> bytes:
+def ungzip_reader_from_stream(
+    reader: IO[bytes], *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES
+) -> bytes:
     """Decompress all gzip bytes from ``reader``."""
     return ungzip(reader.read(), max_bytes=max_bytes)
 
@@ -544,7 +542,9 @@ def zlib_reader_from_stream(reader: IO[bytes], *, level: int = 6) -> bytes:
     return zlib_bytes(reader.read(), level=level)
 
 
-def unzlib_reader_from_stream(reader: IO[bytes], *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES) -> bytes:
+def unzlib_reader_from_stream(
+    reader: IO[bytes], *, max_bytes: int = DEFAULT_UNZIP_MAX_BYTES
+) -> bytes:
     """Decompress all zlib bytes from ``reader``."""
     return unzlib(reader.read(), max_bytes=max_bytes)
 

@@ -20,10 +20,18 @@ from kniferpy.verr import KniferError, ValidationError
 
 # ── Go-compat sentinel error variables ──────────────────────────────────────
 
-ErrInvalidTokenizeRequest = KniferError("tok: invalid tokenize request", code="knifer.tok.invalid_tokenize_request")
-ErrInvalidKeywordsRequest = KniferError("tok: invalid keywords request", code="knifer.tok.invalid_keywords_request")
-ErrInputLimitExceeded = KniferError("tok: input limit exceeded", code="knifer.tok.input_limit_exceeded")
-ErrTokenLimitExceeded = KniferError("tok: token limit exceeded", code="knifer.tok.token_limit_exceeded")
+ErrInvalidTokenizeRequest = KniferError(
+    "tok: invalid tokenize request", code="knifer.tok.invalid_tokenize_request"
+)
+ErrInvalidKeywordsRequest = KniferError(
+    "tok: invalid keywords request", code="knifer.tok.invalid_keywords_request"
+)
+ErrInputLimitExceeded = KniferError(
+    "tok: input limit exceeded", code="knifer.tok.input_limit_exceeded"
+)
+ErrTokenLimitExceeded = KniferError(
+    "tok: token limit exceeded", code="knifer.tok.token_limit_exceeded"
+)
 ErrMissingProvider = KniferError("tok: missing provider", code="knifer.tok.missing_provider")
 
 
@@ -211,6 +219,7 @@ def trigram(text: str) -> list[str]:
 
 def filter_words(text: str, min_len: int = 1, allowed_chars: str | None = None) -> list[str]:
     import re as _re
+
     if allowed_chars:
         pattern = _re.compile(f"[{_re.escape(allowed_chars)}]+")
     else:
@@ -223,14 +232,74 @@ def filter_words(text: str, min_len: int = 1, allowed_chars: str | None = None) 
 
 # ========== Stop Words ==========
 
-_ENGLISH_STOP_WORDS: frozenset[str] = frozenset({
-    "a", "an", "the", "and", "or", "but", "if", "in", "on", "at", "to", "for",
-    "of", "with", "by", "from", "is", "are", "was", "were", "be", "been", "being",
-    "have", "has", "had", "do", "does", "did", "will", "would", "could", "should",
-    "may", "might", "can", "shall", "not", "no", "nor", "so", "as", "its", "it",
-    "this", "that", "these", "those", "he", "she", "they", "we", "you", "me",
-    "him", "her", "us", "them", "my", "your", "his", "our", "their", "i",
-})
+_ENGLISH_STOP_WORDS: frozenset[str] = frozenset(
+    {
+        "a",
+        "an",
+        "the",
+        "and",
+        "or",
+        "but",
+        "if",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "from",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "being",
+        "have",
+        "has",
+        "had",
+        "do",
+        "does",
+        "did",
+        "will",
+        "would",
+        "could",
+        "should",
+        "may",
+        "might",
+        "can",
+        "shall",
+        "not",
+        "no",
+        "nor",
+        "so",
+        "as",
+        "its",
+        "it",
+        "this",
+        "that",
+        "these",
+        "those",
+        "he",
+        "she",
+        "they",
+        "we",
+        "you",
+        "me",
+        "him",
+        "her",
+        "us",
+        "them",
+        "my",
+        "your",
+        "his",
+        "our",
+        "their",
+        "i",
+    }
+)
 
 
 def remove_stop_words(words: list[str], stop_words: set[str] | None = None) -> list[str]:
@@ -251,6 +320,7 @@ class SimpleProvider:
 
     def tokenize(self, request: TokenizeRequest) -> TokenizeResponse:
         import re as _re
+
         words = _re.findall(r"\w+", request.text)
         tokens: list[Token] = []
         pos = 0
@@ -259,21 +329,24 @@ class SimpleProvider:
             if start < 0:
                 start = 0
             end = start + len(word)
-            tokens.append(Token(
-                text=word,
-                start=start,
-                end=end,
-                position=i,
-                weight=1.0,
-            ))
+            tokens.append(
+                Token(
+                    text=word,
+                    start=start,
+                    end=end,
+                    position=i,
+                    weight=1.0,
+                )
+            )
             pos = end
         if request.max_tokens > 0 and len(tokens) > request.max_tokens:
-            tokens = tokens[:request.max_tokens]
+            tokens = tokens[: request.max_tokens]
         return TokenizeResponse(text=request.text, tokens=tokens)
 
     def keywords(self, request: KeywordsRequest) -> KeywordsResponse:
         import re as _re
         from collections import Counter
+
         words = _re.findall(r"\w+", request.text)
         words = [w for w in words if w.lower() not in _ENGLISH_STOP_WORDS]
         counter = Counter(words)

@@ -4,21 +4,21 @@ from typing import Any, Callable
 
 from kniferpy.internal import xmlx
 from kniferpy.internal.xmlx import (
+    AMP,
+    APOS,
+    CONTENT_KEY,
+    GT,
+    LT,
+    NBSP,
+    QUOTE,
+    CommentRegex,
+    DefaultCharset,
     Document,
     Element,
+    IndentDefault,
+    InvalidRegex,
     NamespaceCache,
     XMLError,
-    CONTENT_KEY,
-    NBSP,
-    AMP,
-    QUOTE,
-    APOS,
-    LT,
-    GT,
-    InvalidRegex,
-    CommentRegex,
-    IndentDefault,
-    DefaultCharset,
 )
 
 # ── Go-compat type aliases ─────────────────────────────────────────────────────

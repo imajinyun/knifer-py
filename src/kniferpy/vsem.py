@@ -8,7 +8,9 @@ from kniferpy.verr import ValidationError
 
 ErrInvalidCapacity = ValidationError("semaphore: invalid capacity", code="sem.invalid_capacity")
 ErrInvalidWeight = ValidationError("semaphore: invalid weight", code="sem.invalid_weight")
-ErrReleaseTooMany = ValidationError("semaphore: release more than acquired", code="sem.release_too_many")
+ErrReleaseTooMany = ValidationError(
+    "semaphore: release more than acquired", code="sem.release_too_many"
+)
 ErrClosed = ValidationError("semaphore: closed", code="sem.closed")
 
 __all__ = [

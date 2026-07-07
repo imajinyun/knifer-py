@@ -572,9 +572,10 @@ def test_shortcut_wrappers_execute_with_fake_session() -> None:
     assert vhttp.get_string_e_with_options("https://api.example.com", *opts) == ("ok", None)
     assert vhttp.get_with_timeout_e("https://api.example.com", 0.5, *opts) == ("ok", None)
     assert vhttp.get_with_params_e("https://api.example.com", {"a": "1"}, *opts) == ("ok", None)
-    assert vhttp.get_with_params_e_with_options(
-        "https://api.example.com", {"a": "1"}, *opts
-    ) == ("ok", None)
+    assert vhttp.get_with_params_e_with_options("https://api.example.com", {"a": "1"}, *opts) == (
+        "ok",
+        None,
+    )
     assert vhttp.post_form_e("https://api.example.com", {"a": "1"}, *opts) == ("ok", None)
     assert vhttp.post_form_e_with_options("https://api.example.com", {"a": "1"}, *opts) == (
         "ok",
@@ -818,15 +819,18 @@ def test_mime_content_type_cookie_auth_and_status_helpers() -> None:
     assert vhttp.parse_cookies("a=1; b=2") == {"a": "1", "b": "2"}
     assert vhttp.parse_cookies("") == {}
     assert vhttp.make_cookie_header({"a": "1", "b": "2"}) == "a=1; b=2"
-    assert vhttp.make_set_cookie(
-        "sid",
-        "abc",
-        domain="example.com",
-        max_age=60,
-        secure=True,
-        http_only=True,
-        same_site="Lax",
-    ) == "sid=abc; Path=/; Domain=example.com; Max-Age=60; Secure; HttpOnly; SameSite=Lax"
+    assert (
+        vhttp.make_set_cookie(
+            "sid",
+            "abc",
+            domain="example.com",
+            max_age=60,
+            secure=True,
+            http_only=True,
+            same_site="Lax",
+        )
+        == "sid=abc; Path=/; Domain=example.com; Max-Age=60; Secure; HttpOnly; SameSite=Lax"
+    )
     assert vhttp.basic_auth_header("user", "pass") == "Basic dXNlcjpwYXNz"
     assert vhttp.bearer_auth_header("token") == "Bearer token"
     assert vhttp.http_status_text(404) == "Not Found"
@@ -891,20 +895,24 @@ def test_content_decoding_html_url_charset_content_type_helpers() -> None:
     assert vhttp.html_escape("<a&>") == "&lt;a&amp;&gt;"
     assert vhttp.html_unescape("&lt;a&amp;&gt;") == "<a&>"
     assert vhttp.clean_html(html) == "Hello World"
-    assert vhttp.clean_html_with_options(
-        "<x>keep</x>",
-        vhttp.with_html_tag_regexp(re.compile(r"</?x>")),
-        vhttp.with_html_comment_regexp(re.compile(r"$^")),
-    ) == "keep"
-    assert vhttp.filter_html_tag("<div><b>ok</b><script>x</script></div>", {"b"}) == (
-        "<b>ok</b>x"
+    assert (
+        vhttp.clean_html_with_options(
+            "<x>keep</x>",
+            vhttp.with_html_tag_regexp(re.compile(r"</?x>")),
+            vhttp.with_html_comment_regexp(re.compile(r"$^")),
+        )
+        == "keep"
     )
+    assert vhttp.filter_html_tag("<div><b>ok</b><script>x</script></div>", {"b"}) == ("<b>ok</b>x")
     assert vhttp.filter_html_tag_with_options("<b>drop</b><i>keep</i>", ["b"]) == "<i>keep</i>"
-    assert vhttp.filter_html_tag_with_options(
-        "<x>drop</x>",
-        ["x"],
-        vhttp.with_html_filter_compile_func(re.compile),
-    ) == ""
+    assert (
+        vhttp.filter_html_tag_with_options(
+            "<x>drop</x>",
+            ["x"],
+            vhttp.with_html_filter_compile_func(re.compile),
+        )
+        == ""
+    )
     assert vhttp.get_charset_from_content_type("text/html; charset=utf-8") == "utf-8"
     assert (
         vhttp.get_charset_from_content_type_with_options(
@@ -1070,22 +1078,31 @@ def test_download_helpers_cover_error_paths(tmp_path: Path) -> None:
         *opts,
     ) == (b"hello", None)
     assert vhttp.download("https://api.example.com/file", FailingWriter(), *opts)[1] is not None
-    assert vhttp.download_safe(
-        "https://api.example.com/file",
-        FailingWriter(),
-        allow_example_host,
-        *opts,
-    )[1] is not None
-    assert vhttp.download(
-        "https://api.example.com/file",
-        io.BytesIO(),
-        vhttp.with_session(failing_status_session),  # type: ignore[arg-type]
-    )[1] is not None
-    assert httpx.download_file(
-        "https://api.example.com/file",
-        tmp_path / "plain.txt",
-        vhttp.with_save_file_perm(0o600),
-    )[1] is not None
+    assert (
+        vhttp.download_safe(
+            "https://api.example.com/file",
+            FailingWriter(),
+            allow_example_host,
+            *opts,
+        )[1]
+        is not None
+    )
+    assert (
+        vhttp.download(
+            "https://api.example.com/file",
+            io.BytesIO(),
+            vhttp.with_session(failing_status_session),  # type: ignore[arg-type]
+        )[1]
+        is not None
+    )
+    assert (
+        httpx.download_file(
+            "https://api.example.com/file",
+            tmp_path / "plain.txt",
+            vhttp.with_save_file_perm(0o600),
+        )[1]
+        is not None
+    )
     assert httpx.download_file_safe_with_options(
         "https://api.example.com/file",
         tmp_path / "safe-options.txt",
@@ -1119,13 +1136,16 @@ def test_more_user_agent_and_request_safe_branches() -> None:
     assert ipad.os == "iOS (iPad)"
     assert unknown.browser == ""
     assert blink == "Blink"
-    assert httpx._request_safe(
-        "HEAD",
-        "https://api.example.com",
-        allowed_hosts={"api.example.com"},
-        resolver=lambda host: ["93.184.216.34"],
-        session=session,
-    ) == b"ok"
+    assert (
+        httpx._request_safe(
+            "HEAD",
+            "https://api.example.com",
+            allowed_hosts={"api.example.com"},
+            resolver=lambda host: ["93.184.216.34"],
+            session=session,
+        )
+        == b"ok"
+    )
     with pytest.raises(ValueError):
         httpx._request_safe(
             "TRACE",
@@ -1181,15 +1201,24 @@ def test_content_decoding_brotli_and_option_default_fallbacks() -> None:
 
     assert vhttp.decode_response_body(compressed, "br") == expected
     assert vhttp.decode_response_body(b"bad", "br") == b"bad"
-    assert httpx._apply_html_clean_options(
-        [vhttp.with_html_tag_regexp(None), vhttp.with_html_comment_regexp(None)]  # type: ignore[arg-type]
-    ).tag_re is not None
-    assert httpx._apply_html_filter_options(
-        [vhttp.with_html_filter_compile_func(None)]  # type: ignore[arg-type]
-    ).compile is re.compile
-    assert httpx._apply_charset_options(
-        [vhttp.with_charset_regexp(None), vhttp.with_meta_charset_regexp(None)]  # type: ignore[arg-type]
-    ).charset_pattern is not None
+    assert (
+        httpx._apply_html_clean_options(
+            [vhttp.with_html_tag_regexp(None), vhttp.with_html_comment_regexp(None)]  # type: ignore[arg-type]
+        ).tag_re
+        is not None
+    )
+    assert (
+        httpx._apply_html_filter_options(
+            [vhttp.with_html_filter_compile_func(None)]  # type: ignore[arg-type]
+        ).compile
+        is re.compile
+    )
+    assert (
+        httpx._apply_charset_options(
+            [vhttp.with_charset_regexp(None), vhttp.with_meta_charset_regexp(None)]  # type: ignore[arg-type]
+        ).charset_pattern
+        is not None
+    )
 
 
 def test_html_url_charset_empty_and_error_tolerant_branches() -> None:
@@ -1198,11 +1227,14 @@ def test_html_url_charset_empty_and_error_tolerant_branches() -> None:
 
     assert vhttp.filter_html_tag("<div><b>ok</b></div>") == "<b>ok</b>"
     assert vhttp.filter_html_tag_with_options("<b>keep</b>", None) == ""
-    assert vhttp.filter_html_tag_with_options(
-        "<x>keep</x>",
-        ["x"],
-        vhttp.with_html_filter_compile_func(bad_compile),
-    ) == "<x>keep</x>"
+    assert (
+        vhttp.filter_html_tag_with_options(
+            "<x>keep</x>",
+            ["x"],
+            vhttp.with_html_filter_compile_func(bad_compile),
+        )
+        == "<x>keep</x>"
+    )
     assert vhttp.to_params(None) == ""
     assert vhttp.decode_param_map("") == {}
     assert vhttp.decode_params("") == {}

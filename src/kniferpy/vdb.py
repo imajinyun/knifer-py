@@ -8,9 +8,9 @@ from __future__ import annotations
 from typing import Any, Callable
 
 from kniferpy.internal.dbx import (
+    DB,
     And,
     AscDirection,
-    DB,
     Column,
     Condition,
     DBError,
@@ -21,8 +21,8 @@ from kniferpy.internal.dbx import (
     DialectOracle,
     DialectPostgres,
     DialectQuestion,
-    DialectSQLServer,
     DialectSQLite,
+    DialectSQLServer,
     DialectUnknown,
     Direction,
     Entity,
@@ -35,9 +35,9 @@ from kniferpy.internal.dbx import (
     Page,
     PageResult,
     Query,
+    Session,
     SQLBuilder,
     SQLOpenFunc,
-    Session,
     Table,
     Wrapper,
     add_condition,

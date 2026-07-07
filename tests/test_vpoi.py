@@ -1,3 +1,4 @@
+import io
 import os
 import stat
 import zipfile
@@ -111,11 +112,14 @@ def test_read_rows_with_limit(tmp_path):
 
 def test_read_rows_with_start_cell(tmp_path):
     wb_path = tmp_path / "test.xlsx"
-    write_rows(str(wb_path), [
-        ["", "", "", "", "", ""],
-        ["", "", "A", "B", "C"],
-        ["", "", "1", "2", "3"],
-    ])
+    write_rows(
+        str(wb_path),
+        [
+            ["", "", "", "", "", ""],
+            ["", "", "A", "B", "C"],
+            ["", "", "1", "2", "3"],
+        ],
+    )
     rows = read_rows(str(wb_path), with_read_start_cell(2, 3))
     # The first row should contain A, B, C and the second 1, 2, 3
     # openpyxl may include trailing empty cells
@@ -380,9 +384,7 @@ def test_limit_rows_and_cells_edge_branches() -> None:
 
     cfg = poix._ReadConfig(start_row=1, start_col=3, max_rows=1, max_cols=1)
     assert poix._limit_rows([["a"], ["b"]], cfg) == [[]]
-    assert poix._limit_cells([[poix.Cell(Value="a")], [poix.Cell(Value="b")]], cfg) == [
-        []
-    ]
+    assert poix._limit_cells([[poix.Cell(Value="a")], [poix.Cell(Value="b")]], cfg) == [[]]
 
 
 def test_set_rows_and_any_rows_defaults() -> None:
@@ -444,11 +446,21 @@ def test_internal_config_helpers_and_custom_workbook(tmp_path):
 
 def test_write_option_callbacks_are_stored() -> None:
     cfg = poix._default_write_config()
-    mkdir = lambda path, perm: None
-    opener = lambda path, flags, perm: None
-    save_as = lambda wb, path: None
-    chmod = lambda path, perm: None
-    stat = lambda path: None
+
+    def mkdir(path, perm):
+        return None
+
+    def opener(path, flags, perm):
+        return None
+
+    def save_as(wb, path):
+        return None
+
+    def chmod(path, perm):
+        return None
+
+    def stat(path):
+        return None
 
     cfg.mkdir_all = mkdir
     cfg.open_file = opener

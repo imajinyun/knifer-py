@@ -1,17 +1,18 @@
 from __future__ import annotations
 
+import contextlib
 import io
-import os
 import shutil
 import tempfile
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import IO
 
 from kniferpy.verr import SecurityError
 
 DEFAULT_MAX_BYTES = 64 << 20  # 64 MiB
+_ZIP_MAGIC = bytes.fromhex("504b0304")
 
 
 def safe_join(base: str | Path, *parts: str | Path) -> Path:
@@ -52,7 +53,9 @@ def file_size(path: str | Path) -> int:
 # ── read ────────────────────────────────────────────────────────────────────
 
 
-def read_text(path: str | Path, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES) -> str:
+def read_text(
+    path: str | Path, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES
+) -> str:
     candidate = Path(path)
     _ensure_size(candidate, max_bytes=max_bytes)
     return candidate.read_text(encoding=encoding)
@@ -188,7 +191,6 @@ _MAGIC_SIGNATURES: dict[str, tuple[str, str, str]] = {
     b"RIFF": ("", "", ""),  # handled specially
     b"PK\x03\x04": ("application/zip", ".zip", "archive"),
     b"%PDF": ("application/pdf", ".pdf", "document"),
-    b"\x25\x50\x44\x46": ("application/pdf", ".pdf", "document"),
     b"\x1f\x8b\x08": ("application/gzip", ".gz", "archive"),
     b"\x42\x5a\x68": ("application/bzip2", ".bz2", "archive"),
     b"\x1f\x9d": ("application/compress", ".z", "archive"),
@@ -207,7 +209,7 @@ _MAGIC_SIGNATURES: dict[str, tuple[str, str, str]] = {
     b"\x00\x00\x00\x14\x66\x74\x79\x70": ("video/mp4", ".mp4", "video"),
     b"\x00\x00\x00\x20\x66\x74\x79\x70": ("video/mp4", ".mp4", "video"),
     b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1": ("application/msword", ".doc", "document"),
-    b"\x50\x4b\x03\x04": ("", "", ""),  # handled via PK
+    _ZIP_MAGIC: ("", "", ""),  # handled via PK
     b"\x1f\x8b": ("", "", ""),  # handled via gzip
 }
 
@@ -221,6 +223,7 @@ class FileType:
 
 class FileCategory:
     """File category constants (Go compat)."""
+
     UNKNOWN = "unknown"
     IMAGE = "image"
     VIDEO = "video"
@@ -278,10 +281,11 @@ def detect_file_type_from_path(path: str | Path) -> FileType:
 def detect_file_type_from_reader(reader) -> FileType:
     """Detect file type from a reader (Go compat: DetectFileType(io.Reader))."""
     from io import IOBase
+
     if isinstance(reader, IOBase):
         try:
             data = reader.read(560)
-            if hasattr(reader, 'seek'):
+            if hasattr(reader, "seek"):
                 reader.seek(0)
             return detect_file_type(data)
         except Exception:
@@ -340,7 +344,9 @@ def read_all(r: IO[bytes] | io.RawIOBase, *, max_bytes: int = DEFAULT_MAX_BYTES)
             )
 
 
-def reader_read_string(r: IO[bytes] | io.RawIOBase, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES) -> str:
+def reader_read_string(
+    r: IO[bytes] | io.RawIOBase, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES
+) -> str:
     return read_all(r, max_bytes=max_bytes).decode(encoding)
 
 
@@ -391,10 +397,8 @@ def copy_stream(dst: IO[bytes], src: IO[bytes] | io.RawIOBase, *, buffer_size: i
 
 def close_quietly(c: IO[bytes] | None) -> None:
     if c is not None:
-        try:
+        with contextlib.suppress(Exception):
             c.close()
-        except Exception:
-            pass
 
 
 def reader_from_string(s: str) -> io.StringIO:
@@ -409,7 +413,9 @@ def read_file_bytes(path: str | Path, *, max_bytes: int = DEFAULT_MAX_BYTES) -> 
     return read_bytes(path, max_bytes=max_bytes)
 
 
-def read_file_string(path: str | Path, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES) -> str:
+def read_file_string(
+    path: str | Path, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES
+) -> str:
     return read_text(path, encoding=encoding, max_bytes=max_bytes)
 
 

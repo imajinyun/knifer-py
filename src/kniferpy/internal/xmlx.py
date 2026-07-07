@@ -34,8 +34,10 @@ DefaultCharset = "UTF-8"
 
 # ========== XMLError ==========
 
+
 class XMLError(DecodeError):
     """XML-specific error with optional code and cause."""
+
     pass
 
 
@@ -51,7 +53,9 @@ class Element:
     parent: Element | None = None
 
     def __repr__(self) -> str:
-        return f"Element(name={self.name!r}, text={self.text[:40]!r}, children={len(self.children)})"
+        return (
+            f"Element(name={self.name!r}, text={self.text[:40]!r}, children={len(self.children)})"
+        )
 
 
 @dataclass
@@ -311,6 +315,7 @@ def parse_xml(xml_str: str) -> Document:
 def read_xml(path_or_content: str) -> Document:
     try:
         from kniferpy.internal import filex
+
         content = filex.read_text(path_or_content)
         return parse_xml(content)
     except Exception:
@@ -319,6 +324,7 @@ def read_xml(path_or_content: str) -> Document:
 
 def read_xml_file(path: str) -> Document:
     from kniferpy.internal import filex
+
     return parse_xml(filex.read_text(path))
 
 
@@ -373,7 +379,9 @@ def xml_to_map_into(xml_str: str, result: dict[str, Any] | None = None) -> dict[
     return m
 
 
-def xml_node_to_map_into(node: Element | None, result: dict[str, Any] | None = None) -> dict[str, Any]:
+def xml_node_to_map_into(
+    node: Element | None, result: dict[str, Any] | None = None
+) -> dict[str, Any]:
     m = xml_node_to_map(node)
     if result is not None:
         result.update(m)
@@ -390,6 +398,7 @@ def marshal_map(data: dict[str, Any], root_tag: str = "root", *, pretty: bool = 
 
 def marshal_bean(bean: Any, root_tag: str = "root", *, pretty: bool = False) -> str:
     import dataclasses
+
     if dataclasses.is_dataclass(bean):
         d = dataclasses.asdict(bean)
         return marshal_map(d, root_tag, pretty=pretty)
@@ -416,6 +425,7 @@ def write_to(doc: Document, *, pretty: bool = False) -> str:
 
 def write_file(path: str, doc: Document, *, pretty: bool = True) -> None:
     from kniferpy.internal import filex
+
     content = write_to(doc, pretty=pretty)
     filex.write_text(path, content)
 
@@ -623,6 +633,7 @@ def _xml_escape_attr(s: str) -> str:
 def format_xml(xml_str: str) -> str:
     try:
         from xml.dom import minidom
+
         dom = minidom.parseString(xml_str)
         return dom.toprettyxml(indent="  ")
     except Exception:
@@ -661,11 +672,13 @@ def _get_by_path_dict(d: Any, path: str) -> Any:
 
 def read(path: str) -> dict[str, Any]:
     from kniferpy.internal import filex
+
     return to_map(filex.read_text(path))
 
 
 def write(path: str, data: dict[str, Any], root_tag: str = "root", *, pretty: bool = True) -> None:
     from kniferpy.internal import filex
+
     filex.write_text(path, to_xml(data, root_tag, pretty=pretty))
 
 
@@ -728,6 +741,7 @@ def read_by_sax_file(
     on_characters: Callable[[str], None] | None = None,
 ) -> None:
     from kniferpy.internal import filex
+
     read_by_sax(
         filex.read_text(path),
         on_start_element=on_start_element,

@@ -1,5 +1,3 @@
-import pytest
-
 from kniferpy import vpass
 from kniferpy.vpass import Strength
 
@@ -22,9 +20,22 @@ def test_common_weak_password_is_capped() -> None:
 
 def test_all_common_weak_passwords() -> None:
     common = {
-        "000000", "111111", "123123", "123456", "12345678", "123456789",
-        "admin", "iloveyou", "letmein", "password", "password1",
-        "qwerty", "qwerty123", "welcome", "woaini", "zxcvbn",
+        "000000",
+        "111111",
+        "123123",
+        "123456",
+        "12345678",
+        "123456789",
+        "admin",
+        "iloveyou",
+        "letmein",
+        "password",
+        "password1",
+        "qwerty",
+        "qwerty123",
+        "welcome",
+        "woaini",
+        "zxcvbn",
     }
     for pwd in common:
         assert vpass.analyze(pwd).common_weak, f"{pwd!r} should be common_weak"

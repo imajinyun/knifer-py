@@ -27,7 +27,6 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from kniferpy.internal import mailx
 from kniferpy.internal.mailx import (
     CHARSET_ASCII,
     CHARSET_UTF8,
@@ -114,9 +113,11 @@ SendCloser = Any
 
 # ── Go-compat new_client constructor ───────────────────────────────────────────
 
+
 def new_client(host: str, port: int, **kwargs: Any) -> Client:
     """Create an SMTP client (Go compat)."""
     return Client(Config(host=host, port=port, **kwargs))
+
 
 __all__ = [
     "CHARSET_ASCII",

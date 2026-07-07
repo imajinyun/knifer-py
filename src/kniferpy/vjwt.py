@@ -8,13 +8,11 @@ algorithm verification, and date validation.
 
 from __future__ import annotations
 
-from datetime import timedelta
 from typing import Any
-
-from cryptography.hazmat.primitives.asymmetric import ec, rsa
 
 from kniferpy.internal import jwtx
 from kniferpy.internal.jwtx import JWTBuilder, JWTSigner
+from kniferpy.verr import CryptoError as JWTError
 
 # ── Algorithm Constants ───────────────────────────────────────────────────────
 
@@ -53,8 +51,6 @@ MinHMACKeyBytesHS512 = 64
 
 # ── Error ─────────────────────────────────────────────────────────────────────
 
-from kniferpy.verr import CryptoError as JWTError
-
 
 def new_jwt_error(msg: str) -> JWTError:
     return JWTError(msg)
@@ -62,6 +58,7 @@ def new_jwt_error(msg: str) -> JWTError:
 
 def jwt_errorf(format_str: str, *args: Any) -> JWTError:
     return JWTError(format_str % args)
+
 
 __all__ = [
     "JWTBuilder",

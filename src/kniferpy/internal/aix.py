@@ -20,6 +20,7 @@ from kniferpy.verr import KniferError
 
 # --- errors --------------------------------------------------------------------
 
+
 class ErrInvalidChatRequest(KniferError):
     pass
 
@@ -37,6 +38,7 @@ class ErrMissingEmbeddingProvider(KniferError):
 
 
 # --- types ---------------------------------------------------------------------
+
 
 class Role(str):
     """Identifies the speaker or source of a chat message."""
@@ -151,17 +153,17 @@ class EmbeddingResponse:
 
 # --- provider interfaces -------------------------------------------------------
 
+
 class ChatProvider(Protocol):
-    def chat(self, request: ChatRequest) -> ChatResponse:
-        ...
+    def chat(self, request: ChatRequest) -> ChatResponse: ...
 
 
 class EmbeddingProvider(Protocol):
-    def embed(self, request: EmbeddingRequest) -> EmbeddingResponse:
-        ...
+    def embed(self, request: EmbeddingRequest) -> EmbeddingResponse: ...
 
 
 # --- client --------------------------------------------------------------------
+
 
 class Client:
     def __init__(

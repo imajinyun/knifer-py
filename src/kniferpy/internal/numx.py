@@ -36,7 +36,9 @@ _Number = int | float
 
 @dataclass
 class _RandomNumberConfig:
-    random_reader: Callable[[int], int] = field(default_factory=lambda: (lambda n: int.from_bytes(os.urandom(8), "big") % n))
+    random_reader: Callable[[int], int] = field(
+        default_factory=lambda: (lambda n: int.from_bytes(os.urandom(8), "big") % n)
+    )
 
 
 @dataclass
@@ -145,10 +147,27 @@ def _apply_double_options(opts: Sequence[DoubleOption]) -> _DoubleConfig:
 # ---------------------------------------------------------------------------
 
 _FACTORIALS: tuple[int, ...] = (
-    1, 1, 2, 6, 24, 120, 720, 5040, 40320, 362880, 3628800,
-    39916800, 479001600, 6227020800, 87178291200, 1307674368000,
-    20922789888000, 355687428096000, 6402373705728000,
-    121645100408832000, 2432902008176640000,
+    1,
+    1,
+    2,
+    6,
+    24,
+    120,
+    720,
+    5040,
+    40320,
+    362880,
+    3628800,
+    39916800,
+    479001600,
+    6227020800,
+    87178291200,
+    1307674368000,
+    20922789888000,
+    355687428096000,
+    6402373705728000,
+    121645100408832000,
+    2432902008176640000,
 )
 
 _DEFAULT_DIV_SCALE = 10
@@ -189,8 +208,10 @@ def _secure_intn(max_val: int, reader: Callable[[int], int] | None = None) -> in
     if max_val <= 0:
         return 0
     if reader is None:
+
         def reader(n):
             return int.from_bytes(os.urandom(8), "big") % n
+
     return reader(max_val)
 
 
@@ -331,7 +352,9 @@ def _round_down_float(value: float, scale: int) -> float:
 # ---------------------------------------------------------------------------
 
 
-def _decimal_format(format_str: str, value: float, opts: Sequence[FormatOption] | None = None) -> str:
+def _decimal_format(
+    format_str: str, value: float, opts: Sequence[FormatOption] | None = None
+) -> str:
     if opts is None:
         opts = []
     _apply_format_options(opts)
@@ -365,7 +388,9 @@ def _to_str(number: float, opts: Sequence[FormatOption] | None = None) -> str:
     return _to_str_strip(number, True, opts)
 
 
-def _to_str_default(number: float | None, default_value: str, opts: Sequence[FormatOption] | None = None) -> str:
+def _to_str_default(
+    number: float | None, default_value: str, opts: Sequence[FormatOption] | None = None
+) -> str:
     if number is None:
         return default_value
     return _to_str(number, opts)
@@ -607,7 +632,9 @@ def _parse_number(number_str: str, opts: Sequence[ParseOption] | None = None) ->
         return None
 
 
-def _parse_int_default(number_str: str, default_value: int, opts: Sequence[ParseOption] | None = None) -> int:
+def _parse_int_default(
+    number_str: str, default_value: int, opts: Sequence[ParseOption] | None = None
+) -> int:
     if opts is None:
         opts = []
     if not number_str.strip():
@@ -617,7 +644,9 @@ def _parse_int_default(number_str: str, default_value: int, opts: Sequence[Parse
     return _parse_int_with_opts(number_str, opts)
 
 
-def _parse_long_default(number_str: str, default_value: int, opts: Sequence[ParseOption] | None = None) -> int:
+def _parse_long_default(
+    number_str: str, default_value: int, opts: Sequence[ParseOption] | None = None
+) -> int:
     if opts is None:
         opts = []
     if not number_str.strip():
@@ -627,7 +656,9 @@ def _parse_long_default(number_str: str, default_value: int, opts: Sequence[Pars
     return _parse_long(number_str, opts)
 
 
-def _parse_float_default(number_str: str, default_value: float, opts: Sequence[ParseOption] | None = None) -> float:
+def _parse_float_default(
+    number_str: str, default_value: float, opts: Sequence[ParseOption] | None = None
+) -> float:
     if opts is None:
         opts = []
     if not number_str.strip():
@@ -639,7 +670,9 @@ def _parse_float_default(number_str: str, default_value: float, opts: Sequence[P
         return default_value
 
 
-def _parse_double_default(number_str: str, default_value: float, opts: Sequence[ParseOption] | None = None) -> float:
+def _parse_double_default(
+    number_str: str, default_value: float, opts: Sequence[ParseOption] | None = None
+) -> float:
     if opts is None:
         opts = []
     if not number_str.strip():
@@ -656,14 +689,20 @@ def _parse_double_default(number_str: str, default_value: float, opts: Sequence[
 # ---------------------------------------------------------------------------
 
 
-def _gen_random_number(begin: int, end: int, size: int, opts: Sequence[RandomNumberOption] | None = None) -> list[int]:
+def _gen_random_number(
+    begin: int, end: int, size: int, opts: Sequence[RandomNumberOption] | None = None
+) -> list[int]:
     if begin > end:
         begin, end = end, begin
     return _gen_random_number_with_seed(begin, end, size, _num_range(begin, end, 1), opts)
 
 
 def _gen_random_number_with_seed(
-    begin: int, end: int, size: int, seed: list[int], opts: Sequence[RandomNumberOption] | None = None
+    begin: int,
+    end: int,
+    size: int,
+    seed: list[int],
+    opts: Sequence[RandomNumberOption] | None = None,
 ) -> list[int]:
     if opts is None:
         opts = []
@@ -681,7 +720,9 @@ def _gen_random_number_with_seed(
     return out
 
 
-def _gen_by_set(begin: int, end: int, size: int, opts: Sequence[RandomNumberOption] | None = None) -> list[int]:
+def _gen_by_set(
+    begin: int, end: int, size: int, opts: Sequence[RandomNumberOption] | None = None
+) -> list[int]:
     if opts is None:
         opts = []
     if begin > end:
@@ -781,13 +822,17 @@ class _ExprParser:
         if self._match("("):
             v = self._parse_expression()
             if not self._match(")"):
-                raise ValidationError(message="missing closing parenthesis", code="knifer.num.calc_paren")
+                raise ValidationError(
+                    message="missing closing parenthesis", code="knifer.num.calc_paren"
+                )
             return v
         start = self.pos
         while self.pos < len(self.s) and (self.s[self.pos].isdigit() or self.s[self.pos] == "."):
             self.pos += 1
         if start == self.pos:
-            raise ValidationError(message=f"expected number at {self.pos}", code="knifer.num.calc_expected")
+            raise ValidationError(
+                message=f"expected number at {self.pos}", code="knifer.num.calc_expected"
+            )
         return self.cfg.parse_float(self.s[start : self.pos])
 
 
@@ -799,7 +844,9 @@ def _calculate(expression: str, opts: Sequence[ParseOption] | None = None) -> fl
     result = parser._parse_expression()
     parser._skip_spaces()
     if parser.pos != len(parser.s):
-        raise ValidationError(message=f"unexpected token at {parser.pos}", code="knifer.num.calc_trailing")
+        raise ValidationError(
+            message=f"unexpected token at {parser.pos}", code="knifer.num.calc_trailing"
+        )
     return result
 
 
@@ -851,7 +898,9 @@ def _to_unsigned_byte_array(value: int) -> bytes:
 def _to_unsigned_byte_array_len(length: int, value: int) -> bytes:
     raw = _to_unsigned_byte_array(value)
     if len(raw) > length:
-        raise ValidationError(message="standard length exceeded for value", code="knifer.num.byte_len_exceeded")
+        raise ValidationError(
+            message="standard length exceeded for value", code="knifer.num.byte_len_exceeded"
+        )
     return b"\x00" * (length - len(raw)) + raw
 
 
@@ -964,7 +1013,10 @@ def _is_beside(number1: int, number2: int) -> bool:
 
 def _factorial(n: int) -> int:
     if n < 0:
-        raise ValidationError(message=f"factorial is undefined for negative input: {n}", code="knifer.num.factorial_negative")
+        raise ValidationError(
+            message=f"factorial is undefined for negative input: {n}",
+            code="knifer.num.factorial_negative",
+        )
     if n < len(_FACTORIALS):
         return _FACTORIALS[n]
     return math.factorial(n)

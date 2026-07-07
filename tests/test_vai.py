@@ -187,7 +187,9 @@ def test_embedding_request_clone_independent():
 def test_client_chat_success():
     provider = _ChatProvider()
     client = new(chat_provider=provider)
-    result = client.chat(ChatRequest(Model="model-a", Messages=[Message(Role=RoleUser, Content="ping")]))
+    result = client.chat(
+        ChatRequest(Model="model-a", Messages=[Message(Role=RoleUser, Content="ping")])
+    )
     assert result.Message.Content == "pong"
 
 
@@ -216,7 +218,9 @@ def test_client_chat_clones_request():
 def test_client_chat_clones_response():
     provider = _ChatProvider()
     client = new(chat_provider=provider)
-    result = client.chat(ChatRequest(Model="model-a", Messages=[Message(Role=RoleUser, Content="ping")]))
+    result = client.chat(
+        ChatRequest(Model="model-a", Messages=[Message(Role=RoleUser, Content="ping")])
+    )
     result.Message.Content = "mutated"
     assert provider.response.Message.Content == "pong"
 
@@ -265,7 +269,9 @@ def test_client_embed_clones_response():
 
 def test_chat_shortcut():
     provider = _ChatProvider()
-    result = chat(provider, ChatRequest(Model="model-a", Messages=[Message(Role=RoleUser, Content="ping")]))
+    result = chat(
+        provider, ChatRequest(Model="model-a", Messages=[Message(Role=RoleUser, Content="ping")])
+    )
     assert result.Message.Content == "pong"
 
 

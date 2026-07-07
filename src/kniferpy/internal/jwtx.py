@@ -8,10 +8,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 
 import jwt
-from jwt.algorithms import NoneAlgorithm
-
-from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa, utils
 from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.asymmetric import ec, padding, rsa
 
 from kniferpy.verr import CryptoError
 
@@ -54,7 +52,14 @@ def algorithm_name(alg: str) -> str:
 # ── HMAC signing ──────────────────────────────────────────────────────────────
 
 
-def _sign_hmac(payload: dict[str, Any], secret: str | bytes, alg: str, *, expires_in: int | timedelta | None = None, headers: dict[str, Any] | None = None) -> str:
+def _sign_hmac(
+    payload: dict[str, Any],
+    secret: str | bytes,
+    alg: str,
+    *,
+    expires_in: int | timedelta | None = None,
+    headers: dict[str, Any] | None = None,
+) -> str:
     _validate_hmac_secret(secret, alg)
     claims = dict(payload)
     if expires_in is not None:
@@ -66,7 +71,14 @@ def _sign_hmac(payload: dict[str, Any], secret: str | bytes, alg: str, *, expire
         raise CryptoError(str(exc), code="jwt.sign_failed") from exc
 
 
-def _verify_hmac(token: str, secret: str | bytes, alg: str, *, issuer: str | None = None, audience: str | None = None) -> dict[str, Any]:
+def _verify_hmac(
+    token: str,
+    secret: str | bytes,
+    alg: str,
+    *,
+    issuer: str | None = None,
+    audience: str | None = None,
+) -> dict[str, Any]:
     _validate_hmac_secret(secret, alg)
     try:
         payload = jwt.decode(token, secret, algorithms=[alg], issuer=issuer, audience=audience)
@@ -88,27 +100,39 @@ def _validate_hmac_secret(secret: str | bytes, alg: str) -> None:
         )
 
 
-def sign_hs256(payload: dict[str, Any], secret: str | bytes, *, expires_in: int | timedelta | None = None) -> str:
+def sign_hs256(
+    payload: dict[str, Any], secret: str | bytes, *, expires_in: int | timedelta | None = None
+) -> str:
     return _sign_hmac(payload, secret, "HS256", expires_in=expires_in)
 
 
-def sign_hs384(payload: dict[str, Any], secret: str | bytes, *, expires_in: int | timedelta | None = None) -> str:
+def sign_hs384(
+    payload: dict[str, Any], secret: str | bytes, *, expires_in: int | timedelta | None = None
+) -> str:
     return _sign_hmac(payload, secret, "HS384", expires_in=expires_in)
 
 
-def sign_hs512(payload: dict[str, Any], secret: str | bytes, *, expires_in: int | timedelta | None = None) -> str:
+def sign_hs512(
+    payload: dict[str, Any], secret: str | bytes, *, expires_in: int | timedelta | None = None
+) -> str:
     return _sign_hmac(payload, secret, "HS512", expires_in=expires_in)
 
 
-def verify_hs256(token: str, secret: str | bytes, *, issuer: str | None = None, audience: str | None = None) -> dict[str, Any]:
+def verify_hs256(
+    token: str, secret: str | bytes, *, issuer: str | None = None, audience: str | None = None
+) -> dict[str, Any]:
     return _verify_hmac(token, secret, "HS256", issuer=issuer, audience=audience)
 
 
-def verify_hs384(token: str, secret: str | bytes, *, issuer: str | None = None, audience: str | None = None) -> dict[str, Any]:
+def verify_hs384(
+    token: str, secret: str | bytes, *, issuer: str | None = None, audience: str | None = None
+) -> dict[str, Any]:
     return _verify_hmac(token, secret, "HS384", issuer=issuer, audience=audience)
 
 
-def verify_hs512(token: str, secret: str | bytes, *, issuer: str | None = None, audience: str | None = None) -> dict[str, Any]:
+def verify_hs512(
+    token: str, secret: str | bytes, *, issuer: str | None = None, audience: str | None = None
+) -> dict[str, Any]:
     return _verify_hmac(token, secret, "HS512", issuer=issuer, audience=audience)
 
 
@@ -118,7 +142,14 @@ def verify_hs512(token: str, secret: str | bytes, *, issuer: str | None = None, 
 # ── ECDSA signing ─────────────────────────────────────────────────────────────
 
 
-def _sign_ec(payload: dict[str, Any], private_key: ec.EllipticCurvePrivateKey, alg: str, *, expires_in: int | timedelta | None = None, headers: dict[str, Any] | None = None) -> str:
+def _sign_ec(
+    payload: dict[str, Any],
+    private_key: ec.EllipticCurvePrivateKey,
+    alg: str,
+    *,
+    expires_in: int | timedelta | None = None,
+    headers: dict[str, Any] | None = None,
+) -> str:
     claims = dict(payload)
     if expires_in is not None:
         delta = expires_in if isinstance(expires_in, timedelta) else timedelta(seconds=expires_in)
@@ -129,7 +160,14 @@ def _sign_ec(payload: dict[str, Any], private_key: ec.EllipticCurvePrivateKey, a
         raise CryptoError(str(exc), code="jwt.sign_failed") from exc
 
 
-def _verify_ec(token: str, public_key: ec.EllipticCurvePublicKey, alg: str, *, issuer: str | None = None, audience: str | None = None) -> dict[str, Any]:
+def _verify_ec(
+    token: str,
+    public_key: ec.EllipticCurvePublicKey,
+    alg: str,
+    *,
+    issuer: str | None = None,
+    audience: str | None = None,
+) -> dict[str, Any]:
     try:
         payload = jwt.decode(token, public_key, algorithms=[alg], issuer=issuer, audience=audience)
     except jwt.PyJWTError as exc:
@@ -139,27 +177,60 @@ def _verify_ec(token: str, public_key: ec.EllipticCurvePublicKey, alg: str, *, i
     return payload
 
 
-def sign_es256(payload: dict[str, Any], private_key: ec.EllipticCurvePrivateKey, *, expires_in: int | timedelta | None = None) -> str:
+def sign_es256(
+    payload: dict[str, Any],
+    private_key: ec.EllipticCurvePrivateKey,
+    *,
+    expires_in: int | timedelta | None = None,
+) -> str:
     return _sign_ec(payload, private_key, "ES256", expires_in=expires_in)
 
 
-def sign_es384(payload: dict[str, Any], private_key: ec.EllipticCurvePrivateKey, *, expires_in: int | timedelta | None = None) -> str:
+def sign_es384(
+    payload: dict[str, Any],
+    private_key: ec.EllipticCurvePrivateKey,
+    *,
+    expires_in: int | timedelta | None = None,
+) -> str:
     return _sign_ec(payload, private_key, "ES384", expires_in=expires_in)
 
 
-def sign_es512(payload: dict[str, Any], private_key: ec.EllipticCurvePrivateKey, *, expires_in: int | timedelta | None = None) -> str:
+def sign_es512(
+    payload: dict[str, Any],
+    private_key: ec.EllipticCurvePrivateKey,
+    *,
+    expires_in: int | timedelta | None = None,
+) -> str:
     return _sign_ec(payload, private_key, "ES512", expires_in=expires_in)
 
 
-def verify_es256(token: str, public_key: ec.EllipticCurvePublicKey, *, issuer: str | None = None, audience: str | None = None) -> dict[str, Any]:
+def verify_es256(
+    token: str,
+    public_key: ec.EllipticCurvePublicKey,
+    *,
+    issuer: str | None = None,
+    audience: str | None = None,
+) -> dict[str, Any]:
     return _verify_ec(token, public_key, "ES256", issuer=issuer, audience=audience)
 
 
-def verify_es384(token: str, public_key: ec.EllipticCurvePublicKey, *, issuer: str | None = None, audience: str | None = None) -> dict[str, Any]:
+def verify_es384(
+    token: str,
+    public_key: ec.EllipticCurvePublicKey,
+    *,
+    issuer: str | None = None,
+    audience: str | None = None,
+) -> dict[str, Any]:
     return _verify_ec(token, public_key, "ES384", issuer=issuer, audience=audience)
 
 
-def verify_es512(token: str, public_key: ec.EllipticCurvePublicKey, *, issuer: str | None = None, audience: str | None = None) -> dict[str, Any]:
+def verify_es512(
+    token: str,
+    public_key: ec.EllipticCurvePublicKey,
+    *,
+    issuer: str | None = None,
+    audience: str | None = None,
+) -> dict[str, Any]:
     return _verify_ec(token, public_key, "ES512", issuer=issuer, audience=audience)
 
 
@@ -169,7 +240,14 @@ def verify_es512(token: str, public_key: ec.EllipticCurvePublicKey, *, issuer: s
 # ── RSA-PSS signing ───────────────────────────────────────────────────────────
 
 
-def _sign_ps(payload: dict[str, Any], private_key: rsa.RSAPrivateKey, alg: str, *, expires_in: int | timedelta | None = None, headers: dict[str, Any] | None = None) -> str:
+def _sign_ps(
+    payload: dict[str, Any],
+    private_key: rsa.RSAPrivateKey,
+    alg: str,
+    *,
+    expires_in: int | timedelta | None = None,
+    headers: dict[str, Any] | None = None,
+) -> str:
     claims = dict(payload)
     if expires_in is not None:
         delta = expires_in if isinstance(expires_in, timedelta) else timedelta(seconds=expires_in)
@@ -180,7 +258,14 @@ def _sign_ps(payload: dict[str, Any], private_key: rsa.RSAPrivateKey, alg: str, 
         raise CryptoError(str(exc), code="jwt.sign_failed") from exc
 
 
-def _verify_ps(token: str, public_key: rsa.RSAPublicKey, alg: str, *, issuer: str | None = None, audience: str | None = None) -> dict[str, Any]:
+def _verify_ps(
+    token: str,
+    public_key: rsa.RSAPublicKey,
+    alg: str,
+    *,
+    issuer: str | None = None,
+    audience: str | None = None,
+) -> dict[str, Any]:
     try:
         payload = jwt.decode(token, public_key, algorithms=[alg], issuer=issuer, audience=audience)
     except jwt.PyJWTError as exc:
@@ -190,27 +275,60 @@ def _verify_ps(token: str, public_key: rsa.RSAPublicKey, alg: str, *, issuer: st
     return payload
 
 
-def sign_ps256(payload: dict[str, Any], private_key: rsa.RSAPrivateKey, *, expires_in: int | timedelta | None = None) -> str:
+def sign_ps256(
+    payload: dict[str, Any],
+    private_key: rsa.RSAPrivateKey,
+    *,
+    expires_in: int | timedelta | None = None,
+) -> str:
     return _sign_ps(payload, private_key, "PS256", expires_in=expires_in)
 
 
-def sign_ps384(payload: dict[str, Any], private_key: rsa.RSAPrivateKey, *, expires_in: int | timedelta | None = None) -> str:
+def sign_ps384(
+    payload: dict[str, Any],
+    private_key: rsa.RSAPrivateKey,
+    *,
+    expires_in: int | timedelta | None = None,
+) -> str:
     return _sign_ps(payload, private_key, "PS384", expires_in=expires_in)
 
 
-def sign_ps512(payload: dict[str, Any], private_key: rsa.RSAPrivateKey, *, expires_in: int | timedelta | None = None) -> str:
+def sign_ps512(
+    payload: dict[str, Any],
+    private_key: rsa.RSAPrivateKey,
+    *,
+    expires_in: int | timedelta | None = None,
+) -> str:
     return _sign_ps(payload, private_key, "PS512", expires_in=expires_in)
 
 
-def verify_ps256(token: str, public_key: rsa.RSAPublicKey, *, issuer: str | None = None, audience: str | None = None) -> dict[str, Any]:
+def verify_ps256(
+    token: str,
+    public_key: rsa.RSAPublicKey,
+    *,
+    issuer: str | None = None,
+    audience: str | None = None,
+) -> dict[str, Any]:
     return _verify_ps(token, public_key, "PS256", issuer=issuer, audience=audience)
 
 
-def verify_ps384(token: str, public_key: rsa.RSAPublicKey, *, issuer: str | None = None, audience: str | None = None) -> dict[str, Any]:
+def verify_ps384(
+    token: str,
+    public_key: rsa.RSAPublicKey,
+    *,
+    issuer: str | None = None,
+    audience: str | None = None,
+) -> dict[str, Any]:
     return _verify_ps(token, public_key, "PS384", issuer=issuer, audience=audience)
 
 
-def verify_ps512(token: str, public_key: rsa.RSAPublicKey, *, issuer: str | None = None, audience: str | None = None) -> dict[str, Any]:
+def verify_ps512(
+    token: str,
+    public_key: rsa.RSAPublicKey,
+    *,
+    issuer: str | None = None,
+    audience: str | None = None,
+) -> dict[str, Any]:
     return _verify_ps(token, public_key, "PS512", issuer=issuer, audience=audience)
 
 
@@ -245,7 +363,14 @@ def _get_header(token: str) -> dict[str, Any]:
 # ── Strict verification ───────────────────────────────────────────────────────
 
 
-def verify_strict(token: str, secret: str | bytes, alg: str, *, issuer: str | None = None, audience: str | None = None) -> dict[str, Any]:
+def verify_strict(
+    token: str,
+    secret: str | bytes,
+    alg: str,
+    *,
+    issuer: str | None = None,
+    audience: str | None = None,
+) -> dict[str, Any]:
     """Verify a JWT strictly without algorithm fallback.
 
     The token's ``alg`` header must match ``alg``.
@@ -389,31 +514,49 @@ class JWTBuilder:
         return self
 
     def sign_hs256(self, secret: str | bytes) -> str:
-        return _sign_hmac(self._claims, secret, "HS256", expires_in=self._expires_in, headers=self._headers)
+        return _sign_hmac(
+            self._claims, secret, "HS256", expires_in=self._expires_in, headers=self._headers
+        )
 
     def sign_hs384(self, secret: str | bytes) -> str:
-        return _sign_hmac(self._claims, secret, "HS384", expires_in=self._expires_in, headers=self._headers)
+        return _sign_hmac(
+            self._claims, secret, "HS384", expires_in=self._expires_in, headers=self._headers
+        )
 
     def sign_hs512(self, secret: str | bytes) -> str:
-        return _sign_hmac(self._claims, secret, "HS512", expires_in=self._expires_in, headers=self._headers)
+        return _sign_hmac(
+            self._claims, secret, "HS512", expires_in=self._expires_in, headers=self._headers
+        )
 
     def sign_es256(self, private_key: ec.EllipticCurvePrivateKey) -> str:
-        return _sign_ec(self._claims, private_key, "ES256", expires_in=self._expires_in, headers=self._headers)
+        return _sign_ec(
+            self._claims, private_key, "ES256", expires_in=self._expires_in, headers=self._headers
+        )
 
     def sign_es384(self, private_key: ec.EllipticCurvePrivateKey) -> str:
-        return _sign_ec(self._claims, private_key, "ES384", expires_in=self._expires_in, headers=self._headers)
+        return _sign_ec(
+            self._claims, private_key, "ES384", expires_in=self._expires_in, headers=self._headers
+        )
 
     def sign_es512(self, private_key: ec.EllipticCurvePrivateKey) -> str:
-        return _sign_ec(self._claims, private_key, "ES512", expires_in=self._expires_in, headers=self._headers)
+        return _sign_ec(
+            self._claims, private_key, "ES512", expires_in=self._expires_in, headers=self._headers
+        )
 
     def sign_ps256(self, private_key: rsa.RSAPrivateKey) -> str:
-        return _sign_ps(self._claims, private_key, "PS256", expires_in=self._expires_in, headers=self._headers)
+        return _sign_ps(
+            self._claims, private_key, "PS256", expires_in=self._expires_in, headers=self._headers
+        )
 
     def sign_ps384(self, private_key: rsa.RSAPrivateKey) -> str:
-        return _sign_ps(self._claims, private_key, "PS384", expires_in=self._expires_in, headers=self._headers)
+        return _sign_ps(
+            self._claims, private_key, "PS384", expires_in=self._expires_in, headers=self._headers
+        )
 
     def sign_ps512(self, private_key: rsa.RSAPrivateKey) -> str:
-        return _sign_ps(self._claims, private_key, "PS512", expires_in=self._expires_in, headers=self._headers)
+        return _sign_ps(
+            self._claims, private_key, "PS512", expires_in=self._expires_in, headers=self._headers
+        )
 
     def verify_hs256(self, token: str, secret: str | bytes) -> dict[str, Any]:
         return verify_hs256(token, secret, issuer=self._issuer, audience=self._audience)
@@ -467,7 +610,9 @@ def create_jwt_token(payload: dict[str, Any], key: str | bytes) -> str:
     return sign_hs256(payload, key)
 
 
-def create_token_with_headers(headers: dict[str, Any], payload: dict[str, Any], key: str | bytes) -> str:
+def create_token_with_headers(
+    headers: dict[str, Any], payload: dict[str, Any], key: str | bytes
+) -> str:
     """Create an HS256 token with custom headers (Go compat)."""
     return _sign_hmac(payload, key, "HS256", headers=headers)
 
@@ -578,7 +723,9 @@ def new_hmac_signer(algorithm: str, key: bytes) -> JWTSigner:
         key = key.encode("utf-8") if isinstance(key, str) else key
     hash_map = {"HS256": "sha256", "HS384": "sha384", "HS512": "sha512"}
     if algorithm.upper() not in hash_map:
-        raise CryptoError(f"unsupported HMAC algorithm: {algorithm}", code="jwt.unsupported_algorithm")
+        raise CryptoError(
+            f"unsupported HMAC algorithm: {algorithm}", code="jwt.unsupported_algorithm"
+        )
     hash_name = hash_map[algorithm.upper()]
     return JWTSigner(algorithm.upper(), _hmac_sign(key, hash_name), _hmac_verify(key, hash_name))
 
@@ -653,15 +800,17 @@ def _rsa_pss_verify(pub: rsa.RSAPublicKey, hash_alg: str) -> Callable:
     return verify
 
 
-def new_rsa_pss_signer(
-    algorithm: str, priv: rsa.RSAPrivateKey, pub: rsa.RSAPublicKey
-) -> JWTSigner:
+def new_rsa_pss_signer(algorithm: str, priv: rsa.RSAPrivateKey, pub: rsa.RSAPublicKey) -> JWTSigner:
     """Create an RSA-PSS signer for PS256, PS384, or PS512."""
     hash_map = {"PS256": "sha256", "PS384": "sha384", "PS512": "sha512"}
     if algorithm.upper() not in hash_map:
-        raise CryptoError(f"unsupported RSA-PSS algorithm: {algorithm}", code="jwt.unsupported_algorithm")
+        raise CryptoError(
+            f"unsupported RSA-PSS algorithm: {algorithm}", code="jwt.unsupported_algorithm"
+        )
     hash_name = hash_map[algorithm.upper()]
-    return JWTSigner(algorithm.upper(), _rsa_pss_sign(priv, hash_name), _rsa_pss_verify(pub, hash_name))
+    return JWTSigner(
+        algorithm.upper(), _rsa_pss_sign(priv, hash_name), _rsa_pss_verify(pub, hash_name)
+    )
 
 
 # ── ECDSA signer ─────────────────────────────────────────────────────────────
@@ -741,7 +890,9 @@ def new_ecdsa_signer(
     """Create an ECDSA signer for ES256, ES384, or ES512."""
     hash_map = {"ES256": "sha256", "ES384": "sha384", "ES512": "sha512"}
     if algorithm.upper() not in hash_map:
-        raise CryptoError(f"unsupported ECDSA algorithm: {algorithm}", code="jwt.unsupported_algorithm")
+        raise CryptoError(
+            f"unsupported ECDSA algorithm: {algorithm}", code="jwt.unsupported_algorithm"
+        )
     hash_name = hash_map[algorithm.upper()]
     return JWTSigner(algorithm.upper(), _ecdsa_sign(priv, hash_name), _ecdsa_verify(pub, hash_name))
 
@@ -811,7 +962,6 @@ def jwtsigner_es256(priv: ec.EllipticCurvePrivateKey, pub: ec.EllipticCurvePubli
 
 def create_token_with_signer(payload: dict[str, Any], signer: JWTSigner) -> str:
     """Create a JWT token using a JWTSigner (Go compat)."""
-    import jwt as _jwt_module
 
     header = {"alg": signer.algorithm(), "typ": "JWT"}
     header_b64 = (

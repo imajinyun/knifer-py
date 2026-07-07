@@ -10,6 +10,7 @@ Supports:
 - Weighted random selection with the alias method
 - Per-call options for custom sources and readers
 """
+
 from __future__ import annotations
 
 from typing import Any, Callable

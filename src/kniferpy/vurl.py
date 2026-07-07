@@ -8,7 +8,6 @@ type checking, and resource (file/HTTP) opening. All functions raise
 from __future__ import annotations
 
 from typing import Any, Callable
-from urllib.parse import ParseResult
 
 from kniferpy.internal import urlx
 from kniferpy.internal.urlx import URLBuilder

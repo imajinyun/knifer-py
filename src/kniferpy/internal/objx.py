@@ -273,7 +273,6 @@ def register_name(name: str, value: type) -> None:
 
 def validate_accepted_types(value: object, *accepted_types: type) -> None:
     """Check whether value only contains built-in safe types plus accepted types."""
-    from kniferpy.verr import SecurityError
     _check_type(value, accepted_types)
 
 

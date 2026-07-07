@@ -27,6 +27,7 @@ OpAccept = "accept"
 
 # --- errors -------------------------------------------------------------------
 
+
 class SocketRuntimeError(KniferError):
     pass
 
@@ -74,48 +75,56 @@ def new_socket_config() -> SocketConfig:
 def with_thread_pool_size(n: int) -> ConfigOption:
     def apply(cfg: SocketConfig) -> None:
         cfg.thread_pool_size = n
+
     return apply
 
 
 def with_thread_pool_size_func(f: Callable[[], int]) -> ConfigOption:
     def apply(cfg: SocketConfig) -> None:
         cfg.thread_pool_size_func = f
+
     return apply
 
 
 def with_read_timeout(ms: int) -> ConfigOption:
     def apply(cfg: SocketConfig) -> None:
         cfg.read_timeout_ms = ms
+
     return apply
 
 
 def with_write_timeout(ms: int) -> ConfigOption:
     def apply(cfg: SocketConfig) -> None:
         cfg.write_timeout_ms = ms
+
     return apply
 
 
 def with_read_buffer_size(n: int) -> ConfigOption:
     def apply(cfg: SocketConfig) -> None:
         cfg.read_buffer_size = n
+
     return apply
 
 
 def with_write_buffer_size(n: int) -> ConfigOption:
     def apply(cfg: SocketConfig) -> None:
         cfg.write_buffer_size = n
+
     return apply
 
 
 def with_clock(clock: Callable[[], float]) -> ConfigOption:
     def apply(cfg: SocketConfig) -> None:
         cfg.clock = clock
+
     return apply
 
 
 def with_runner(runner: Callable[..., None]) -> ConfigOption:
     def apply(cfg: SocketConfig) -> None:
         cfg.runner = runner
+
     return apply
 
 
@@ -142,28 +151,34 @@ class _ConnectConfig:
 def with_connect_timeout(timeout: float) -> ConnectOption:
     def apply(cfg: _ConnectConfig) -> None:
         cfg.timeout = timeout
+
     return apply
 
 
 def with_connect_network(network: str) -> ConnectOption:
     def apply(cfg: _ConnectConfig) -> None:
         cfg.network = network
+
     return apply
 
 
 def with_connect_dialer(dialer: Callable[..., Any]) -> ConnectOption:
     def apply(cfg: _ConnectConfig) -> None:
         cfg.dialer = dialer
+
     return apply
 
 
 # --- connect helpers ----------------------------------------------------------
 
+
 def socket_connect(hostname: str, port: int, timeout: float) -> socket.socket:
     return socket_connect_with_options(hostname, port, [with_connect_timeout(timeout)])
 
 
-def socket_connect_with_options(hostname: str, port: int, opts: list[ConnectOption]) -> socket.socket:
+def socket_connect_with_options(
+    hostname: str, port: int, opts: list[ConnectOption]
+) -> socket.socket:
     cfg = _ConnectConfig()
     for opt in opts:
         if opt is not None:
@@ -183,7 +198,9 @@ def socket_connect_addr(addr: tuple[str, int], timeout: float) -> socket.socket:
     return socket_connect_addr_with_options(addr, [with_connect_timeout(timeout)])
 
 
-def socket_connect_addr_with_options(addr: tuple[str, int], opts: list[ConnectOption]) -> socket.socket:
+def socket_connect_addr_with_options(
+    addr: tuple[str, int], opts: list[ConnectOption]
+) -> socket.socket:
     return socket_connect_with_options(addr[0], addr[1], opts)
 
 
@@ -206,6 +223,7 @@ def channel_dial_with_options(addr: tuple[str, int], opts: list[ConnectOption]) 
 
 
 # --- nio server --------------------------------------------------------------
+
 
 class NioServer:
     def __init__(self, port: int, config: SocketConfig | None = None):
@@ -260,6 +278,7 @@ def new_nio_server_addr_with_config(addr: tuple[str, int], cfg: SocketConfig) ->
 
 # --- nio client --------------------------------------------------------------
 
+
 class NioClient:
     def __init__(self, host: str, port: int, config: SocketConfig | None = None):
         self._host = host
@@ -295,6 +314,7 @@ def new_nio_client_addr_with_options(addr: tuple[str, int], opts: list[ConfigOpt
 
 
 # --- aio -----------------------------------------------------------------------
+
 
 class AioSession:
     def __init__(self, conn: socket.socket, action: Any, config: SocketConfig):
@@ -337,9 +357,7 @@ class AioServer:
         return self._config.thread_pool_size
 
     def start(self) -> None:
-        self._pool = concurrent.futures.ThreadPoolExecutor(
-            max_workers=self._get_thread_pool_size()
-        )
+        self._pool = concurrent.futures.ThreadPoolExecutor(max_workers=self._get_thread_pool_size())
         self._server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self._server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._server_socket.bind(("0.0.0.0", self._port))
@@ -406,24 +424,19 @@ def new_aio_client_with_options(
     return AioClient(addr, action, cfg)
 
 
-def new_aio_client_with_config(
-    addr: tuple[str, int], action: Any, cfg: SocketConfig
-) -> AioClient:
+def new_aio_client_with_config(addr: tuple[str, int], action: Any, cfg: SocketConfig) -> AioClient:
     return AioClient(addr, action, cfg)
 
 
-def new_aio_client_with_conn(
-    conn: socket.socket, action: Any, cfg: SocketConfig
-) -> AioClient:
-    client = AioClient(
-        (conn.getpeername()[0], conn.getpeername()[1]), action, cfg
-    )
+def new_aio_client_with_conn(conn: socket.socket, action: Any, cfg: SocketConfig) -> AioClient:
+    client = AioClient((conn.getpeername()[0], conn.getpeername()[1]), action, cfg)
     client._conn = conn
     client._session = new_aio_session(conn, action, cfg)
     return client
 
 
 # --- protocol -----------------------------------------------------------------
+
 
 class IoAction:
     def on_read(self, session: AioSession, buf: Any) -> None:

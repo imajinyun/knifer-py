@@ -5,7 +5,6 @@ import hashlib
 import os
 import re
 import threading
-import time
 import urllib.parse
 from pathlib import Path
 from typing import Any, Callable
@@ -137,14 +136,18 @@ class Conf:
         """Return an int value or raise ValidationError."""
         value, ok = self.lookup(group, key)
         if not ok:
-            raise ValidationError(message=f"key {key!r} not found", code="knifer.conf.key_not_found")
+            raise ValidationError(
+                message=f"key {key!r} not found", code="knifer.conf.key_not_found"
+            )
         return convx.to_int(value, 0)
 
     def get_bool_e(self, key: str, group: str = _DEFAULT_GROUP) -> bool:
         """Return a bool value or raise ValidationError."""
         value, ok = self.lookup(group, key)
         if not ok:
-            raise ValidationError(message=f"key {key!r} not found", code="knifer.conf.key_not_found")
+            raise ValidationError(
+                message=f"key {key!r} not found", code="knifer.conf.key_not_found"
+            )
         return convx.to_bool(value)
 
     # --- Mutators -----------------------------------------------------------
@@ -442,7 +445,10 @@ def watch(
     *,
     interval: float = 1.0,
 ) -> threading.Thread:
-    """Watch a file for changes via polling. Returns a thread that can be stopped via ``.stop()``."""
+    """Watch a file for changes via polling.
+
+    Returns a thread that can be stopped via ``.stop()``.
+    """
     path_str = str(path)
     stop = threading.Event()
     t = threading.Thread(
@@ -607,7 +613,7 @@ def schema_from_struct(obj: Any) -> Schema:
     """Build a Schema from a dataclass with conf metadata tags."""
     rules: list[FieldRule] = []
     for field in dataclasses.fields(obj):
-        conf_meta = field.metadata.get("conf", "") if hasattr(field.metadata, 'get') else ""
+        conf_meta = field.metadata.get("conf", "") if hasattr(field.metadata, "get") else ""
         if isinstance(conf_meta, dict):
             conf_meta = conf_meta.get("key", "")
 
@@ -667,6 +673,7 @@ def bind_group_with_options(conf: Conf, group: str, obj: Any, **_opts: Any) -> N
 def base64_decrypt(cipher_text: str) -> str:
     """Decode a Base64-encoded ciphertext into a plaintext string."""
     import base64
+
     return base64.b64decode(cipher_text).decode("utf-8")
 
 
@@ -805,7 +812,7 @@ def parse_yaml(content: str) -> Conf:
         raise ValidationError(
             message="yaml parsing requires PyYAML: pip install pyyaml",
             code="knifer.conf.yaml_missing",
-        )
+        ) from None
     try:
         data = yaml.safe_load(content)
     except Exception as exc:
@@ -824,12 +831,13 @@ def parse_toml(content: str) -> Conf:
     except ImportError:
         try:
             import toml as _toml
+
             data = _toml.loads(content)
         except ImportError:
             raise ValidationError(
                 message="toml parsing requires tomli/tomllib (Python 3.11+) or toml",
                 code="knifer.conf.toml_missing",
-            )
+            ) from None
         except Exception as exc:
             raise ValidationError(
                 message=f"toml parse error: {exc}",
@@ -851,6 +859,7 @@ def parse_toml(content: str) -> Conf:
 def parse_json(content: str) -> Conf:
     """Parse JSON content into a Conf."""
     import json
+
     try:
         data = json.loads(content)
     except json.JSONDecodeError as exc:
@@ -874,5 +883,9 @@ def _flatten_to_conf(data: Any, prefix: str = "") -> Conf:
             elif isinstance(value, list):
                 conf.set_by_group(_DEFAULT_GROUP, group, ",".join(str(v) for v in value))
             elif value is not None:
-                conf.set_by_group(_DEFAULT_GROUP, group, str(value) if not isinstance(value, (bool, int, float)) else str(value))
+                conf.set_by_group(
+                    _DEFAULT_GROUP,
+                    group,
+                    str(value) if not isinstance(value, (bool, int, float)) else str(value),
+                )
     return conf

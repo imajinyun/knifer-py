@@ -254,7 +254,9 @@ def rotate(img: Image.Image, angle: float, background: tuple[int, int, int, int]
     if abs(normalized - 270) < 1e-9:
         return rotate_270(img)
 
-    return img.rotate(-normalized, expand=True, fillcolor=background, resample=Image.Resampling.NEAREST)
+    return img.rotate(
+        -normalized, expand=True, fillcolor=background, resample=Image.Resampling.NEAREST
+    )
 
 
 def grayscale(img: Image.Image) -> Image.Image:
@@ -879,7 +881,11 @@ def _fill_polygon(
             if (yp[i_inner] < y <= yp[j]) or (yp[j] < y <= yp[i_inner]):
                 node_x.append(
                     xp[i_inner]
-                    + int(float(y - yp[i_inner]) / float(yp[j] - yp[i_inner]) * float(xp[j] - xp[i_inner]))
+                    + int(
+                        float(y - yp[i_inner])
+                        / float(yp[j] - yp[i_inner])
+                        * float(xp[j] - xp[i_inner])
+                    )
                 )
             j = i_inner
         node_x.sort()
@@ -938,7 +944,9 @@ class LineCaptcha(AbstractCaptcha):
             xe = xs + self._rand_int(max(self.width // 8, 1))
             ye = ys + self._rand_int(max(self.height // 8, 1))
             _draw_line(img, xs, ys, xe, ye, self._rand_color())
-        _draw_string(img, self._code, self.width, self.height, _compute_scale(self.height), self._rand_color)
+        _draw_string(
+            img, self._code, self.width, self.height, _compute_scale(self.height), self._rand_color
+        )
         buf = io.BytesIO()
         img.save(buf, format="PNG")
         self._set_image_bytes(buf.getvalue())
@@ -962,7 +970,9 @@ class CircleCaptcha(AbstractCaptcha):
             rx = self._rand_int(max(half, 1))
             ry = self._rand_int(max(half, 1))
             _draw_oval(img, cx, cy, rx, ry, self._rand_color())
-        _draw_string(img, self._code, self.width, self.height, _compute_scale(self.height), self._rand_color)
+        _draw_string(
+            img, self._code, self.width, self.height, _compute_scale(self.height), self._rand_color
+        )
         buf = io.BytesIO()
         img.save(buf, format="PNG")
         self._set_image_bytes(buf.getvalue())
@@ -979,7 +989,9 @@ class ShearCaptcha(AbstractCaptcha):
     def create_code(self) -> None:
         self._generate_code()
         img = Image.new("RGB", (self.width, self.height), self._bg()[:3])
-        _draw_string(img, self._code, self.width, self.height, _compute_scale(self.height), self._rand_color)
+        _draw_string(
+            img, self._code, self.width, self.height, _compute_scale(self.height), self._rand_color
+        )
 
         period_x = self._rand_int_range(self.width // 4, self.width) or self.width
         _shear_x(img, self._bg(), period_x)
@@ -1074,7 +1086,9 @@ def _draw_code_frame(
 # --- captcha factories --------------------------------------------------------
 
 
-def new_line_captcha(width: int, height: int, opts: Sequence[CaptchaOption] | None = None) -> LineCaptcha:
+def new_line_captcha(
+    width: int, height: int, opts: Sequence[CaptchaOption] | None = None
+) -> LineCaptcha:
     c = LineCaptcha()
     c.width = width
     c.height = height
@@ -1092,7 +1106,9 @@ def new_line_captcha_with(width: int, height: int, code_count: int, line_count: 
     return c
 
 
-def new_circle_captcha(width: int, height: int, opts: Sequence[CaptchaOption] | None = None) -> CircleCaptcha:
+def new_circle_captcha(
+    width: int, height: int, opts: Sequence[CaptchaOption] | None = None
+) -> CircleCaptcha:
     c = CircleCaptcha()
     c.width = width
     c.height = height
@@ -1101,7 +1117,9 @@ def new_circle_captcha(width: int, height: int, opts: Sequence[CaptchaOption] | 
     return c
 
 
-def new_circle_captcha_with(width: int, height: int, code_count: int, circle_count: int) -> CircleCaptcha:
+def new_circle_captcha_with(
+    width: int, height: int, code_count: int, circle_count: int
+) -> CircleCaptcha:
     c = CircleCaptcha()
     c.width = width
     c.height = height
@@ -1110,7 +1128,9 @@ def new_circle_captcha_with(width: int, height: int, code_count: int, circle_cou
     return c
 
 
-def new_shear_captcha(width: int, height: int, opts: Sequence[CaptchaOption] | None = None) -> ShearCaptcha:
+def new_shear_captcha(
+    width: int, height: int, opts: Sequence[CaptchaOption] | None = None
+) -> ShearCaptcha:
     c = ShearCaptcha()
     c.width = width
     c.height = height
@@ -1119,7 +1139,9 @@ def new_shear_captcha(width: int, height: int, opts: Sequence[CaptchaOption] | N
     return c
 
 
-def new_shear_captcha_with(width: int, height: int, code_count: int, thickness: int) -> ShearCaptcha:
+def new_shear_captcha_with(
+    width: int, height: int, code_count: int, thickness: int
+) -> ShearCaptcha:
     c = ShearCaptcha()
     c.width = width
     c.height = height
@@ -1128,7 +1150,9 @@ def new_shear_captcha_with(width: int, height: int, code_count: int, thickness: 
     return c
 
 
-def new_gif_captcha(width: int, height: int, opts: Sequence[CaptchaOption] | None = None) -> GifCaptcha:
+def new_gif_captcha(
+    width: int, height: int, opts: Sequence[CaptchaOption] | None = None
+) -> GifCaptcha:
     c = GifCaptcha()
     c.width = width
     c.height = height
@@ -1330,7 +1354,9 @@ def qr_code_png(content: str, opts: Sequence[QRCodeOption] | None = None) -> byt
     return buf.getvalue()
 
 
-def qr_code_bytes(content: str, output_format: BarcodeOutputFormat, opts: Sequence[QRCodeOption] | None = None) -> bytes:
+def qr_code_bytes(
+    content: str, output_format: BarcodeOutputFormat, opts: Sequence[QRCodeOption] | None = None
+) -> bytes:
     """Render QR code content to bytes in the specified output format."""
     if output_format == BarcodeOutputFormat.PNG:
         return qr_code_png(content, opts)
@@ -1414,21 +1440,29 @@ def can_decode_barcode_format(fmt: BarcodeFormat) -> bool:
 # --- barcode rendering wrappers (thin aliases over QR) -------------------------
 
 
-def barcode_image(content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> Image.Image:
+def barcode_image(
+    content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None
+) -> Image.Image:
     if fmt != BarcodeFormat.QR_CODE:
         raise ErrImageUnsupported(f"image: barcode format {fmt.name} not supported for encoding")
     return qr_code_image(content, opts)
 
 
-def barcode_png(content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> bytes:
+def barcode_png(
+    content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None
+) -> bytes:
     return qr_code_png(content, opts)
 
 
-def barcode_svg(content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> str:
+def barcode_svg(
+    content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None
+) -> str:
     return qr_code_svg(content, opts)
 
 
-def barcode_ascii(content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> str:
+def barcode_ascii(
+    content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None
+) -> str:
     return qr_code_ascii(content, opts)
 
 
@@ -1442,15 +1476,21 @@ def barcode_ascii_with_chars(
     return qr_code_ascii_with_chars(content, set_string, unset_string, opts)
 
 
-def barcode_base64_data(content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> str:
+def barcode_base64_data(
+    content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None
+) -> str:
     return qr_code_base64_data(content, opts)
 
 
-def barcode_bytes(content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> bytes:
+def barcode_bytes(
+    content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None
+) -> bytes:
     return qr_code_png(content, opts)
 
 
-def write_barcode(w: io.BytesIO, content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None) -> None:
+def write_barcode(
+    w: io.BytesIO, content: str, fmt: BarcodeFormat, opts: Sequence[BarcodeOption] | None = None
+) -> None:
     write_qr_code(w, content, opts)
 
 
@@ -1473,11 +1513,13 @@ def decode_qr_code_image(img: Image.Image) -> list[DecodeResult]:
         return []
     results: list[DecodeResult] = []
     for obj in _pyzbar_decode(img):
-        results.append(DecodeResult(
-            text=obj.data.decode("utf-8", errors="replace"),
-            format=BarcodeFormat.QR_CODE,
-            raw_bytes=obj.data,
-        ))
+        results.append(
+            DecodeResult(
+                text=obj.data.decode("utf-8", errors="replace"),
+                format=BarcodeFormat.QR_CODE,
+                raw_bytes=obj.data,
+            )
+        )
     return results
 
 
@@ -1496,7 +1538,9 @@ def new_math_generator() -> MathGenerator:
     return MathGenerator()
 
 
-def new_math_generator_with(num1_range: tuple[int, int], num2_range: tuple[int, int]) -> MathGenerator:
+def new_math_generator_with(
+    num1_range: tuple[int, int], num2_range: tuple[int, int]
+) -> MathGenerator:
     return MathGenerator(num1_range=num1_range, num2_range=num2_range)
 
 
@@ -1529,7 +1573,9 @@ def gen_random_generator_with_options(
     random_int: Callable[[int], int] | None = None,
     int_parser: Callable[[str], int] | None = None,
 ) -> RandomGenerator:
-    return RandomGenerator(base=base or BASE_CHAR_NUMBER_UC, random_int=random_int, int_parser=int_parser)
+    return RandomGenerator(
+        base=base or BASE_CHAR_NUMBER_UC, random_int=random_int, int_parser=int_parser
+    )
 
 
 def verify_captcha_ignore_case(code: str, user_input: str) -> bool:

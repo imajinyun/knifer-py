@@ -4,7 +4,6 @@ import pytest
 
 from kniferpy import vdict, vset
 
-
 # ── vdict backward compat (all PascalCase functions are deprecated) ──────────
 
 

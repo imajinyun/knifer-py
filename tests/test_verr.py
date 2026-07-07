@@ -1,38 +1,41 @@
 import pytest
 
 from kniferpy.verr import (
-    KniferError,
-    ValidationError,
-    SecurityError,
-    DecodeError,
-    CryptoError,
-    JSONError,
-    PanicError,
-    Wrapper,
-    Collector,
-    TimerFactory,
-    WithStack,
-    WithStackTrace,
-    EmptyFormatter,
-    SentryDSN,
-    LogFunc,
+    ERR_CODE_INTERNAL,
     ERR_CODE_INVALID_INPUT,
     ERR_CODE_NOT_FOUND,
-    ERR_CODE_UNSUPPORTED,
-    ERR_CODE_UNSAFE_RESOURCE,
-    ERR_CODE_TIMEOUT,
     ERR_CODE_PROVIDER_FAILURE,
-    ERR_CODE_INTERNAL,
+    ERR_CODE_TIMEOUT,
+    ERR_CODE_UNSAFE_RESOURCE,
+    ERR_CODE_UNSUPPORTED,
+    Collector,
+    CryptoError,
+    DecodeError,
+    EmptyFormatter,
+    Init,
+    JSONError,
+    KniferError,
+    PanicError,
+    SecurityError,
+    SentryDSN,
+    TimerFactory,
+    ValidationError,
+    WithStack,
+    WithStackTrace,
+    Wrap,
+    Wrapper,
+    capture_exception,
     code_of,
+    configure_default_log_func,
     err_code_name,
     error_is,
+    errorf,
     get_stack,
     get_stack_from_error,
     get_stack_trace,
-    get_stack_with_skip,
     get_stack_trace_with_options,
+    get_stack_with_skip,
     init_sentry,
-    capture_exception,
     must_exit,
     must_exit_with_code,
     must_exit_with_log,
@@ -42,15 +45,10 @@ from kniferpy.verr import (
     new_error,
     recover,
     recover_without_error,
-    reset_stack_frame_cache,
     reset_default_log_func,
-    configure_default_log_func,
+    reset_stack_frame_cache,
     wrap_error,
-    errorf,
-    Init,
-    Wrap,
 )
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # Error codes and constants
@@ -292,6 +290,7 @@ def test_get_stack_from_error_with_withstack() -> None:
     class MyError(Exception, WithStack):
         def stack(self) -> str:
             return "my custom stack"
+
     err = MyError("test")
     stack = get_stack_from_error(err)
     assert stack == "my custom stack"
@@ -303,8 +302,10 @@ def test_get_stack_from_plain_error_falls_back() -> None:
 
 
 def test_format_stack_frame() -> None:
-    from kniferpy.internal.errx import format_stack_frame
     import traceback
+
+    from kniferpy.internal.errx import format_stack_frame
+
     frames = traceback.extract_stack()
     if frames:
         result = format_stack_frame(frames[0])
@@ -338,6 +339,7 @@ def test_wrapper_exec_with_warn() -> None:
 def test_wrapper_exec_raises() -> None:
     def failing() -> None:
         raise ValueError("failed")
+
     w = Wrapper(failing).with_errorf("error: %s", "ValueError")
     with pytest.raises(ValueError):
         w.exec()
@@ -345,6 +347,7 @@ def test_wrapper_exec_raises() -> None:
 
 def test_wrapper_with_custom_log_func() -> None:
     log_calls = []
+
     def custom_log(level: str, message: str, stack: str) -> None:
         log_calls.append((level, message))
 
@@ -365,13 +368,17 @@ def test_recover() -> None:
 
 def test_recover_without_error() -> None:
     # Should not raise
-    recover_without_error(lambda: (_ for _ in ()).throw(ValueError("boom")), "error: %s", "ValueError")
+    recover_without_error(
+        lambda: (_ for _ in ()).throw(ValueError("boom")), "error: %s", "ValueError"
+    )
 
 
 def test_recover_without_error_success() -> None:
     called = []
+
     def fn() -> None:
         called.append(True)
+
     recover_without_error(fn)
     assert called == [True]
 
@@ -433,6 +440,7 @@ def test_collector_collect_error_success() -> None:
 
 def test_collector_with_log_func() -> None:
     log_calls = []
+
     def custom_log(level: str, message: str, stack: str) -> None:
         log_calls.append((level, message))
 
@@ -444,8 +452,10 @@ def test_collector_with_log_func() -> None:
 def test_collector_with_runner() -> None:
     runs = []
     c = new_collector().with_runner(lambda fn: runs.append(fn) or fn())
+
     def task() -> None:
         raise ValueError("boom")
+
     c.go_run(task)
     assert len(runs) == 1
 
@@ -481,6 +491,7 @@ def test_collector_wait_until_with_options() -> None:
 
 def test_new_collector_with_options() -> None:
     log_calls = []
+
     def custom_log(level: str, message: str, stack: str) -> None:
         log_calls.append((level, message))
 
@@ -499,7 +510,7 @@ def test_new_collector_with_options_runner() -> None:
 def test_new_collector_with_options_timer_factory_field() -> None:
     timer = TimerFactory(0.01)
     c = new_collector_with_options(timer_factory=timer)
-    assert getattr(c, "_timer_factory") is timer
+    assert c._timer_factory is timer
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -512,6 +523,7 @@ def test_timer_factory() -> None:
     done = tf.create()
     assert not done()
     import time
+
     time.sleep(0.15)
     assert done()
 
@@ -523,6 +535,7 @@ def test_timer_factory() -> None:
 
 def test_configure_and_reset_default_log_func() -> None:
     log_calls = []
+
     def custom_log(level: str, message: str, stack: str) -> None:
         log_calls.append((level, message))
 

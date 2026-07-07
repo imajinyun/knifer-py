@@ -2,16 +2,11 @@ from __future__ import annotations
 
 import email.message
 import email.parser
-import hashlib
-import io
 import ipaddress
 import os
-import random
 import socket
 import ssl
 import tempfile
-import time
-from http.cookies import SimpleCookie
 from typing import Any, Callable
 
 from kniferpy.verr import ValidationError
@@ -373,7 +368,13 @@ def is_connected(sock: socket.socket | None) -> bool:
 class UploadSetting:
     """Configuration for multipart upload parsing."""
 
-    __slots__ = ("max_file_size", "memory_threshold", "tmp_upload_path", "file_exts", "allow_file_exts")
+    __slots__ = (
+        "max_file_size",
+        "memory_threshold",
+        "tmp_upload_path",
+        "file_exts",
+        "allow_file_exts",
+    )
 
     def __init__(
         self,
@@ -447,7 +448,7 @@ def new_upload_setting() -> UploadSetting:
 
 
 def _parse_header_params(header_value: str) -> tuple[str, dict[str, str]]:
-    """Parse a header like 'form-data; name=\"field1\"; filename=\"test.txt\"' into (value, params)."""
+    """Parse a parameterized header into ``(value, params)``."""
     parts = header_value.split(";", 1)
     value = parts[0].strip()
     params: dict[str, str] = {}
@@ -502,7 +503,7 @@ def parse_multipart_form(
             continue
 
         header_bytes = part[:header_end]
-        body_bytes = part[header_end + 4:]  # skip \r\n\r\n
+        body_bytes = part[header_end + 4 :]  # skip \r\n\r\n
         # Strip trailing \r\n that precedes the next boundary
         body_bytes = body_bytes.rstrip(b"\r\n")
 
@@ -633,7 +634,9 @@ def mask_by_ip_range(from_ip: str, to_ip: str) -> str:
     """Compute the subnet mask from an IP range."""
     from_addr = _parse(from_ip)
     to_addr = _parse(to_ip)
-    if not isinstance(from_addr, ipaddress.IPv4Address) or not isinstance(to_addr, ipaddress.IPv4Address):
+    if not isinstance(from_addr, ipaddress.IPv4Address) or not isinstance(
+        to_addr, ipaddress.IPv4Address
+    ):
         raise ValidationError(
             message="invalid IP range",
             code="knifer.net.invalid_ip_range",
@@ -650,7 +653,9 @@ def count_by_ip_range(from_ip: str, to_ip: str) -> int:
     """Count addresses in an IP range."""
     from_addr = _parse(from_ip)
     to_addr = _parse(to_ip)
-    if not isinstance(from_addr, ipaddress.IPv4Address) or not isinstance(to_addr, ipaddress.IPv4Address):
+    if not isinstance(from_addr, ipaddress.IPv4Address) or not isinstance(
+        to_addr, ipaddress.IPv4Address
+    ):
         raise ValidationError(
             message="invalid IP range",
             code="knifer.net.invalid_ip_range",
@@ -760,7 +765,9 @@ def list_ip_range(from_ip: str, to_ip: str) -> list[str]:
     """List all IPs between from_ip and to_ip (inclusive)."""
     from_addr = _parse(from_ip)
     to_addr = _parse(to_ip)
-    if not isinstance(from_addr, ipaddress.IPv4Address) or not isinstance(to_addr, ipaddress.IPv4Address):
+    if not isinstance(from_addr, ipaddress.IPv4Address) or not isinstance(
+        to_addr, ipaddress.IPv4Address
+    ):
         raise ValidationError(
             message="invalid IP range",
             code="knifer.net.invalid_ip_range",
@@ -786,7 +793,11 @@ def _get_local_ips(version: int = 0) -> list[str]:
     """Get all local IP addresses using standard library only."""
     ips: set[str] = set()
     try:
-        family = socket.AF_INET if version == 4 else (socket.AF_INET6 if version == 6 else socket.AF_UNSPEC)
+        family = (
+            socket.AF_INET
+            if version == 4
+            else (socket.AF_INET6 if version == 6 else socket.AF_UNSPEC)
+        )
         for info in socket.getaddrinfo(socket.gethostname(), None, family=family):
             ip = info[4][0]
             if version == 4 and ":" in ip:
@@ -847,6 +858,7 @@ def get_local_host_name() -> str:
 def get_local_mac_address(separator: str = "-") -> str:
     """Get the MAC address of the first non-loopback interface."""
     import uuid
+
     mac = uuid.getnode()
     return separator.join(f"{(mac >> (i * 8)) & 0xFF:02x}" for i in reversed(range(6)))
 
@@ -854,6 +866,7 @@ def get_local_mac_address(separator: str = "-") -> str:
 def get_mac_address(inet_address: str, separator: str = "-") -> str:
     """Get MAC address for a specific IP."""
     import uuid
+
     node = uuid.getnode()
     return separator.join(f"{(node >> (i * 8)) & 0xFF:02x}" for i in reversed(range(6)))
 
@@ -965,6 +978,7 @@ def new_local_port_generator(begin_port: int = PORT_RANGE_MIN) -> LocalPortGener
 def netcat(host: str, port: int, data: bytes, timeout: float = 3.0) -> None:
     """Send data via TCP and return the response."""
     import socket as _socket
+
     try:
         with _socket.create_connection((host, port), timeout=timeout) as sock:
             sock.sendall(data)
@@ -973,7 +987,7 @@ def netcat(host: str, port: int, data: bytes, timeout: float = 3.0) -> None:
             message=f"netcat failed: {exc}",
             code="knifer.net.netcat_failed",
             context={"host": host, "port": port},
-        )
+        ) from exc
 
 
 def get_remote_address(sock: socket.socket) -> str:
@@ -1043,6 +1057,7 @@ def new_cert_pool() -> ssl.SSLContext:
 
 def add_root_ca_bytes(ssl_context: ssl.SSLContext, ca_data: bytes) -> None:
     import tempfile
+
     with tempfile.NamedTemporaryFile(delete=False, suffix=".pem") as f:
         f.write(ca_data)
         f.flush()
@@ -1087,11 +1102,12 @@ def local_address_list_by_interface(
 def _get_interface_addresses() -> list[tuple[Any, list[str]]]:
     """Get network interface name/address pairs."""
     import socket as _socket
+
     hostname = _socket.gethostname()
     ips: list[tuple[Any, list[str]]] = []
     try:
         for info in _socket.getaddrinfo(hostname, None):
-            name = info[0].name if hasattr(info[0], 'name') else ""
+            name = info[0].name if hasattr(info[0], "name") else ""
             ip = info[4][0]
             ips.append((name, [ip]))
     except Exception:
@@ -1178,7 +1194,9 @@ def list_ips_with_options(ip_range: str, is_all: bool = False, **_opts: Any) -> 
     return list_ips(ip_range, is_all)
 
 
-def list_ip_cidr_with_options(ip: str, mask_bit: int, is_all: bool = False, **_opts: Any) -> list[str]:
+def list_ip_cidr_with_options(
+    ip: str, mask_bit: int, is_all: bool = False, **_opts: Any
+) -> list[str]:
     return list_ip_cidr(ip, mask_bit, is_all)
 
 
@@ -1190,7 +1208,9 @@ def get_ip_by_host_with_options(host: str, **_opts: Any) -> list[str]:
     return get_ip_by_host(host)
 
 
-def get_dns_info_with_options(host: str, types: list[str] | None = None, **_opts: Any) -> dict[str, list[str]]:
+def get_dns_info_with_options(
+    host: str, types: list[str] | None = None, **_opts: Any
+) -> dict[str, list[str]]:
     return get_dns_info(host, types)
 
 
@@ -1202,15 +1222,21 @@ def is_open_with_options(host: str, port: int, timeout: float = 3.0, **_opts: An
     return ping(host, port, timeout)
 
 
-def connect_with_options(host: str, port: int, timeout: float = 3.0, **_opts: Any) -> socket.socket | None:
+def connect_with_options(
+    host: str, port: int, timeout: float = 3.0, **_opts: Any
+) -> socket.socket | None:
     return connect(host, port, timeout)
 
 
-def netcat_with_options(host: str, port: int, data: bytes, timeout: float = 3.0, **_opts: Any) -> None:
+def netcat_with_options(
+    host: str, port: int, data: bytes, timeout: float = 3.0, **_opts: Any
+) -> None:
     return netcat(host, port, data, timeout)
 
 
-def build_inet_socket_address_with_options(host: str, default_port: int, **_opts: Any) -> tuple[str, int]:
+def build_inet_socket_address_with_options(
+    host: str, default_port: int, **_opts: Any
+) -> tuple[str, int]:
     return build_inet_socket_address(host, default_port)
 
 
@@ -1286,9 +1312,13 @@ def get_usable_local_port_in_range_with_options(min_port: int, max_port: int, **
     return get_usable_local_port_in_range(min_port, max_port)
 
 
-def get_usable_local_ports_with_options(num_requested: int, min_port: int, max_port: int, **_opts: Any) -> list[int]:
+def get_usable_local_ports_with_options(
+    num_requested: int, min_port: int, max_port: int, **_opts: Any
+) -> list[int]:
     return get_usable_local_ports(num_requested, min_port, max_port)
 
 
-def new_local_port_generator_with_options(begin_port: int = PORT_RANGE_MIN, **_opts: Any) -> LocalPortGenerator:
+def new_local_port_generator_with_options(
+    begin_port: int = PORT_RANGE_MIN, **_opts: Any
+) -> LocalPortGenerator:
     return new_local_port_generator(begin_port)

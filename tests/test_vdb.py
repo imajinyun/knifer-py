@@ -332,7 +332,7 @@ class TestDialect:
         assert is_safe_identifier("public.users")
         assert not is_safe_identifier("users; DROP TABLE users")
         assert not is_safe_identifier("users'")
-        assert not is_safe_identifier("users\"")
+        assert not is_safe_identifier('users"')
 
 
 # --- wrapper tests ------------------------------------------------------------

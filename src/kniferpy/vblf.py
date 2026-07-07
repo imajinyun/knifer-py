@@ -30,6 +30,7 @@ from kniferpy.internal.hashx import (
     sdbm_hash,
     tianl_hash,
 )
+from kniferpy.verr import ValidationError
 
 # ── Go-compat type alias ───────────────────────────────────────────────────────
 
@@ -44,10 +45,6 @@ BitMapBloomFilterOption = Callable[[Any], None]
 
 BitSetBloomFilterOption = Callable[[Any], None]
 """Functional option for BitSetBloomFilter construction (Go compat)."""
-
-# ── Go-compat error type alias ─────────────────────────────────────────────────
-
-from kniferpy.verr import ValidationError
 
 # create BloomFilterError as a proper error class (Go compat)
 BloomFilterError = type("BloomFilterError", (ValidationError,), {})
@@ -212,7 +209,9 @@ def new_bitmap_bloom_filter_with_filters(m: int, *filters: BloomFilter) -> BitMa
     return blfx.new_bitmap_bloom_filter_with_filters(m, *filters)
 
 
-def new_bitmap_bloom_filter_with_filters_e(m: int, *filters: BloomFilter) -> tuple[BitMapBloomFilter, None]:
+def new_bitmap_bloom_filter_with_filters_e(
+    m: int, *filters: BloomFilter
+) -> tuple[BitMapBloomFilter, None]:
     return blfx.new_bitmap_bloom_filter_with_filters_e(m, *filters)
 
 
@@ -224,7 +223,9 @@ def new_long_map(size: int) -> LongMap:
     return blfx.new_long_map(size)
 
 
-def init_from_file_with_options(bloom: BitSetBloomFilter, path: str, opts: list | None = None) -> None:
+def init_from_file_with_options(
+    bloom: BitSetBloomFilter, path: str, opts: list | None = None
+) -> None:
     blfx.init_from_file_with_options(bloom, path, opts)
 
 

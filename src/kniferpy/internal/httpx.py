@@ -1,17 +1,18 @@
 from __future__ import annotations
 
-import io
+import base64 as _base64
 import json
 import os
 import re
-import socket
 import ssl
 import threading
 from dataclasses import dataclass, field
+from dataclasses import dataclass as _dc
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from typing import Any, Callable, Dict, List, Protocol, TypeAlias
-from urllib.parse import urlencode, urlparse
+from typing import Any, Callable, Protocol, TypeAlias
+from typing import Callable as _Callable
+from urllib.parse import urlencode
 
 import requests
 
@@ -32,7 +33,6 @@ class ResponseLike(Protocol):
 
 class SessionLike(Protocol):
     headers: Any
-
 
     def get(self, url: str, timeout: float, **kwargs: Any) -> ResponseLike: ...
 
@@ -167,78 +167,91 @@ ClientOption = Callable[["Client"], None]
 def with_timeout(d: float) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.timeout = d
+
     return _apply
 
 
 def with_header(name: str, value: str) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.headers[name] = value
+
     return _apply
 
 
 def with_headers(headers: dict[str, str]) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.headers.update(headers)
+
     return _apply
 
 
 def with_follow_redirects(b: bool) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.follow_redirects = b
+
     return _apply
 
 
 def with_max_redirects(n: int) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.max_redirects = n
+
     return _apply
 
 
 def with_tls_config(cfg: ssl.SSLContext) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.tls_config = cfg
+
     return _apply
 
 
 def with_session(session: requests.Session) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.session = session
+
     return _apply
 
 
 def with_user_agent(ua: str) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.headers[Header.USER_AGENT] = ua
+
     return _apply
 
 
 def with_content_type(ct: str) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.headers[Header.CONTENT_TYPE] = ct
+
     return _apply
 
 
 def with_charset(charset: str) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.charset = charset
+
     return _apply
 
 
 def with_max_response_bytes(max_bytes: int) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.max_response_bytes = max_bytes
+
     return _apply
 
 
 def with_url_policy(policy: URLPolicy) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.url_policy = policy
+
     return _apply
 
 
 def with_allowed_hosts(*hosts: str) -> RequestOption:
     def _apply(r: HTTPRequest) -> None:
         r.url_policy = URLPolicy(allowed_hosts=list(hosts))
+
     return _apply
 
 
@@ -252,18 +265,21 @@ def with_global_config(cfg: GlobalConfig) -> RequestOption:
             r.headers.setdefault(Header.USER_AGENT, cfg.user_agent)
         for k, v in cfg.headers.items():
             r.headers.setdefault(k, v)
+
     return _apply
 
 
 def with_client_global_config(cfg: GlobalConfig) -> ClientOption:
     def _apply(c: Client) -> None:
         c.global_config = cfg
+
     return _apply
 
 
 def with_client_request_options(opts: list[RequestOption]) -> ClientOption:
     def _apply(c: Client) -> None:
         c.default_options = list(opts)
+
     return _apply
 
 
@@ -392,7 +408,9 @@ class HTTPRequest:
         self.form_data = data
         return self
 
-    def set_form_file(self, field: str, file_name: str, data: bytes, content_type: str = "") -> HTTPRequest:
+    def set_form_file(
+        self, field: str, file_name: str, data: bytes, content_type: str = ""
+    ) -> HTTPRequest:
         self.form_files.append(FormFile(field, file_name, data, content_type))
         return self
 
@@ -419,7 +437,9 @@ class HTTPRequest:
     def form_file_reader(self, field: str, file_name: str, reader: Any) -> HTTPRequest:
         """Set a form file from a reader (Go compat)."""
         data = reader.read() if hasattr(reader, "read") else reader
-        self.form_files.append(FormFile(field, file_name, data if isinstance(data, bytes) else data.encode(), ""))
+        self.form_files.append(
+            FormFile(field, file_name, data if isinstance(data, bytes) else data.encode(), "")
+        )
         return self
 
     def clone(self) -> HTTPRequest:
@@ -467,7 +487,11 @@ class HTTPRequest:
             if self.form_files:
                 files = {}
                 for ff in self.form_files:
-                    files[ff.field_name] = (ff.file_name, ff.data, ff.content_type or "application/octet-stream")
+                    files[ff.field_name] = (
+                        ff.file_name,
+                        ff.data,
+                        ff.content_type or "application/octet-stream",
+                    )
                 kwargs["files"] = files
         if not self.follow_redirects:
             kwargs["allow_redirects"] = False
@@ -478,7 +502,9 @@ class HTTPRequest:
         url = self._build_url()
         if self._safe:
             urlx.validate_http_url(
-                url, allowed_hosts=self._allowed_hosts or None, resolver=self._resolver,
+                url,
+                allowed_hosts=self._allowed_hosts or None,
+                resolver=self._resolver,
             )
         session = self.session or requests.Session()
         kwargs = self._build_kwargs()
@@ -558,7 +584,15 @@ class HTTPResponse:
                 k, v = part.split("=", 1)
                 k = k.strip()
                 v = v.strip()
-                if k.lower() not in ("path", "domain", "expires", "max-age", "secure", "httponly", "samesite"):
+                if k.lower() not in (
+                    "path",
+                    "domain",
+                    "expires",
+                    "max-age",
+                    "secure",
+                    "httponly",
+                    "samesite",
+                ):
                     result[k] = v
         return result
 
@@ -812,7 +846,9 @@ def new_isolated_request(method: str, raw_url: str, *opts: RequestOption) -> HTT
     return r
 
 
-def new_request_with_config(method: str, raw_url: str, cfg: GlobalConfig, opts: list[RequestOption] | None = None) -> HTTPRequest:
+def new_request_with_config(
+    method: str, raw_url: str, cfg: GlobalConfig, opts: list[RequestOption] | None = None
+) -> HTTPRequest:
     r = HTTPRequest()
     r.method = method
     r.raw_url = raw_url
@@ -840,32 +876,44 @@ def get_string_safe_e(raw_url: str, *opts: RequestOption) -> tuple[str, HTTPErro
     return r.execute_string()
 
 
-def get_with_timeout_e(raw_url: str, timeout: float, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+def get_with_timeout_e(
+    raw_url: str, timeout: float, *opts: RequestOption
+) -> tuple[str, HTTPError | None]:
     r = get(raw_url, with_timeout(timeout), *opts)
     return r.execute_string()
 
 
-def get_with_params_e(raw_url: str, params: dict[str, Any], *opts: RequestOption) -> tuple[str, HTTPError | None]:
+def get_with_params_e(
+    raw_url: str, params: dict[str, Any], *opts: RequestOption
+) -> tuple[str, HTTPError | None]:
     r = get(raw_url, *opts)
     r.set_query_map(params)
     return r.execute_string()
 
 
-def get_with_params_e_with_options(raw_url: str, params: dict[str, Any], *opts: RequestOption) -> tuple[str, HTTPError | None]:
+def get_with_params_e_with_options(
+    raw_url: str, params: dict[str, Any], *opts: RequestOption
+) -> tuple[str, HTTPError | None]:
     return get_with_params_e(raw_url, params, *opts)
 
 
-def post_form_e(raw_url: str, params: dict[str, Any], *opts: RequestOption) -> tuple[str, HTTPError | None]:
+def post_form_e(
+    raw_url: str, params: dict[str, Any], *opts: RequestOption
+) -> tuple[str, HTTPError | None]:
     r = post(raw_url, *opts)
     r.set_form(params)
     return r.execute_string()
 
 
-def post_form_e_with_options(raw_url: str, params: dict[str, Any], *opts: RequestOption) -> tuple[str, HTTPError | None]:
+def post_form_e_with_options(
+    raw_url: str, params: dict[str, Any], *opts: RequestOption
+) -> tuple[str, HTTPError | None]:
     return post_form_e(raw_url, params, *opts)
 
 
-def post_form_safe_e(raw_url: str, params: dict[str, Any], *opts: RequestOption) -> tuple[str, HTTPError | None]:
+def post_form_safe_e(
+    raw_url: str, params: dict[str, Any], *opts: RequestOption
+) -> tuple[str, HTTPError | None]:
     r = post_safe_r(raw_url, *opts)
     r.set_form(params)
     return r.execute_string()
@@ -877,11 +925,15 @@ def post_json_e(raw_url: str, json_str: str, *opts: RequestOption) -> tuple[str,
     return r.execute_string()
 
 
-def post_json_e_with_options(raw_url: str, json_str: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+def post_json_e_with_options(
+    raw_url: str, json_str: str, *opts: RequestOption
+) -> tuple[str, HTTPError | None]:
     return post_json_e(raw_url, json_str, *opts)
 
 
-def post_json_safe_e(raw_url: str, json_str: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+def post_json_safe_e(
+    raw_url: str, json_str: str, *opts: RequestOption
+) -> tuple[str, HTTPError | None]:
     r = post_safe_r(raw_url, *opts)
     r.set_body_json(json_str)
     return r.execute_string()
@@ -893,11 +945,15 @@ def post_string_e(raw_url: str, body: str, *opts: RequestOption) -> tuple[str, H
     return r.execute_string()
 
 
-def post_string_e_with_options(raw_url: str, body: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+def post_string_e_with_options(
+    raw_url: str, body: str, *opts: RequestOption
+) -> tuple[str, HTTPError | None]:
     return post_string_e(raw_url, body, *opts)
 
 
-def post_string_safe_e(raw_url: str, body: str, *opts: RequestOption) -> tuple[str, HTTPError | None]:
+def post_string_safe_e(
+    raw_url: str, body: str, *opts: RequestOption
+) -> tuple[str, HTTPError | None]:
     r = post_safe_r(raw_url, *opts)
     r.set_body_string(body)
     return r.execute_string()
@@ -906,18 +962,24 @@ def post_string_safe_e(raw_url: str, body: str, *opts: RequestOption) -> tuple[s
 # ========== Download Helpers ==========
 
 
-def download_string_e(raw_url: str, custom_charset: str = "", *opts: RequestOption) -> tuple[str, HTTPError | None]:
+def download_string_e(
+    raw_url: str, custom_charset: str = "", *opts: RequestOption
+) -> tuple[str, HTTPError | None]:
     r = get(raw_url, *opts)
     if custom_charset:
         r.set_charset(custom_charset)
     return r.execute_string()
 
 
-def download_string_e_with_options(raw_url: str, custom_charset: str = "", *opts: RequestOption) -> tuple[str, HTTPError | None]:
+def download_string_e_with_options(
+    raw_url: str, custom_charset: str = "", *opts: RequestOption
+) -> tuple[str, HTTPError | None]:
     return download_string_e(raw_url, custom_charset, *opts)
 
 
-def download_string_safe_e(raw_url: str, custom_charset: str = "", *opts: RequestOption) -> tuple[str, HTTPError | None]:
+def download_string_safe_e(
+    raw_url: str, custom_charset: str = "", *opts: RequestOption
+) -> tuple[str, HTTPError | None]:
     r = get_safe_r(raw_url, *opts)
     if custom_charset:
         r.set_charset(custom_charset)
@@ -929,7 +991,9 @@ def download_bytes_e(raw_url: str, *opts: RequestOption) -> tuple[bytes, HTTPErr
     return r.execute_bytes()
 
 
-def download_bytes_e_with_options(raw_url: str, *opts: RequestOption) -> tuple[bytes, HTTPError | None]:
+def download_bytes_e_with_options(
+    raw_url: str, *opts: RequestOption
+) -> tuple[bytes, HTTPError | None]:
     return download_bytes_e(raw_url, *opts)
 
 
@@ -955,30 +1019,35 @@ class SaveConfig:
 def with_save_file_perm(perm: int) -> SaveOption:
     def _apply(c: SaveConfig) -> None:
         c.file_perm = perm
+
     return _apply
 
 
 def with_save_dir_perm(perm: int) -> SaveOption:
     def _apply(c: SaveConfig) -> None:
         c.dir_perm = perm
+
     return _apply
 
 
 def with_save_overwrite(overwrite: bool) -> SaveOption:
     def _apply(c: SaveConfig) -> None:
         c.overwrite = overwrite
+
     return _apply
 
 
 def with_save_create_parents(create: bool) -> SaveOption:
     def _apply(c: SaveConfig) -> None:
         c.create_parents = create
+
     return _apply
 
 
 def with_save_default_filename(name: str) -> SaveOption:
     def _apply(c: SaveConfig) -> None:
         c.default_filename = name
+
     return _apply
 
 
@@ -990,11 +1059,13 @@ def download(raw_url: str, w: Any, *opts: RequestOption) -> tuple[int, HTTPError
     try:
         n = resp.write_to(w)
         return n, None
-    except IOError as e:
+    except OSError as e:
         return 0, new_error(str(e), e)
 
 
-def download_with_options(raw_url: str, w: Any, *opts: RequestOption) -> tuple[int, HTTPError | None]:
+def download_with_options(
+    raw_url: str, w: Any, *opts: RequestOption
+) -> tuple[int, HTTPError | None]:
     return download(raw_url, w, *opts)
 
 
@@ -1006,28 +1077,42 @@ def download_safe(raw_url: str, w: Any, *opts: RequestOption) -> tuple[int, HTTP
     try:
         n = resp.write_to(w)
         return n, None
-    except IOError as e:
+    except OSError as e:
         return 0, new_error(str(e), e)
 
 
-def download_file(raw_url: str, dest: str | Path, *save_opts: SaveOption) -> tuple[int, HTTPError | None]:
+def download_file(
+    raw_url: str, dest: str | Path, *save_opts: SaveOption
+) -> tuple[int, HTTPError | None]:
     return _download_file_impl(raw_url, dest, list(save_opts), safe=False)
 
 
 def download_file_with_options(
-    raw_url: str, dest: str | Path, request_opts: list[RequestOption] | None = None, *save_opts: SaveOption,
+    raw_url: str,
+    dest: str | Path,
+    request_opts: list[RequestOption] | None = None,
+    *save_opts: SaveOption,
 ) -> tuple[int, HTTPError | None]:
-    return _download_file_impl(raw_url, dest, list(save_opts), request_opts=request_opts or [], safe=False)
+    return _download_file_impl(
+        raw_url, dest, list(save_opts), request_opts=request_opts or [], safe=False
+    )
 
 
-def download_file_safe(raw_url: str, dest: str | Path, *save_opts: SaveOption) -> tuple[int, HTTPError | None]:
+def download_file_safe(
+    raw_url: str, dest: str | Path, *save_opts: SaveOption
+) -> tuple[int, HTTPError | None]:
     return _download_file_impl(raw_url, dest, list(save_opts), safe=True)
 
 
 def download_file_safe_with_options(
-    raw_url: str, dest: str | Path, request_opts: list[RequestOption] | None = None, *save_opts: SaveOption,
+    raw_url: str,
+    dest: str | Path,
+    request_opts: list[RequestOption] | None = None,
+    *save_opts: SaveOption,
 ) -> tuple[int, HTTPError | None]:
-    return _download_file_impl(raw_url, dest, list(save_opts), request_opts=request_opts or [], safe=True)
+    return _download_file_impl(
+        raw_url, dest, list(save_opts), request_opts=request_opts or [], safe=True
+    )
 
 
 def _download_file_impl(
@@ -1049,10 +1134,7 @@ def _download_file_impl(
         dest.parent.mkdir(parents=True, exist_ok=True)
     if request_opts is None:
         request_opts = []
-    if safe:
-        r = get_safe_r(raw_url, *request_opts)
-    else:
-        r = get(raw_url, *request_opts)
+    r = get_safe_r(raw_url, *request_opts) if safe else get(raw_url, *request_opts)
     resp = r.execute()
     if resp.err is not None:
         return 0, resp.err
@@ -1090,7 +1172,10 @@ def parse_user_agent(ua: str) -> UserAgent:
 
 
 def _is_mobile_ua(ua: str) -> bool:
-    return any(k in ua for k in ("mobile", "android", "iphone", "ipad", "ipod", "blackberry", "windows phone"))
+    return any(
+        k in ua
+        for k in ("mobile", "android", "iphone", "ipad", "ipod", "blackberry", "windows phone")
+    )
 
 
 def _parse_os(ua: str) -> str:
@@ -1342,9 +1427,13 @@ def get_string_safe(
     session: SessionLike | None = None,
 ) -> str:
     body = _request_safe(
-        "GET", raw_url,
-        allowed_hosts=allowed_hosts, timeout=timeout,
-        max_bytes=max_bytes, resolver=resolver, session=session,
+        "GET",
+        raw_url,
+        allowed_hosts=allowed_hosts,
+        timeout=timeout,
+        max_bytes=max_bytes,
+        resolver=resolver,
+        session=session,
     )
     return body.decode("utf-8")
 
@@ -1359,13 +1448,17 @@ def get_bytes_safe(
     session: SessionLike | None = None,
 ) -> bytes:
     return _request_safe(
-        "GET", raw_url,
-        allowed_hosts=allowed_hosts, timeout=timeout,
-        max_bytes=max_bytes, resolver=resolver, session=session,
+        "GET",
+        raw_url,
+        allowed_hosts=allowed_hosts,
+        timeout=timeout,
+        max_bytes=max_bytes,
+        resolver=resolver,
+        session=session,
     )
 
 
-def download_file_safe(
+def download_file_safe(  # noqa: F811
     raw_url: str,
     dst: str | Path,
     *,
@@ -1421,9 +1514,14 @@ def post_json_safe(
     session: SessionLike | None = None,
 ) -> dict[str, JSONValue]:
     body = _request_safe(
-        "POST", raw_url, json_body=payload,
-        allowed_hosts=allowed_hosts, timeout=timeout,
-        max_bytes=max_bytes, resolver=resolver, session=session,
+        "POST",
+        raw_url,
+        json_body=payload,
+        allowed_hosts=allowed_hosts,
+        timeout=timeout,
+        max_bytes=max_bytes,
+        resolver=resolver,
+        session=session,
     )
     decoded = _to_json_value(json.loads(body))
     if not isinstance(decoded, dict):
@@ -1442,9 +1540,14 @@ def put_json_safe(
     session: SessionLike | None = None,
 ) -> dict[str, JSONValue]:
     body = _request_safe(
-        "PUT", raw_url, json_body=payload,
-        allowed_hosts=allowed_hosts, timeout=timeout,
-        max_bytes=max_bytes, resolver=resolver, session=session,
+        "PUT",
+        raw_url,
+        json_body=payload,
+        allowed_hosts=allowed_hosts,
+        timeout=timeout,
+        max_bytes=max_bytes,
+        resolver=resolver,
+        session=session,
     )
     decoded = _to_json_value(json.loads(body))
     if not isinstance(decoded, dict):
@@ -1462,9 +1565,13 @@ def delete_safe(
     session: SessionLike | None = None,
 ) -> bytes:
     return _request_safe(
-        "DELETE", raw_url,
-        allowed_hosts=allowed_hosts, timeout=timeout,
-        max_bytes=max_bytes, resolver=resolver, session=session,
+        "DELETE",
+        raw_url,
+        allowed_hosts=allowed_hosts,
+        timeout=timeout,
+        max_bytes=max_bytes,
+        resolver=resolver,
+        session=session,
     )
 
 
@@ -1479,9 +1586,14 @@ def patch_json_safe(
     session: SessionLike | None = None,
 ) -> dict[str, JSONValue]:
     body = _request_safe(
-        "PATCH", raw_url, json_body=payload,
-        allowed_hosts=allowed_hosts, timeout=timeout,
-        max_bytes=max_bytes, resolver=resolver, session=session,
+        "PATCH",
+        raw_url,
+        json_body=payload,
+        allowed_hosts=allowed_hosts,
+        timeout=timeout,
+        max_bytes=max_bytes,
+        resolver=resolver,
+        session=session,
     )
     decoded = _to_json_value(json.loads(body))
     if not isinstance(decoded, dict):
@@ -1607,7 +1719,9 @@ def parse_content_type(header: str) -> tuple[str, dict[str, str]]:
 _default_transport_provider: Callable[[], requests.Session | None] | None = None
 
 
-def configure_default_transport_provider(provider: Callable[[], requests.Session | None] | None) -> None:
+def configure_default_transport_provider(
+    provider: Callable[[], requests.Session | None] | None,
+) -> None:
     """Set a custom transport provider for default HTTP sessions (Go compat)."""
     global _default_transport_provider
     _default_transport_provider = provider
@@ -1666,11 +1780,6 @@ def make_set_cookie(
     if same_site:
         parts.append(f"SameSite={same_site}")
     return "; ".join(parts)
-
-
-# ========== Auth Headers ==========
-
-import base64 as _base64
 
 
 def basic_auth_header(username: str, password: str) -> str:
@@ -1742,7 +1851,8 @@ def build_url(
     fragment: str = "",
 ) -> str:
     """Build a URL from components."""
-    from urllib.parse import urlencode, quote
+    from urllib.parse import quote, urlencode
+
     url = f"{scheme}://{host}"
     if path:
         if not path.startswith("/"):
@@ -1925,12 +2035,14 @@ def decode_response_body(data: bytes, content_encoding: str = "") -> bytes:
     enc = content_encoding.strip().lower()
     if enc == "gzip":
         import gzip
+
         try:
             return gzip.decompress(data)
         except Exception:
             return data
     if enc == "deflate":
         import zlib
+
         try:
             return zlib.decompress(data)
         except Exception:
@@ -1938,6 +2050,7 @@ def decode_response_body(data: bytes, content_encoding: str = "") -> bytes:
     if enc == "br":
         try:
             import brotli
+
             return brotli.decompress(data)
         except ImportError:
             pass
@@ -1946,12 +2059,8 @@ def decode_response_body(data: bytes, content_encoding: str = "") -> bytes:
     return data
 
 
-# ========== HTML Utilities ==========
-
-from dataclasses import dataclass as _dc
-from typing import Callable as _Callable
-
 # ── HTMLCleanOption ────────────────────────────────────────────────────────────
+
 
 @_dc
 class HTMLCleanConfig:
@@ -1968,12 +2077,14 @@ _DEFAULT_COMMENT_RE = re.compile(r"<!--.*?-->", re.DOTALL | re.IGNORECASE)
 def with_html_tag_regexp(regex: re.Pattern) -> HTMLCleanOption:
     def _apply(cfg: HTMLCleanConfig) -> None:
         cfg.tag_re = regex
+
     return _apply
 
 
 def with_html_comment_regexp(regex: re.Pattern) -> HTMLCleanOption:
     def _apply(cfg: HTMLCleanConfig) -> None:
         cfg.comment_re = regex
+
     return _apply
 
 
@@ -1991,6 +2102,7 @@ def _apply_html_clean_options(opts: list[HTMLCleanOption]) -> HTMLCleanConfig:
 
 # ── HTMLFilterOption ───────────────────────────────────────────────────────────
 
+
 @_dc
 class HTMLFilterConfig:
     compile: _Callable[[str], re.Pattern] = re.compile
@@ -2003,6 +2115,7 @@ def with_html_filter_compile_func(compile_fn: _Callable[[str], re.Pattern]) -> H
     def _apply(cfg: HTMLFilterConfig) -> None:
         if compile_fn is not None:
             cfg.compile = compile_fn
+
     return _apply
 
 
@@ -2018,19 +2131,50 @@ def _apply_html_filter_options(opts: list[HTMLFilterOption]) -> HTMLFilterConfig
 
 def html_escape(s: str) -> str:
     import html
+
     return html.escape(s)
 
 
 def html_unescape(s: str) -> str:
     import html
+
     return html.unescape(s)
 
 
 _INLINE_TAGS = {
-    "a", "abbr", "acronym", "b", "bdo", "big", "br", "button", "cite",
-    "code", "dfn", "em", "i", "img", "input", "kbd", "label", "map",
-    "object", "output", "q", "samp", "script", "select", "small", "span",
-    "strong", "sub", "sup", "textarea", "time", "tt", "var",
+    "a",
+    "abbr",
+    "acronym",
+    "b",
+    "bdo",
+    "big",
+    "br",
+    "button",
+    "cite",
+    "code",
+    "dfn",
+    "em",
+    "i",
+    "img",
+    "input",
+    "kbd",
+    "label",
+    "map",
+    "object",
+    "output",
+    "q",
+    "samp",
+    "script",
+    "select",
+    "small",
+    "span",
+    "strong",
+    "sub",
+    "sup",
+    "textarea",
+    "time",
+    "tt",
+    "var",
 }
 
 
@@ -2047,6 +2191,7 @@ def clean_html_with_options(html_content: str, *opts: HTMLCleanOption) -> str:
 
 def filter_html_tag(html_content: str, allowed_tags: set[str] | None = None) -> str:
     import re as _re
+
     if allowed_tags is None:
         allowed_tags = _INLINE_TAGS
     preserved: list[tuple[str, str]] = []
@@ -2059,7 +2204,11 @@ def filter_html_tag(html_content: str, allowed_tags: set[str] | None = None) -> 
         return tag
 
     # Save allowed tags
-    pattern = r"</?(" + "|".join(re.escape(t) for t in sorted(allowed_tags, key=len, reverse=True)) + r")(\s[^>]*)?>"
+    pattern = (
+        r"</?("
+        + "|".join(re.escape(t) for t in sorted(allowed_tags, key=len, reverse=True))
+        + r")(\s[^>]*)?>"
+    )
     html_content = _re.sub(pattern, _save, html_content, flags=_re.IGNORECASE)
     # Remove all other tags
     html_content = _re.sub(r"<[^>]+>", "", html_content)
@@ -2103,6 +2252,7 @@ def to_params(data: dict[str, Any] | None) -> str:
     if not data:
         return ""
     from urllib.parse import urlencode
+
     return urlencode(data)
 
 
@@ -2112,6 +2262,7 @@ def encode_params(params: dict[str, Any] | None) -> str:
 
 def decode_param_map(query: str) -> dict[str, list[str]]:
     from urllib.parse import parse_qs
+
     if not query:
         return {}
     return parse_qs(query.lstrip("?"))
@@ -2119,6 +2270,7 @@ def decode_param_map(query: str) -> dict[str, list[str]]:
 
 def decode_params(query: str) -> dict[str, str]:
     from urllib.parse import parse_qs
+
     if not query:
         return {}
     raw = parse_qs(query.lstrip("?"))
@@ -2150,6 +2302,7 @@ def is_redirected(status_code: int) -> bool:
 
 # ── CharsetOption ──────────────────────────────────────────────────────────────
 
+
 @_dc
 class CharsetConfig:
     charset_pattern: re.Pattern | None = None
@@ -2159,22 +2312,26 @@ class CharsetConfig:
 CharsetOption: TypeAlias = _Callable[["CharsetConfig"], None]
 
 _DEFAULT_CHARSET_PATTERN = re.compile(
-    r'charset\s*=\s*["\']?([^"\'>;\s]+)', re.IGNORECASE,
+    r'charset\s*=\s*["\']?([^"\'>;\s]+)',
+    re.IGNORECASE,
 )
 _DEFAULT_META_CHARSET_PATTERN = re.compile(
-    r'<meta[^>]+charset\s*=\s*["\']?([^"\'>;\s]+)', re.IGNORECASE,
+    r'<meta[^>]+charset\s*=\s*["\']?([^"\'>;\s]+)',
+    re.IGNORECASE,
 )
 
 
 def with_charset_regexp(regex: re.Pattern) -> CharsetOption:
     def _apply(cfg: CharsetConfig) -> None:
         cfg.charset_pattern = regex
+
     return _apply
 
 
 def with_meta_charset_regexp(regex: re.Pattern) -> CharsetOption:
     def _apply(cfg: CharsetConfig) -> None:
         cfg.meta_charset_pattern = regex
+
     return _apply
 
 
@@ -2198,7 +2355,8 @@ def get_charset_from_content_type(content_type: str) -> str:
 
 
 def get_charset_from_content_type_with_options(
-    content_type: str, *opts: CharsetOption,
+    content_type: str,
+    *opts: CharsetOption,
 ) -> str:
     cfg = _apply_charset_options(list(opts))
     if cfg.charset_pattern:
@@ -2213,7 +2371,8 @@ def get_charset_from_html(html_content: str) -> str:
 
 
 def get_charset_from_html_with_options(
-    html_content: str, *opts: CharsetOption,
+    html_content: str,
+    *opts: CharsetOption,
 ) -> str:
     cfg = _apply_charset_options(list(opts))
     if cfg.meta_charset_pattern:
@@ -2286,7 +2445,15 @@ class CookieJar:
                 k, v = part.split("=", 1)
                 k = k.strip()
                 v = v.strip()
-                if k.lower() not in ("path", "domain", "expires", "max-age", "secure", "httponly", "samesite"):
+                if k.lower() not in (
+                    "path",
+                    "domain",
+                    "expires",
+                    "max-age",
+                    "secure",
+                    "httponly",
+                    "samesite",
+                ):
                     self._cookies[k] = v
 
     def __len__(self) -> int:
@@ -2368,8 +2535,12 @@ def get_with_params_safe(
 ) -> str:
     full_url = url_with_form(raw_url, params)
     return get_string_safe(
-        full_url, allowed_hosts=allowed_hosts, timeout=timeout,
-        max_bytes=max_bytes, resolver=resolver, session=session,
+        full_url,
+        allowed_hosts=allowed_hosts,
+        timeout=timeout,
+        max_bytes=max_bytes,
+        resolver=resolver,
+        session=session,
     )
 
 
@@ -2384,6 +2555,11 @@ def post_form_encoded_safe(
     session: SessionLike | None = None,
 ) -> str:
     return post_form_safe(
-        raw_url, data, allowed_hosts=allowed_hosts, timeout=timeout,
-        max_bytes=max_bytes, resolver=resolver, session=session,
+        raw_url,
+        data,
+        allowed_hosts=allowed_hosts,
+        timeout=timeout,
+        max_bytes=max_bytes,
+        resolver=resolver,
+        session=session,
     )

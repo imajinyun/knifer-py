@@ -5,6 +5,7 @@ from typing import Any, Callable
 
 from kniferpy.internal import filex
 from kniferpy.internal.filex import (
+    UNKNOWN_FILE_TYPE,
     FileCategory,
     FileCategoryArchive,
     FileCategoryAudio,
@@ -15,7 +16,6 @@ from kniferpy.internal.filex import (
     FileCategoryUnknown,
     FileCategoryVideo,
     FileType,
-    UNKNOWN_FILE_TYPE,
 )
 from kniferpy.verr import KniferError
 
@@ -140,7 +140,9 @@ def file_size(path: str | Path) -> int:
     return filex.file_size(path)
 
 
-def read_text(path: str | Path, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES) -> str:
+def read_text(
+    path: str | Path, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES
+) -> str:
     return filex.read_text(path, encoding=encoding, max_bytes=max_bytes)
 
 
@@ -295,7 +297,9 @@ def reader_from_bytes(data: bytes):
     return filex.reader_from_bytes(data)
 
 
-def read_file_string(path: str | Path, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES) -> str:
+def read_file_string(
+    path: str | Path, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES
+) -> str:
     return filex.read_file_string(path, encoding=encoding, max_bytes=max_bytes)
 
 

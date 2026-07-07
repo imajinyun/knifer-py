@@ -1,7 +1,6 @@
 import base64
-import json
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 
 import pytest
 from cryptography.hazmat.primitives.asymmetric import ec, rsa
@@ -304,9 +303,10 @@ def test_parse_jwt_invalid_token() -> None:
 
 
 def test_new_jwt() -> None:
-    claims = vjwt.new_jwt({"sub": "user-1"})
+    payload = {"sub": "user-1"}
+    claims = vjwt.new_jwt(payload)
     assert claims["sub"] == "user-1"
-    assert claims is not {"sub": "user-1"}  # returns a copy
+    assert claims is not payload  # returns a copy
 
 
 def test_jwt_of() -> None:
@@ -611,47 +611,25 @@ def test_sign_ps512_with_expiry(rsa_key: rsa.RSAPrivateKey) -> None:
 
 
 def test_builder_sign_verify_hs256() -> None:
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .set_issuer("kniferpy")
-        .sign_hs256(SECRET)
-    )
-    claims = (
-        vjwt.JWTBuilder()
-        .require_issuer("kniferpy")
-        .verify_hs256(token, SECRET)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").set_issuer("kniferpy").sign_hs256(SECRET)
+    claims = vjwt.JWTBuilder().require_issuer("kniferpy").verify_hs256(token, SECRET)
     assert claims["sub"] == "user-1"
 
 
 def test_builder_sign_verify_hs384() -> None:
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .sign_hs384(SECRET_HS384)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").sign_hs384(SECRET_HS384)
     claims = vjwt.JWTBuilder().verify_hs384(token, SECRET_HS384)
     assert claims["sub"] == "user-1"
 
 
 def test_builder_sign_verify_hs512() -> None:
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .sign_hs512(SECRET_HS512)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").sign_hs512(SECRET_HS512)
     claims = vjwt.JWTBuilder().verify_hs512(token, SECRET_HS512)
     assert claims["sub"] == "user-1"
 
 
 def test_builder_with_expires_in() -> None:
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .set_expires_in(3600)
-        .sign_hs256(SECRET)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").set_expires_in(3600).sign_hs256(SECRET)
     claims = vjwt.JWTBuilder().verify_hs256(token, SECRET)
     assert "exp" in claims
 
@@ -668,70 +646,38 @@ def test_builder_with_timedelta_expires_in() -> None:
 
 
 def test_builder_set_jwt_id() -> None:
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .set_jwt_id("jti-123")
-        .sign_hs256(SECRET)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").set_jwt_id("jti-123").sign_hs256(SECRET)
     claims = vjwt.JWTBuilder().verify_hs256(token, SECRET)
     assert claims["jti"] == "jti-123"
 
 
 def test_builder_set_claim() -> None:
-    token = (
-        vjwt.JWTBuilder()
-        .set_claim("role", "admin")
-        .sign_hs256(SECRET)
-    )
+    token = vjwt.JWTBuilder().set_claim("role", "admin").sign_hs256(SECRET)
     claims = vjwt.JWTBuilder().verify_hs256(token, SECRET)
     assert claims["role"] == "admin"
 
 
 def test_builder_set_claims() -> None:
-    token = (
-        vjwt.JWTBuilder()
-        .set_claims({"role": "admin", "org": "kniferpy"})
-        .sign_hs256(SECRET)
-    )
+    token = vjwt.JWTBuilder().set_claims({"role": "admin", "org": "kniferpy"}).sign_hs256(SECRET)
     claims = vjwt.JWTBuilder().verify_hs256(token, SECRET)
     assert claims["role"] == "admin"
     assert claims["org"] == "kniferpy"
 
 
 def test_builder_set_headers() -> None:
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .set_headers({"kid": "key-1"})
-        .sign_hs256(SECRET)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").set_headers({"kid": "key-1"}).sign_hs256(SECRET)
     claims = vjwt.JWTBuilder().verify_hs256(token, SECRET)
     assert claims["sub"] == "user-1"
 
 
 def test_builder_require_audience() -> None:
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .set_audience("api")
-        .sign_hs256(SECRET)
-    )
-    claims = (
-        vjwt.JWTBuilder()
-        .require_audience("api")
-        .verify_hs256(token, SECRET)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").set_audience("api").sign_hs256(SECRET)
+    claims = vjwt.JWTBuilder().require_audience("api").verify_hs256(token, SECRET)
     assert claims["sub"] == "user-1"
 
 
 def test_builder_audience_mismatch() -> None:
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .set_audience("api")
-        .sign_hs256(SECRET)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").set_audience("api").sign_hs256(SECRET)
     with pytest.raises(CryptoError) as exc_info:
         vjwt.JWTBuilder().require_audience("other").verify_hs256(token, SECRET)
     assert exc_info.value.code == "jwt.verify_failed"
@@ -739,76 +685,48 @@ def test_builder_audience_mismatch() -> None:
 
 def test_builder_sign_verify_es256(ec_key_p256: ec.EllipticCurvePrivateKey) -> None:
     pub = ec_key_p256.public_key()
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .sign_es256(ec_key_p256)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").sign_es256(ec_key_p256)
     claims = vjwt.JWTBuilder().verify_es256(token, pub)
     assert claims["sub"] == "user-1"
 
 
 def test_builder_sign_verify_es384(ec_key_p384: ec.EllipticCurvePrivateKey) -> None:
     pub = ec_key_p384.public_key()
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .sign_es384(ec_key_p384)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").sign_es384(ec_key_p384)
     claims = vjwt.JWTBuilder().verify_es384(token, pub)
     assert claims["sub"] == "user-1"
 
 
 def test_builder_sign_verify_es512(ec_key_p521: ec.EllipticCurvePrivateKey) -> None:
     pub = ec_key_p521.public_key()
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .sign_es512(ec_key_p521)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").sign_es512(ec_key_p521)
     claims = vjwt.JWTBuilder().verify_es512(token, pub)
     assert claims["sub"] == "user-1"
 
 
 def test_builder_sign_verify_ps256(rsa_key: rsa.RSAPrivateKey) -> None:
     pub = rsa_key.public_key()
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .sign_ps256(rsa_key)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").sign_ps256(rsa_key)
     claims = vjwt.JWTBuilder().verify_ps256(token, pub)
     assert claims["sub"] == "user-1"
 
 
 def test_builder_sign_verify_ps384(rsa_key: rsa.RSAPrivateKey) -> None:
     pub = rsa_key.public_key()
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .sign_ps384(rsa_key)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").sign_ps384(rsa_key)
     claims = vjwt.JWTBuilder().verify_ps384(token, pub)
     assert claims["sub"] == "user-1"
 
 
 def test_builder_sign_verify_ps512(rsa_key: rsa.RSAPrivateKey) -> None:
     pub = rsa_key.public_key()
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .sign_ps512(rsa_key)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").sign_ps512(rsa_key)
     claims = vjwt.JWTBuilder().verify_ps512(token, pub)
     assert claims["sub"] == "user-1"
 
 
 def test_builder_verify_strict() -> None:
-    token = (
-        vjwt.JWTBuilder()
-        .set_subject("user-1")
-        .sign_hs256(SECRET)
-    )
+    token = vjwt.JWTBuilder().set_subject("user-1").sign_hs256(SECRET)
     claims = vjwt.JWTBuilder().verify_strict(token, SECRET, "HS256")
     assert claims["sub"] == "user-1"
 
@@ -1099,25 +1017,19 @@ def test_create_jwt_token() -> None:
 
 
 def test_create_token_with_headers() -> None:
-    token = vjwt.create_token_with_headers(
-        {"kid": "key-1"}, {"sub": "user-1"}, SECRET
-    )
+    token = vjwt.create_token_with_headers({"kid": "key-1"}, {"sub": "user-1"}, SECRET)
     claims = vjwt.verify_hs256(token, SECRET)
     assert claims["sub"] == "user-1"
 
 
 def test_create_token_with_algorithm_hs384() -> None:
-    token = vjwt.create_token_with_algorithm(
-        {"sub": "user-1"}, SECRET_HS384, "HS384"
-    )
+    token = vjwt.create_token_with_algorithm({"sub": "user-1"}, SECRET_HS384, "HS384")
     claims = vjwt.verify_hs384(token, SECRET_HS384)
     assert claims["sub"] == "user-1"
 
 
 def test_create_token_with_algorithm_hs512() -> None:
-    token = vjwt.create_token_with_algorithm(
-        {"sub": "user-1"}, SECRET_HS512, "HS512"
-    )
+    token = vjwt.create_token_with_algorithm({"sub": "user-1"}, SECRET_HS512, "HS512")
     claims = vjwt.verify_hs512(token, SECRET_HS512)
     assert claims["sub"] == "user-1"
 
@@ -1184,9 +1096,7 @@ def test_create_token_with_signer_ecdsa(ec_key_p256: ec.EllipticCurvePrivateKey)
 
 def test_create_token_with_headers_and_signer() -> None:
     signer = vjwt.HS256(SECRET.encode())
-    token = vjwt.create_token_with_headers_and_signer(
-        {"kid": "key-1"}, {"sub": "user-1"}, signer
-    )
+    token = vjwt.create_token_with_headers_and_signer({"kid": "key-1"}, {"sub": "user-1"}, signer)
     assert vjwt.verify_with_signer(token, signer) is True
 
 
@@ -1222,7 +1132,6 @@ def test_verify_strict_signer() -> None:
 
 
 def test_verify_strict_signer_algorithm_mismatch() -> None:
-    signer = vjwt.HS256(SECRET.encode())
     token = vjwt.sign_hs256({"sub": "user-1"}, SECRET)
     other_signer = vjwt.HS384(SECRET_HS384.encode())
     assert vjwt.verify_strict_signer(token, other_signer) is False

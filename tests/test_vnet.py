@@ -107,27 +107,19 @@ def test_subnet_math_success_and_errors() -> None:
     assert vnet.count_by_mask_bit(30, is_all=True) == 4
     assert vnet.mask_by_mask_bit(24) == "255.255.255.0"
     assert vnet.mask_by_ip_range("192.168.1.0", "192.168.1.255") == "255.255.255.0"
-    assert vnet.mask_by_ip_range_with_options("192.168.1.1", "192.168.1.1") == (
-        "255.255.255.255"
-    )
+    assert vnet.mask_by_ip_range_with_options("192.168.1.1", "192.168.1.1") == ("255.255.255.255")
     assert vnet.count_by_ip_range("192.168.1.1", "192.168.1.3") == 3
     assert vnet.count_by_ip_range_with_options("192.168.1.1", "192.168.1.3") == 3
     assert vnet.format_ip_block("192.168.1.1", "255.255.255.0") == "192.168.1.1/24"
-    assert vnet.format_ip_block_with_options("192.168.1.1", "255.255.255.0") == (
-        "192.168.1.1/24"
-    )
+    assert vnet.format_ip_block_with_options("192.168.1.1", "255.255.255.0") == ("192.168.1.1/24")
     assert vnet.begin_ip("192.168.1.42", 24) == "192.168.1.0"
     assert vnet.begin_ip_with_options("192.168.1.42", 24) == "192.168.1.0"
     assert vnet.begin_ip_long("192.168.1.42", 24) == vnet.ipv4_to_long("192.168.1.0")
-    assert vnet.begin_ip_long_with_options("192.168.1.42", 24) == vnet.ipv4_to_long(
-        "192.168.1.0"
-    )
+    assert vnet.begin_ip_long_with_options("192.168.1.42", 24) == vnet.ipv4_to_long("192.168.1.0")
     assert vnet.end_ip("192.168.1.42", 24) == "192.168.1.255"
     assert vnet.end_ip_with_options("192.168.1.42", 24) == "192.168.1.255"
     assert vnet.end_ip_long("192.168.1.42", 24) == vnet.ipv4_to_long("192.168.1.255")
-    assert vnet.end_ip_long_with_options("192.168.1.42", 24) == vnet.ipv4_to_long(
-        "192.168.1.255"
-    )
+    assert vnet.end_ip_long_with_options("192.168.1.42", 24) == vnet.ipv4_to_long("192.168.1.255")
     assert vnet.is_mask_valid("255.255.255.0")
     assert not vnet.is_mask_valid("255.0.255.0")
     assert vnet.is_mask_valid_with_options("255.255.0.0")
@@ -142,9 +134,7 @@ def test_subnet_math_success_and_errors() -> None:
         "192.168.1.3",
     ]
     assert vnet.list_ip_cidr("192.168.1.42", 30) == ["192.168.1.41", "192.168.1.42"]
-    assert vnet.list_ip_cidr_with_options("192.168.1.42", 30, is_all=True)[0] == (
-        "192.168.1.40"
-    )
+    assert vnet.list_ip_cidr_with_options("192.168.1.42", 30, is_all=True)[0] == ("192.168.1.40")
     assert vnet.list_ip_range("192.168.1.1", "192.168.1.3") == [
         "192.168.1.1",
         "192.168.1.2",
@@ -436,7 +426,9 @@ def test_address_and_local_interface_helpers(monkeypatch) -> None:
 
 
 def test_local_ips_gaierror_and_interface_address_fallback(monkeypatch) -> None:
-    monkeypatch.setattr(socket, "getaddrinfo", lambda *args, **kwargs: (_ for _ in ()).throw(socket.gaierror()))
+    monkeypatch.setattr(
+        socket, "getaddrinfo", lambda *args, **kwargs: (_ for _ in ()).throw(socket.gaierror())
+    )
     assert vnet.local_ipv4s() == ["127.0.0.1"]
     assert vnet.local_ipv6s() == []
     assert vnet.local_ips() == ["127.0.0.1"]
@@ -463,9 +455,10 @@ def test_misc_cookie_proxy_and_interface_address_helpers(monkeypatch) -> None:
     assert vnet.get_multistage_reverse_proxy_ip({"X-Forwarded-For": "1.1.1.1, 2.2.2.2"}) == (
         "1.1.1.1"
     )
-    assert vnet.get_multistage_reverse_proxy_ip(
-        {"X-Forwarded-For": "unknown", "X-Real-IP": "3.3.3.3"}
-    ) == "3.3.3.3"
+    assert (
+        vnet.get_multistage_reverse_proxy_ip({"X-Forwarded-For": "unknown", "X-Real-IP": "3.3.3.3"})
+        == "3.3.3.3"
+    )
     assert vnet.get_multistage_reverse_proxy_ip({}) == ""
 
     monkeypatch.setattr(
@@ -570,7 +563,9 @@ class TestMultipart:
         )
         assert skipped.get_file("file") is None
         with pytest.raises(ValidationError) as ext_exc:
-            vnet.parse_multipart_form(body, content_type, vnet.UploadSetting(allow_file_exts=[".png"]))
+            vnet.parse_multipart_form(
+                body, content_type, vnet.UploadSetting(allow_file_exts=[".png"])
+            )
         assert ext_exc.value.code == "knifer.net.file_ext_not_allowed"
         with pytest.raises(ValidationError) as size_exc:
             vnet.parse_multipart_form(body, content_type, vnet.UploadSetting(max_file_size=1))
@@ -584,7 +579,9 @@ class TestMultipart:
         with pytest.raises(ValidationError) as exists_exc:
             vnet.save_uploaded_file(file_entry, str(tmp_path), "saved.txt")
         assert exists_exc.value.code == "knifer.net.file_exists"
-        overwritten = vnet.save_uploaded_file(file_entry, str(tmp_path), "saved.txt", overwrite=True)
+        overwritten = vnet.save_uploaded_file(
+            file_entry, str(tmp_path), "saved.txt", overwrite=True
+        )
         assert overwritten == saved
 
     def test_multipart_no_boundary(self) -> None:

@@ -28,10 +28,20 @@ from kniferpy.internal.sshx import (
     Provider,
     UploadRequest,
     UploadResponse,
+)
+from kniferpy.internal.sshx import (
     download as _download,
+)
+from kniferpy.internal.sshx import (
     list as _list,
+)
+from kniferpy.internal.sshx import (
     new as _new,
+)
+from kniferpy.internal.sshx import (
     run as _run,
+)
+from kniferpy.internal.sshx import (
     upload as _upload,
 )
 from kniferpy.verr import KniferError, ValidationError
@@ -45,12 +55,24 @@ EntryTypeSymlink = EntryType.SYMLINK
 
 # ── Error sentinels ────────────────────────────────────────────────────────────
 
-ErrInvalidCommandRequest = ValidationError(message="malformed command request", code="knifer.ssh.invalid_command_request")
-ErrInvalidListRequest = ValidationError(message="malformed list request", code="knifer.ssh.invalid_list_request")
-ErrInvalidDownloadRequest = ValidationError(message="malformed download request", code="knifer.ssh.invalid_download_request")
-ErrInvalidUploadRequest = ValidationError(message="malformed upload request", code="knifer.ssh.invalid_upload_request")
-ErrOutputLimitExceeded = KniferError(message="output limit exceeded", code="knifer.ssh.output_limit_exceeded")
-ErrTransferLimitExceeded = KniferError(message="transfer limit exceeded", code="knifer.ssh.transfer_limit_exceeded")
+ErrInvalidCommandRequest = ValidationError(
+    message="malformed command request", code="knifer.ssh.invalid_command_request"
+)
+ErrInvalidListRequest = ValidationError(
+    message="malformed list request", code="knifer.ssh.invalid_list_request"
+)
+ErrInvalidDownloadRequest = ValidationError(
+    message="malformed download request", code="knifer.ssh.invalid_download_request"
+)
+ErrInvalidUploadRequest = ValidationError(
+    message="malformed upload request", code="knifer.ssh.invalid_upload_request"
+)
+ErrOutputLimitExceeded = KniferError(
+    message="output limit exceeded", code="knifer.ssh.output_limit_exceeded"
+)
+ErrTransferLimitExceeded = KniferError(
+    message="transfer limit exceeded", code="knifer.ssh.transfer_limit_exceeded"
+)
 ErrMissingProvider = KniferError(message="missing provider", code="knifer.ssh.missing_provider")
 
 # ── Go-compat standalone convenience functions ─────────────────────────────────

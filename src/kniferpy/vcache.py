@@ -154,8 +154,6 @@ def new_no() -> NoCache[K, V]:
 Cache = cachex.Cache
 CacheObj = cachex.CacheObj
 Option = cachex.Option
-CacheListener = cachex.CacheListener
-CacheListenerFunc = cachex.CacheListenerFunc
 
 # Option builders
 with_capacity = cachex.with_capacity

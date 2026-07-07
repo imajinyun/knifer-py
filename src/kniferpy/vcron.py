@@ -162,26 +162,7 @@ cron_launching_count = cronx.cron_launching_count
 new_config = cronx.new_config
 new_scheduler = cronx.new_scheduler
 new_cron_task = cronx.new_cron_task
-new_task_table = cronx.new_task_table
 default_scheduler = cronx.default_scheduler
-cron_set_match_second = cronx.cron_set_match_second
-cron_set_match_second_e = cronx.cron_set_match_second_e
-cron_schedule_func = cronx.cron_schedule_func
-new_cron_error = cronx.new_cron_error
-wrap_cron_error = cronx.wrap_cron_error
-CronError = cronx.CronError
-ERR_SCHEDULER_STARTED = cronx.ERR_SCHEDULER_STARTED
-Config = cronx.Config
-AlwaysTrueMatcher = cronx.AlwaysTrueMatcher
-PartMatcher = cronx.PartMatcher
-PartSecond = cronx.PartSecond
-PartMinute = cronx.PartMinute
-PartHour = cronx.PartHour
-PartDayOfMonth = cronx.PartDayOfMonth
-PartMonth = cronx.PartMonth
-PartDayOfWeek = cronx.PartDayOfWeek
-PartYear = cronx.PartYear
-TaskExecutor = cronx.TaskExecutor
 
 # ── WithOptions aliases (Go compat) ──────────────────────────────────────────
 

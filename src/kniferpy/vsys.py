@@ -8,12 +8,11 @@ than raising.
 
 from __future__ import annotations
 
+# ── Go-compat type aliases ─────────────────────────────────────────────────────
+from typing import Any, Callable
+
 from kniferpy.internal import sysx
 from kniferpy.internal.sysx import HostInfo, OsInfo, PythonInfo, RuntimeInfo, UserInfo
-
-# ── Go-compat type aliases ─────────────────────────────────────────────────────
-
-from typing import Any, Callable
 
 GoInfo = PythonInfo  # Go: system.GoInfo
 HostInfoOption = Callable[[Any], None]

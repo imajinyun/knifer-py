@@ -132,9 +132,7 @@ def test_e_style_constructors() -> None:
         1, vblf.new_js_filter(1_000), vblf.new_sdbm_filter(1_000)
     )
     func, func_err = vblf.new_func_filter_e(1_000)
-    machine, machine_err = vblf.new_func_filter_with_machine_num_e(
-        1_000, vblf.MACHINE_64
-    )
+    machine, machine_err = vblf.new_func_filter_with_machine_num_e(1_000, vblf.MACHINE_64)
 
     assert bitset_err is None and isinstance(bitset, vblf.BitSetBloomFilter)
     assert bitmap_err is None and isinstance(bitmap, vblf.BitMapBloomFilter)

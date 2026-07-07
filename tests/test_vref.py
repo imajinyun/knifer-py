@@ -380,7 +380,9 @@ def test_invoke_static_raw_method_and_checked_errors() -> None:
 
 def test_invoke_missing_and_failing_function_paths() -> None:
     with pytest.raises(TypeError):
-        vref.invoke_func(lambda value: value, )
+        vref.invoke_func(
+            lambda value: value,
+        )
     with pytest.raises(TypeError):
         vref.invoke_static(lambda value: value)
 
@@ -407,7 +409,9 @@ def test_new_instance_copy_failure_returns_knifer_error(monkeypatch: pytest.Monk
     class Copyable:
         pass
 
-    monkeypatch.setattr(refx.copy, "copy", lambda _obj: (_ for _ in ()).throw(RuntimeError("copy failed")))
+    monkeypatch.setattr(
+        refx.copy, "copy", lambda _obj: (_ for _ in ()).throw(RuntimeError("copy failed"))
+    )
     with pytest.raises(KniferError) as exc_info:
         vref.new_instance(Copyable())
     assert exc_info.value.code == "knifer.ref.new_instance"

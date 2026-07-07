@@ -249,8 +249,7 @@ def test_marshal_to_xml_and_write_variants(tmp_path: Path) -> None:
     pretty = vxml.to_xml(data, "root", pretty=True)
 
     assert xml == (
-        '<root id="7"><name>knife</name><items>a</items><items>b</items>'
-        "<safe>True</safe></root>"
+        '<root id="7"><name>knife</name><items>a</items><items>b</items>' "<safe>True</safe></root>"
     )
     assert "\n" in pretty
     assert vxml.marshal_map(data, "root") == xml

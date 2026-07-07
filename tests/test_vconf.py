@@ -189,9 +189,7 @@ def test_apply_profile_default_group() -> None:
 
 
 def test_apply_profile_named_group() -> None:
-    conf = vconf.parse(
-        "name = base\n[server]\nport = 8080\n[profile.dev.server]\nport = 9090\n"
-    )
+    conf = vconf.parse("name = base\n[server]\nport = 8080\n[profile.dev.server]\nport = 9090\n")
     dev = conf.apply_profile("dev")
     assert dev.get("name") == "base"
     assert dev.get_by_group("server", "port") == "9090"
@@ -325,53 +323,65 @@ class TestBind:
 
 class TestSchema:
     def test_validate_schema_required(self) -> None:
-        schema = vconf.Schema(fields=[
-            vconf.FieldRule(key="name", required=True),
-        ])
+        schema = vconf.Schema(
+            fields=[
+                vconf.FieldRule(key="name", required=True),
+            ]
+        )
         conf = vconf.parse("")
         errors = vconf.validate_schema(conf, schema)
         assert len(errors) == 1
         assert "required" in errors[0].lower()
 
     def test_validate_schema_type(self) -> None:
-        schema = vconf.Schema(fields=[
-            vconf.FieldRule(key="port", type="int"),
-        ])
+        schema = vconf.Schema(
+            fields=[
+                vconf.FieldRule(key="port", type="int"),
+            ]
+        )
         conf = vconf.parse("port = notanumber")
         errors = vconf.validate_schema(conf, schema)
         assert len(errors) == 1
 
     def test_validate_schema_choices(self) -> None:
-        schema = vconf.Schema(fields=[
-            vconf.FieldRule(key="level", choices=["debug", "info", "error"]),
-        ])
+        schema = vconf.Schema(
+            fields=[
+                vconf.FieldRule(key="level", choices=["debug", "info", "error"]),
+            ]
+        )
         conf = vconf.parse("level = trace")
         errors = vconf.validate_schema(conf, schema)
         assert len(errors) == 1
 
     def test_validate_schema_group_and_default(self) -> None:
-        schema = vconf.Schema(fields=[
-            vconf.FieldRule(group="server", key="port", type="int", default="8080"),
-            vconf.FieldRule(group="server", key="mode", choices=["dev", "prod"]),
-        ])
+        schema = vconf.Schema(
+            fields=[
+                vconf.FieldRule(group="server", key="port", type="int", default="8080"),
+                vconf.FieldRule(group="server", key="mode", choices=["dev", "prod"]),
+            ]
+        )
         conf = vconf.parse("[server]\nmode = test\n")
         assert vconf.validate_schema(conf, schema) == ["server.mode: 'test' not in ['dev', 'prod']"]
         vconf.apply_defaults(conf, schema)
         assert conf.get_by_group("server", "port") == "8080"
 
     def test_validate_schema_valid(self) -> None:
-        schema = vconf.Schema(fields=[
-            vconf.FieldRule(key="name", required=True),
-            vconf.FieldRule(key="port", type="int"),
-        ])
+        schema = vconf.Schema(
+            fields=[
+                vconf.FieldRule(key="name", required=True),
+                vconf.FieldRule(key="port", type="int"),
+            ]
+        )
         conf = vconf.parse("name = myapp\nport = 8080\n")
         errors = vconf.validate_schema(conf, schema)
         assert len(errors) == 0
 
     def test_apply_defaults(self) -> None:
-        schema = vconf.Schema(fields=[
-            vconf.FieldRule(key="timeout", default="30"),
-        ])
+        schema = vconf.Schema(
+            fields=[
+                vconf.FieldRule(key="timeout", default="30"),
+            ]
+        )
         conf = vconf.parse("")
         vconf.apply_defaults(conf, schema)
         assert conf.get("timeout") == "30"
@@ -417,6 +427,7 @@ def test_profile_key_overlay_and_decrypt_values() -> None:
         "[profile.prod]\n"
         "name = prod\n"
     )
+
     def decrypt(value: str) -> str:
         if value == "fail":
             raise RuntimeError("bad")
@@ -511,12 +522,22 @@ def test_bind_options_schema_metadata_dict_and_validation() -> None:
     ]
     assert vconf.validate_struct(conf, obj) == []
     assert vconf.validate_struct_with_options(conf, obj) == []
-    assert vconf.validate_schema(vconf.parse("flag=maybe\n"), vconf.Schema([
-        vconf.FieldRule(key="flag", type="bool"),
-    ]))
-    assert vconf.validate_schema(vconf.parse("ratio=bad\n"), vconf.Schema([
-        vconf.FieldRule(key="ratio", type="float"),
-    ]))
+    assert vconf.validate_schema(
+        vconf.parse("flag=maybe\n"),
+        vconf.Schema(
+            [
+                vconf.FieldRule(key="flag", type="bool"),
+            ]
+        ),
+    )
+    assert vconf.validate_schema(
+        vconf.parse("ratio=bad\n"),
+        vconf.Schema(
+            [
+                vconf.FieldRule(key="ratio", type="float"),
+            ]
+        ),
+    )
 
     @dataclasses.dataclass
     class DictMetaConfig:
@@ -555,8 +576,7 @@ def test_remote_load_and_safe_host(monkeypatch: pytest.MonkeyPatch) -> None:
 
     assert vconf.load_remote("https://example.com/app.properties").get("name") == "remote"
     assert (
-        vconf.load_remote_with_options("https://example.com/app.properties").get("name")
-        == "remote"
+        vconf.load_remote_with_options("https://example.com/app.properties").get("name") == "remote"
     )
     assert vconf.load_remote_safe("https://example.com/app.properties").get("name") == "remote"
     assert (
@@ -573,6 +593,7 @@ def test_remote_load_and_safe_host(monkeypatch: pytest.MonkeyPatch) -> None:
     )
     with pytest.raises(ValidationError) as private_host:
         vconf.load_remote_safe("https://localhost/app.properties")
+
     def fail_urlopen(url: str, timeout: float = 10.0):
         raise OSError("down")
 

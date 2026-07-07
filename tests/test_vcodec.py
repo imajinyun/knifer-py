@@ -18,9 +18,7 @@ class TestBase64:
 
     def test_encode_with_custom_callable_and_fallback(self) -> None:
         assert vcodec.base64_encode_with_encoding(b"go") == "Z28="
-        assert vcodec.base64_encode_with_encoding(
-            b"a/b", base64.urlsafe_b64encode
-        ) == "YS9i"
+        assert vcodec.base64_encode_with_encoding(b"a/b", base64.urlsafe_b64encode) == "YS9i"
         assert vcodec.base64_encode_with_encoding(b"go", object()) == "Z28="
 
     def test_decode(self) -> None:
@@ -119,10 +117,14 @@ class TestBase58:
         assert vcodec.base58_decode("1Cn8eVZg") == b"\x00hello"
 
     def test_encode_flickr(self) -> None:
-        assert vcodec.base58_encode_with_alphabet(b"hello", vcodec.BASE58_FLICKR_ALPHABET) == "cM8DuyF"
+        assert (
+            vcodec.base58_encode_with_alphabet(b"hello", vcodec.BASE58_FLICKR_ALPHABET) == "cM8DuyF"
+        )
 
     def test_decode_flickr(self) -> None:
-        assert vcodec.base58_decode_with_alphabet("cM8DuyF", vcodec.BASE58_FLICKR_ALPHABET) == b"hello"
+        assert (
+            vcodec.base58_decode_with_alphabet("cM8DuyF", vcodec.BASE58_FLICKR_ALPHABET) == b"hello"
+        )
 
     def test_decode_invalid(self) -> None:
         with pytest.raises(ValueError):

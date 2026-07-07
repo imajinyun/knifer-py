@@ -195,9 +195,10 @@ def test_standalone_helpers_and_new() -> None:
     assert vssh.download(provider, vssh.DownloadRequest(remote_path="/tmp/file.txt")).content == (
         b"file content"
     )
-    assert vssh.upload(
-        provider, vssh.UploadRequest(remote_path="/tmp/file.txt", content=b"hi")
-    ).size == 2
+    assert (
+        vssh.upload(provider, vssh.UploadRequest(remote_path="/tmp/file.txt", content=b"hi")).size
+        == 2
+    )
 
 
 def test_client_without_provider_raises() -> None:

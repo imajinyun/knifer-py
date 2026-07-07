@@ -68,9 +68,7 @@ def _missing_from() -> ValidationError:
 
 
 def _missing_recipient() -> ValidationError:
-    return ValidationError(
-        message="mail: missing recipient", code="knifer.mail.missing_recipient"
-    )
+    return ValidationError(message="mail: missing recipient", code="knifer.mail.missing_recipient")
 
 
 def _missing_body() -> ValidationError:
@@ -82,9 +80,7 @@ def _tls_required() -> KniferError:
 
 
 def _plain_auth() -> KniferError:
-    return KniferError(
-        message="mail: plaintext auth disabled", code="knifer.mail.plain_auth"
-    )
+    return KniferError(message="mail: plaintext auth disabled", code="knifer.mail.plain_auth")
 
 
 def _attachment_too_large() -> ValidationError:
@@ -471,9 +467,7 @@ def _add_file_part(part: EmailMessage, attachment: Attachment, inline: bool) -> 
             filename=attachment.name,
         )
     else:
-        part.add_attachment(
-            data, maintype=maintype, subtype=subtype, filename=attachment.name
-        )
+        part.add_attachment(data, maintype=maintype, subtype=subtype, filename=attachment.name)
 
 
 def _render(message: Message) -> bytes:
@@ -611,9 +605,7 @@ def _open(config: Config) -> smtplib.SMTP:
     smtp: smtplib.SMTP
     is_tls = False
     if config.tls_policy is TLSPolicy.IMPLICIT:
-        smtp = smtplib.SMTP_SSL(
-            config.host, config.port, timeout=config.timeout, context=context
-        )
+        smtp = smtplib.SMTP_SSL(config.host, config.port, timeout=config.timeout, context=context)
         smtp.ehlo(config.local_name or None)  # type: ignore[arg-type]
         is_tls = True
     else:
@@ -757,9 +749,13 @@ def send_account_html(
 
 
 # Reader-based attachments
-def new_attachment_reader(name: str, reader: Callable[[], bytes], *, content_type: str = "") -> Attachment:
+def new_attachment_reader(
+    name: str, reader: Callable[[], bytes], *, content_type: str = ""
+) -> Attachment:
     return _new_bytes_attachment(name, reader(), content_type, "", False)
 
 
-def new_inline_reader(name: str, content_id: str, reader: Callable[[], bytes], *, content_type: str = "") -> Attachment:
+def new_inline_reader(
+    name: str, content_id: str, reader: Callable[[], bytes], *, content_type: str = ""
+) -> Attachment:
     return _new_bytes_attachment(name, reader(), content_type, content_id, True)

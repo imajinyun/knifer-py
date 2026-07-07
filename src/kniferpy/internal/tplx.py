@@ -21,6 +21,7 @@ from kniferpy.verr import KniferError
 
 # --- errors --------------------------------------------------------------------
 
+
 class ErrMissingEngine(KniferError):
     pass
 
@@ -31,6 +32,7 @@ class ErrInvalidRenderRequest(KniferError):
 
 # --- types ---------------------------------------------------------------------
 
+
 @dataclass
 class RenderRequest:
     Source: str = ""
@@ -38,8 +40,7 @@ class RenderRequest:
 
 
 class Engine(Protocol):
-    def render(self, req: RenderRequest) -> str:
-        ...
+    def render(self, req: RenderRequest) -> str: ...
 
 
 class EngineFunc:
@@ -51,6 +52,7 @@ class EngineFunc:
 
 
 # --- engine config -------------------------------------------------------------
+
 
 @dataclass
 class _EngineConfig:
@@ -95,6 +97,7 @@ def _apply_engine_options(opts: list[EngineOption]) -> _EngineConfig:
 
 # --- built-in engines ----------------------------------------------------------
 
+
 def new_html_engine(*opts: EngineOption) -> Engine:
     cfg = _apply_engine_options(list(opts))
     return EngineFunc(lambda req: _render_engine(req, cfg, html_escape=True))
@@ -125,6 +128,7 @@ def render_with_engine(engine: Engine | None, source: str, data: Any) -> str:
 
 
 # --- render options ------------------------------------------------------------
+
 
 @dataclass
 class _RenderConfig:
@@ -193,6 +197,7 @@ def _apply_render_options(opts: list[RenderOption]) -> _RenderConfig:
 
 # --- render --------------------------------------------------------------------
 
+
 def render(tpl: str, data: Any) -> str:
     return render_with_options(tpl, data)
 
@@ -217,6 +222,7 @@ def render_template(tpl: str, data: Any) -> str:
 
 
 # --- template engine core ------------------------------------------------------
+
 
 def _data_as_dict(data: Any) -> dict[str, Any]:
     if data is None:

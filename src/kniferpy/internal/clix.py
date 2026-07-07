@@ -13,7 +13,6 @@ from typing import Protocol, TextIO
 
 from kniferpy.verr import KniferError, ValidationError
 
-
 # --- Runner injection ---------------------------------------------------------
 
 
@@ -30,10 +29,21 @@ class Runner(Protocol):
         stdin: str | bytes | None,
         max_output_bytes: int,
         timeout: float | None,
-    ) -> "ExecResult": ...
+    ) -> ExecResult: ...
 
 
-RunnerFunc = Callable[[str, Sequence[str] | None, str | os.PathLike[str] | None, Mapping[str, str] | None, str | bytes | None, int, float | None], "ExecResult"]
+RunnerFunc = Callable[
+    [
+        str,
+        Sequence[str] | None,
+        str | os.PathLike[str] | None,
+        Mapping[str, str] | None,
+        str | bytes | None,
+        int,
+        float | None,
+    ],
+    "ExecResult",
+]
 
 # --- Errors -------------------------------------------------------------------
 
@@ -405,9 +415,13 @@ class FlagParser:
             known, unknown = self._parser.parse_known_args(args)
             return FlagParseResult(args=unknown)
         except SystemExit as e:
-            return FlagParseResult(args=[], error=ValidationError(
-                str(e) or "flag parsing error", code="cli.flag_parse_error",
-            ))
+            return FlagParseResult(
+                args=[],
+                error=ValidationError(
+                    str(e) or "flag parsing error",
+                    code="cli.flag_parse_error",
+                ),
+            )
         except Exception as e:
             return FlagParseResult(args=[], error=e)
 

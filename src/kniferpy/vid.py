@@ -2,12 +2,11 @@ from __future__ import annotations
 
 from typing import Any, Callable
 
-from kniferpy.internal import idx
 from kniferpy.internal.idx import (
     DEFAULT_NANO_ID_LENGTH,
     NANO_ID_ALPHABET,
-    Snowflake,
     UUID,
+    Snowflake,
     configure_default_fallback_random_source_provider,
     configure_default_snowflake,
     create_snowflake,

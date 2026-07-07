@@ -57,7 +57,9 @@ def match_el_with_delimiter(current_version: str, version_el: str, delimiter: st
     return verx.match_el_with_delimiter(current_version, version_el, delimiter)
 
 
-def match_el_with_delimiter_err(current_version: str, version_el: str, delimiter: str) -> tuple[bool, str | None]:
+def match_el_with_delimiter_err(
+    current_version: str, version_el: str, delimiter: str
+) -> tuple[bool, str | None]:
     return verx.match_el_with_delimiter_err(current_version, version_el, delimiter)
 
 

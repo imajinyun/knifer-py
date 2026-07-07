@@ -5,8 +5,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from kniferpy.verr import DecodeError, JSONError
-
+from kniferpy.verr import JSONError
 
 # ========== Null ==========
 
@@ -528,7 +527,7 @@ def put_by_path(obj: Any, path: str, value: Any) -> Any:
 
 def _put_by_path_dict(d: dict[str, Any], parts: list[str], value: Any) -> None:
     current = d
-    for i, part in enumerate(parts[:-1]):
+    for part in parts[:-1]:
         if part not in current:
             current[part] = {}
         if not isinstance(current[part], dict):
@@ -681,16 +680,13 @@ def to_bean(src: Any, dst: type) -> Any:
 
 
 def _dict_to_bean(d: dict[str, Any], dst: type) -> Any:
-    import dataclasses
-    import inspect
-
     try:
         hints = {}
         for cls in dst.__mro__:
             if hasattr(cls, "__annotations__"):
                 hints.update(cls.__annotations__)
         kwargs: dict[str, Any] = {}
-        for field_name, field_type in hints.items():
+        for field_name in hints:
             if field_name in d:
                 kwargs[field_name] = d[field_name]
         return dst(**kwargs)
@@ -760,12 +756,14 @@ def new_config(**kwargs: Any) -> Config:
 def xml_to_json(xml_str: str) -> dict[str, Any]:
     """Parse XML string into a JSON object."""
     from kniferpy.internal.xmlx import to_map as xml_to_map
+
     return xml_to_map(xml_str)
 
 
 def json_to_xml(data: dict[str, Any], root_tag: str = "root", *, pretty: bool = False) -> str:
     """Serialize a JSON value to an XML string."""
     from kniferpy.internal.xmlx import to_xml as xml_to_xml_str
+
     return xml_to_xml_str(data, root_tag, pretty=pretty)
 
 
@@ -913,5 +911,7 @@ def to_xml(root: Any, root_tag: str = "root", *, pretty: bool = False) -> str:
     return json_to_xml(root, root_tag, pretty=pretty)
 
 
-def to_xml_with_options(root: Any, root_tag: str = "root", *, pretty: bool = False, **_opts: Any) -> str:
+def to_xml_with_options(
+    root: Any, root_tag: str = "root", *, pretty: bool = False, **_opts: Any
+) -> str:
     return json_to_xml(root, root_tag, pretty=pretty)

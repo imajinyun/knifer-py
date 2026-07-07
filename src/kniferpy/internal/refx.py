@@ -155,16 +155,15 @@ def get_field_name(field_name: str) -> str:
 def get_fields_directly(target: Any, with_embedded_fields: bool = False) -> list[str]:
     """Return struct fields directly, optionally expanding embedded anonymous structs."""
     names = _collect_field_names(target)
-    if with_embedded_fields:
+    if with_embedded_fields and isinstance(target, type):
         # For dataclasses, expand fields from parent classes
-        if isinstance(target, type):
-            result = list(names)
-            for base in target.__mro__[1:]:
-                if base is not object and dataclasses.is_dataclass(base):
-                    for f in dataclasses.fields(base):
-                        if f.name not in result:
-                            result.append(f.name)
-            return result
+        result = list(names)
+        for base in target.__mro__[1:]:
+            if base is not object and dataclasses.is_dataclass(base):
+                for f in dataclasses.fields(base):
+                    if f.name not in result:
+                        result.append(f.name)
+        return result
     return names
 
 
@@ -236,7 +235,9 @@ def get_method(target: Any, method_name: str) -> tuple[str, Callable[..., Any]] 
     return None
 
 
-def get_public_method(target: Any, method_name: str, *param_types: type) -> tuple[str, Callable[..., Any]] | None:
+def get_public_method(
+    target: Any, method_name: str, *param_types: type
+) -> tuple[str, Callable[..., Any]] | None:
     """Return an exported method by name and optional parameter types."""
     for name, method in _collect_public_methods(target):
         if name == method_name:
@@ -249,13 +250,17 @@ def get_public_method(target: Any, method_name: str, *param_types: type) -> tupl
     return None
 
 
-def get_method_of_obj(obj: Any, method_name: str, *args: Any) -> tuple[str, Callable[..., Any]] | None:
+def get_method_of_obj(
+    obj: Any, method_name: str, *args: Any
+) -> tuple[str, Callable[..., Any]] | None:
     """Return a method by inferring parameter types from the provided args."""
     param_types = tuple(type(a) for a in args)
     return get_public_method(obj, method_name, *param_types)
 
 
-def get_method_ignore_case(target: Any, method_name: str, *param_types: type) -> tuple[str, Callable[..., Any]] | None:
+def get_method_ignore_case(
+    target: Any, method_name: str, *param_types: type
+) -> tuple[str, Callable[..., Any]] | None:
     """Return a method by case-insensitive name and optional param types."""
     lower = method_name.lower()
     for name, method in _collect_public_methods(target):
@@ -269,7 +274,9 @@ def get_method_ignore_case(target: Any, method_name: str, *param_types: type) ->
     return None
 
 
-def get_methods_directly(target: Any, with_supers: bool = False, with_method_from_object: bool = False) -> list[tuple[str, Callable[..., Any]]]:
+def get_methods_directly(
+    target: Any, with_supers: bool = False, with_method_from_object: bool = False
+) -> list[tuple[str, Callable[..., Any]]]:
     """Return methods directly (exports only, optionally including super/object methods)."""
     methods = _collect_public_methods(target)
     if not with_supers and not with_method_from_object:
@@ -379,9 +386,7 @@ def invoke_with_check(obj: Any, method: tuple[str, Callable[..., Any]], *args: A
     try:
         return method[1](*args)
     except Exception as exc:
-        raise KniferError(
-            message=f"invoke failed: {exc}", code="knifer.ref.invoke_failed"
-        ) from exc
+        raise KniferError(message=f"invoke failed: {exc}", code="knifer.ref.invoke_failed") from exc
 
 
 def invoke_method(obj: Any, method: tuple[str, Callable[..., Any]], *args: Any) -> Any:

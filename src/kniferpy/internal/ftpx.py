@@ -21,10 +21,18 @@ from kniferpy.verr import KniferError, ValidationError
 
 # ── Go-compat sentinel error variables ──────────────────────────────────────
 
-ErrInvalidListRequest = KniferError("ftp: invalid list request", code="knifer.ftp.invalid_list_request")
-ErrInvalidDownloadRequest = KniferError("ftp: invalid download request", code="knifer.ftp.invalid_download_request")
-ErrInvalidUploadRequest = KniferError("ftp: invalid upload request", code="knifer.ftp.invalid_upload_request")
-ErrTransferLimitExceeded = KniferError("ftp: transfer limit exceeded", code="knifer.ftp.transfer_limit_exceeded")
+ErrInvalidListRequest = KniferError(
+    "ftp: invalid list request", code="knifer.ftp.invalid_list_request"
+)
+ErrInvalidDownloadRequest = KniferError(
+    "ftp: invalid download request", code="knifer.ftp.invalid_download_request"
+)
+ErrInvalidUploadRequest = KniferError(
+    "ftp: invalid upload request", code="knifer.ftp.invalid_upload_request"
+)
+ErrTransferLimitExceeded = KniferError(
+    "ftp: transfer limit exceeded", code="knifer.ftp.transfer_limit_exceeded"
+)
 ErrMissingProvider = KniferError("ftp: missing provider", code="knifer.ftp.missing_provider")
 
 

@@ -142,6 +142,7 @@ class Set(Generic[T]):
         """Return a YAML-serializable representation (list of members)."""
         try:
             import yaml
+
             return yaml.safe_dump(self.members(), default_flow_style=False)
         except ImportError:
             return self.members()
@@ -151,6 +152,7 @@ class Set(Generic[T]):
         """Parse a YAML sequence into a Set."""
         try:
             import yaml
+
             items = yaml.safe_load(data)
         except ImportError:
             items = json.loads(data)

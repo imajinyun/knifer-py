@@ -156,11 +156,7 @@ def _collect_properties(src: Any, cfg: Options) -> list[_Property]:
     if isinstance(src, (str, bytes, int, float, bool)):
         raise _invalid(f"bean: unsupported src type {type(src).__name__}")
     if hasattr(src, "__dict__"):
-        return [
-            _Property(k, (k,), v)
-            for k, v in vars(src).items()
-            if not k.startswith("_")
-        ]
+        return [_Property(k, (k,), v) for k, v in vars(src).items() if not k.startswith("_")]
     raise _invalid(f"bean: unsupported src type {type(src).__name__}")
 
 
@@ -331,9 +327,7 @@ def _convert_map(value: Any, target: Any, cfg: Options) -> Any:
     args = typing.get_args(target)
     key_type: Any = args[0] if len(args) >= 1 else None
     val_type: Any = args[1] if len(args) >= 2 else None
-    return {
-        _convert(k, key_type, cfg): _convert(v, val_type, cfg) for k, v in value.items()
-    }
+    return {_convert(k, key_type, cfg): _convert(v, val_type, cfg) for k, v in value.items()}
 
 
 def _to_dataclass(value: Any, target: type, cfg: Options) -> Any:

@@ -83,7 +83,9 @@ def test_parse_id_card() -> None:
     assert vident.parse_id_card("bad") is None
 
 
-def test_parse_id_card_returns_none_when_derived_fields_fail(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_parse_id_card_returns_none_when_derived_fields_fail(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     monkeypatch.setattr(identx, "is_valid_id_card18", lambda _card: True)
     monkeypatch.setattr(identx, "is_valid_id_card15", lambda _card: False)
     monkeypatch.setattr(identx, "birth_date", lambda _card: None)

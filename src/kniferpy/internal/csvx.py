@@ -22,6 +22,7 @@ WriteOption = Option
 
 class CSVError(ValidationError):
     """CSV-specific error with optional code and cause (Go compat)."""
+
     pass
 
 
@@ -111,7 +112,7 @@ def read(
     encoding: str = "utf-8",
 ) -> list[Record]:
     """Read CSV records from a file path."""
-    with open(path, "r", encoding=encoding) as f:
+    with open(path, encoding=encoding) as f:
         return read_string(f.read(), delimiter, trim_leading_space)
 
 
@@ -206,7 +207,9 @@ def structs_to_records(values: Any) -> list[Record]:
     records: list[Record] = [headers]
     for item in values:
         item_fields = _struct_fields(item)
-        record = [str(item_fields[i][1]) if i < len(item_fields) else "" for i in range(len(headers))]
+        record = [
+            str(item_fields[i][1]) if i < len(item_fields) else "" for i in range(len(headers))
+        ]
         records.append(record)
     return records
 

@@ -128,13 +128,13 @@ def test_read_json_file_reuses_size_limit(tmp_path: Path) -> None:
 
 def test_read_json_file_list(tmp_path: Path) -> None:
     path = tmp_path / "data.json"
-    path.write_text('[1, 2, 3]', encoding="utf-8")
+    path.write_text("[1, 2, 3]", encoding="utf-8")
     assert vjson.read(path) == [1, 2, 3]
 
 
 def test_read_obj_rejects_list(tmp_path: Path) -> None:
     path = tmp_path / "data.json"
-    path.write_text('[1, 2, 3]', encoding="utf-8")
+    path.write_text("[1, 2, 3]", encoding="utf-8")
     with pytest.raises(JSONError) as exc_info:
         vjson.read_obj(path)
     assert exc_info.value.code == "json.not_object"

@@ -1,10 +1,10 @@
 from __future__ import annotations
 
+import contextlib
 import logging
 import threading
-import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from enum import IntEnum
 from typing import Callable, Protocol
@@ -610,10 +610,8 @@ class Scheduler:
         return self._match_second
 
     def set_time_zone(self, loc: str) -> Scheduler:
-        try:
+        with contextlib.suppress(ERR_SCHEDULER_STARTED):
             self.set_time_zone_e(loc)
-        except ERR_SCHEDULER_STARTED:
-            pass
         return self
 
     def set_time_zone_e(self, loc: str) -> None:
@@ -738,10 +736,8 @@ class Scheduler:
     def _execute_task(self, ct: CronTask) -> None:
         executor = TaskExecutor(cron_task=ct)
         for listener in self._listeners:
-            try:
+            with contextlib.suppress(Exception):
                 listener.on_start(executor)
-            except Exception:
-                pass
 
         with self._launching_lock:
             self._launching_count += 1
@@ -754,17 +750,13 @@ class Scheduler:
             try:
                 ct.execute()
                 for listener in self._listeners:
-                    try:
+                    with contextlib.suppress(Exception):
                         listener.on_succeeded(executor)
-                    except Exception:
-                        pass
             except Exception as exc:
                 _logger.error("cron task %s failed: %s", ct.id, exc)
                 for listener in self._listeners:
-                    try:
+                    with contextlib.suppress(Exception):
                         listener.on_failed(executor, exc)
-                    except Exception:
-                        pass
             finally:
                 with self._running_lock:
                     self._running_count -= 1

@@ -30,9 +30,7 @@ def _try_compile(pattern: str) -> re.Pattern[str] | None:
         return None
 
 
-def _build_match_result(
-    regex: re.Pattern[str], content: str, loc: tuple[int, int]
-) -> MatchResult:
+def _build_match_result(regex: re.Pattern[str], content: str, loc: tuple[int, int]) -> MatchResult:
     """Build a MatchResult from a compiled regex and a (start, end) span."""
     # Find the full match with subgroups
     m = regex.search(content, loc[0], loc[1])
@@ -105,9 +103,7 @@ def replace_first(pattern: str, text: str, replacement: str) -> str:
     return compiled.sub(lambda _: replacement, text, count=1)
 
 
-def replace_func(
-    pattern: str, text: str, repl: Callable[[re.Match[str]], str]
-) -> str:
+def replace_func(pattern: str, text: str, repl: Callable[[re.Match[str]], str]) -> str:
     compiled = _try_compile(pattern)
     if compiled is None:
         return text
@@ -216,9 +212,7 @@ def get_ok(pattern: str, text: str, group: int = 0) -> tuple[str, bool]:
         return "", False
 
 
-def get_re_ok(
-    regex: re.Pattern[str], content: str, group_index: int
-) -> tuple[str, bool]:
+def get_re_ok(regex: re.Pattern[str], content: str, group_index: int) -> tuple[str, bool]:
     if regex is None or group_index < 0:
         return "", False
     groups = regex.search(content)
@@ -342,7 +336,9 @@ def _get_all_groups_re(
     if regex is None:
         return []
     limit = -1 if find_all else 1
-    all_matches = list(regex.finditer(content))[:limit] if limit > 0 else list(regex.finditer(content))
+    all_matches = (
+        list(regex.finditer(content))[:limit] if limit > 0 else list(regex.finditer(content))
+    )
     result: list[str] = []
     start = 0 if with_group0 else 1
     for m in all_matches:
@@ -359,9 +355,7 @@ def get_all_group_names(pattern: str, text: str) -> dict[str, str]:
     return _get_all_group_names_re(compiled, text)
 
 
-def _get_all_group_names_re(
-    regex: re.Pattern[str], content: str
-) -> dict[str, str]:
+def _get_all_group_names_re(regex: re.Pattern[str], content: str) -> dict[str, str]:
     if regex is None:
         return {}
     result: dict[str, str] = {}
@@ -389,9 +383,7 @@ def extract_multi(pattern: str, text: str, template: str) -> str:
     return _extract_multi_re(compiled, text, template)
 
 
-def _extract_multi_re(
-    regex: re.Pattern[str], content: str, template: str
-) -> str:
+def _extract_multi_re(regex: re.Pattern[str], content: str, template: str) -> str:
     if regex is None:
         return ""
     m = regex.search(content)
@@ -400,10 +392,8 @@ def _extract_multi_re(
     return m.expand(_go_to_py_template(template))
 
 
-def extract_multi_and_del_pre(
-    pattern: str, text: list[str], template: str
-) -> str:
-    """Extract with template and remove the consumed prefix from text (in-place via list wrapper)."""
+def extract_multi_and_del_pre(pattern: str, text: list[str], template: str) -> str:
+    """Extract with template and remove the consumed prefix from text."""
     compiled = _try_compile(pattern)
     if compiled is None:
         return ""
@@ -444,18 +434,14 @@ def template_vars(template: str) -> list[int]:
 # ========== New: Each / First ==========
 
 
-def each(
-    regex: re.Pattern[str], content: str, consumer: Callable[[MatchResult], None]
-) -> None:
+def each(regex: re.Pattern[str], content: str, consumer: Callable[[MatchResult], None]) -> None:
     if regex is None or consumer is None:
         return
     for m in regex.finditer(content):
         consumer(_build_match_result(regex, content, (m.start(), m.end())))
 
 
-def first(
-    regex: re.Pattern[str], content: str, consumer: Callable[[MatchResult], None]
-) -> None:
+def first(regex: re.Pattern[str], content: str, consumer: Callable[[MatchResult], None]) -> None:
     if regex is None or consumer is None:
         return
     m = regex.search(content)
@@ -466,7 +452,20 @@ def first(
 # ========== New: EscapeChar ==========
 
 _re_keys = {
-    "$", "(", ")", "*", "+", ".", "[", "]", "?", "\\", "^", "{", "}", "|",
+    "$",
+    "(",
+    ")",
+    "*",
+    "+",
+    ".",
+    "[",
+    "]",
+    "?",
+    "\\",
+    "^",
+    "{",
+    "}",
+    "|",
 }
 
 
@@ -488,17 +487,13 @@ def replace_all(text: str, pattern: str, replacement_template: str) -> str:
     return _replace_all_re(text, compiled, replacement_template)
 
 
-def _replace_all_re(
-    content: str, regex: re.Pattern[str], replacement_template: str
-) -> str:
+def _replace_all_re(content: str, regex: re.Pattern[str], replacement_template: str) -> str:
     if regex is None or content == "":
         return content
     return regex.sub(_go_to_py_template(replacement_template), content)
 
 
-def replace_all_func(
-    text: str, pattern: str, replace_fn: Callable[[MatchResult], str]
-) -> str:
+def replace_all_func(text: str, pattern: str, replace_fn: Callable[[MatchResult], str]) -> str:
     compiled = _try_compile(pattern)
     if compiled is None:
         return text
@@ -586,9 +581,7 @@ def del_first_re(regex: re.Pattern[str], content: str) -> str:
     return replace_first_re(regex, content, "")
 
 
-def replace_first_re(
-    regex: re.Pattern[str], content: str, replacement: str
-) -> str:
+def replace_first_re(regex: re.Pattern[str], content: str, replacement: str) -> str:
     if regex is None or content == "":
         return content
     m = regex.search(content)
@@ -627,7 +620,7 @@ def del_last_re(regex: re.Pattern[str], content: str) -> str:
         last = m
     if last is None:
         return content
-    return content[:last.start()] + content[last.end():]
+    return content[: last.start()] + content[last.end() :]
 
 
 def del_pre_re(regex: re.Pattern[str], content: str) -> str:
@@ -636,7 +629,7 @@ def del_pre_re(regex: re.Pattern[str], content: str) -> str:
     m = regex.search(content)
     if m is None:
         return content
-    return content[:m.start()]
+    return content[: m.start()]
 
 
 def extract_multi_re(regex: re.Pattern[str], content: str, template: str) -> str:
@@ -652,8 +645,8 @@ def extract_multi_and_del_pre_re(regex: re.Pattern[str], content: str, template:
     if m is None:
         return content
     extracted = m.expand(template)
-    delimiter = content[m.end():m.end()] if m.end() < len(content) else ""
-    return extracted + delimiter + content[m.end():]
+    delimiter = content[m.end() : m.end()] if m.end() < len(content) else ""
+    return extracted + delimiter + content[m.end() :]
 
 
 def replace_all_re(regex: re.Pattern[str], content: str, replacement: str) -> str:
@@ -662,7 +655,9 @@ def replace_all_re(regex: re.Pattern[str], content: str, replacement: str) -> st
     return regex.sub(replacement, content)
 
 
-def replace_all_func_re(regex: re.Pattern[str], content: str, replacer: Callable[[re.Match[str]], str]) -> str:
+def replace_all_func_re(
+    regex: re.Pattern[str], content: str, replacer: Callable[[re.Match[str]], str]
+) -> str:
     if regex is None or content == "":
         return content
     return regex.sub(replacer, content)

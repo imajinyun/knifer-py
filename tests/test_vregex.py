@@ -256,15 +256,23 @@ def test_last_index_of_no_match() -> None:
 
 
 def test_get_all_groups() -> None:
-    assert vregex.get_all_groups(
-        r"(\d)(\w)", "1a 2b", with_group0=False, find_all=True
-    ) == ["1", "a", "2", "b"]
+    assert vregex.get_all_groups(r"(\d)(\w)", "1a 2b", with_group0=False, find_all=True) == [
+        "1",
+        "a",
+        "2",
+        "b",
+    ]
 
 
 def test_get_all_groups_with_group0() -> None:
-    assert vregex.get_all_groups(
-        r"(\d)(\w)", "1a 2b", with_group0=True, find_all=True
-    ) == ["1a", "1", "a", "2b", "2", "b"]
+    assert vregex.get_all_groups(r"(\d)(\w)", "1a 2b", with_group0=True, find_all=True) == [
+        "1a",
+        "1",
+        "a",
+        "2b",
+        "2",
+        "b",
+    ]
 
 
 def test_get_all_groups_no_match() -> None:
@@ -477,6 +485,7 @@ def test_re_chinese_constants() -> None:
 
 def test_contains_re() -> None:
     import re as _re
+
     r = _re.compile(r"\d+")
     assert vregex.contains_re(r, "abc123") is True
     assert vregex.contains_re(r, "abc") is False
@@ -484,6 +493,7 @@ def test_contains_re() -> None:
 
 def test_count_re() -> None:
     import re as _re
+
     r = _re.compile(r"\d+")
     assert vregex.count_re(r, "a1b2c3") == 3
     assert vregex.count_re(r, "abc") == 0
@@ -491,6 +501,7 @@ def test_count_re() -> None:
 
 def test_is_match_re() -> None:
     import re as _re
+
     r = _re.compile(r"\d+")
     assert vregex.is_match_re(r, "123") is True
     assert vregex.is_match_re(r, "123abc") is False
@@ -498,6 +509,7 @@ def test_is_match_re() -> None:
 
 def test_get_re() -> None:
     import re as _re
+
     r = _re.compile(r"(\d+)-(\w+)")
     assert vregex.get_re(r, "id 12-abc", 1) == "12"
     assert vregex.get_re(r, "id 12-abc", 2) == "abc"
@@ -505,6 +517,7 @@ def test_get_re() -> None:
 
 def test_get_re_ok() -> None:
     import re as _re
+
     r = _re.compile(r"(\d+)-(\w+)")
     val, ok = vregex.get_re_ok(r, "id 12-abc", 1)
     assert val == "12"
@@ -513,24 +526,28 @@ def test_get_re_ok() -> None:
 
 def test_get_by_name_re() -> None:
     import re as _re
+
     r = _re.compile(r"(?P<year>\d{4})")
     assert vregex.get_by_name_re(r, "y2026", "year") == "2026"
 
 
 def test_del_all_re() -> None:
     import re as _re
+
     r = _re.compile(r"\d")
     assert vregex.del_all_re(r, "a1b2c") == "abc"
 
 
 def test_del_first_re() -> None:
     import re as _re
+
     r = _re.compile(r"\d")
     assert vregex.del_first_re(r, "a1b2c") == "ab2c"
 
 
 def test_replace_first_re() -> None:
     import re as _re
+
     r = _re.compile(r"\d")
     assert vregex.replace_first_re(r, "a1b2c", "*") == "a*b2c"
 
@@ -540,6 +557,7 @@ def test_replace_first_re() -> None:
 
 def test_each() -> None:
     import re as _re
+
     r = _re.compile(r"\d+")
     results: list[vregex.MatchResult] = []
     vregex.each(r, "a1b23c", lambda mr: results.append(mr))
@@ -550,6 +568,7 @@ def test_each() -> None:
 
 def test_each_with_groups() -> None:
     import re as _re
+
     r = _re.compile(r"(\d+)-(\w+)")
     results: list[vregex.MatchResult] = []
     vregex.each(r, "12-abc 34-def", lambda mr: results.append(mr))
@@ -566,6 +585,7 @@ def test_each_nil() -> None:
 
 def test_first() -> None:
     import re as _re
+
     r = _re.compile(r"\d+")
     results: list[vregex.MatchResult] = []
     vregex.first(r, "a1b23c", lambda mr: results.append(mr))
@@ -575,6 +595,7 @@ def test_first() -> None:
 
 def test_first_no_match() -> None:
     import re as _re
+
     r = _re.compile(r"\d+")
     results: list[vregex.MatchResult] = []
     vregex.first(r, "abc", lambda mr: results.append(mr))

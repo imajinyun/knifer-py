@@ -27,65 +27,84 @@ AgeOption = Callable[[Any], None]
 
 def WithDigitsMatcher(_matcher: Callable[[str], bool]) -> IDCardOption:
     """Inject a custom decimal-digit matcher for mainland ID card helpers."""
+
     def _apply(_cfg: Any) -> None:
         pass
+
     return _apply
 
 
 def WithTWCardMatcher(_matcher: Callable[[str], bool]) -> IDCardOption:
     """Inject a custom format matcher for Taiwan ID card helpers."""
+
     def _apply(_cfg: Any) -> None:
         pass
+
     return _apply
 
 
 def WithMacauCardMatcher(_matcher: Callable[[str], bool]) -> IDCardOption:
     """Inject a custom format matcher for Macau ID card helpers."""
+
     def _apply(_cfg: Any) -> None:
         pass
+
     return _apply
 
 
 def WithHKCardMatcher(_matcher: Callable[[str], bool]) -> IDCardOption:
     """Inject a custom format matcher for Hong Kong ID card helpers."""
+
     def _apply(_cfg: Any) -> None:
         pass
+
     return _apply
 
 
 def WithBirthLocation(_location: str) -> BirthOption:
     """Set the timezone location for birthday parsing."""
+
     def _apply(_cfg: Any) -> None:
         pass
+
     return _apply
 
 
 def WithBirthDigitsMatcher(_matcher: Callable[[str], bool]) -> BirthOption:
     """Inject a custom decimal-digit matcher for birthday helpers."""
+
     def _apply(_cfg: Any) -> None:
         pass
+
     return _apply
 
 
 def WithBirthParser(_parser: Callable[[str], date]) -> BirthOption:
     """Inject a custom date parser for birthday helpers."""
+
     def _apply(_cfg: Any) -> None:
         pass
+
     return _apply
 
 
 def WithAgeTime(_at: date) -> AgeOption:
     """Set the reference time for age computation."""
+
     def _apply(_cfg: Any) -> None:
         pass
+
     return _apply
 
 
 def WithAgeClock(_clock: Callable[[], date]) -> AgeOption:
     """Inject a custom clock function for age computation."""
+
     def _apply(_cfg: Any) -> None:
         pass
+
     return _apply
+
 
 __all__ = [
     "Gender",

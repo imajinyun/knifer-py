@@ -73,7 +73,9 @@ class Log(Protocol):
     def error(self, *args: object) -> None: ...
     def errorf(self, template: str, *args: object) -> None: ...
     def log(self, level: Level, template: str, *args: object) -> None: ...
-    def log_e(self, level: Level, err: BaseException | None, template: str, *args: object) -> None: ...
+    def log_e(
+        self, level: Level, err: BaseException | None, template: str, *args: object
+    ) -> None: ...
 
 
 class LogFactory(Protocol):
@@ -239,9 +241,7 @@ class ConsoleLog:
             line += f" | error: {err}"
         print(line, file=self._target_writer(level))
 
-    def log_e(
-        self, level: Level, err: BaseException | None, template: str, *args: object
-    ) -> None:
+    def log_e(self, level: Level, err: BaseException | None, template: str, *args: object) -> None:
         """Emit at ``level`` with an attached error when the level is enabled."""
         if not self.is_enabled(level):
             return
@@ -448,7 +448,7 @@ def fatalf(template: str, *args: object) -> None:
 # Logger factory / named loggers
 _LogFactory = Callable[[str], "ConsoleLog"]
 _log_factory: _LogFactory | None = None
-_logger_cache: dict[str, "ConsoleLog"] = {}
+_logger_cache: dict[str, ConsoleLog] = {}
 
 
 def set_log_factory(factory: _LogFactory) -> None:
@@ -460,22 +460,19 @@ def get_factory() -> _LogFactory | None:
     return _log_factory
 
 
-def logger(name: str) -> "ConsoleLog":
+def logger(name: str) -> ConsoleLog:
     if name in _logger_cache:
         return _logger_cache[name]
-    if _log_factory is not None:
-        lg = _log_factory(name)
-    else:
-        lg = ConsoleLog(name)
+    lg = _log_factory(name) if _log_factory is not None else ConsoleLog(name)
     _logger_cache[name] = lg
     return lg
 
 
-def default_logger() -> "ConsoleLog":
+def default_logger() -> ConsoleLog:
     return _static_logger
 
 
-def new_isolated_logger(name: str) -> "ConsoleLog":
+def new_isolated_logger(name: str) -> ConsoleLog:
     return ConsoleLog(name)
 
 

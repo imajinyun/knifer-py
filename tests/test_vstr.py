@@ -13,16 +13,16 @@ class TestBOM:
         assert vstr.BOM_UTF8 == "UTF-8"
 
     def test_has_bom_utf8(self) -> None:
-        assert vstr.has_bom(b"\xEF\xBB\xBFhello") == vstr.BOM_UTF8
+        assert vstr.has_bom(b"\xef\xbb\xbfhello") == vstr.BOM_UTF8
 
     def test_has_bom_none(self) -> None:
         assert vstr.has_bom(b"hello") == vstr.BOM_NONE
 
     def test_has_bom_utf16le(self) -> None:
-        assert vstr.has_bom(b"\xFF\xFEhello") == vstr.BOM_UTF16_LE
+        assert vstr.has_bom(b"\xff\xfehello") == vstr.BOM_UTF16_LE
 
     def test_strip_bom_utf8(self) -> None:
-        assert vstr.strip_bom(b"\xEF\xBB\xBFhello") == b"hello"
+        assert vstr.strip_bom(b"\xef\xbb\xbfhello") == b"hello"
 
     def test_strip_bom_none(self) -> None:
         assert vstr.strip_bom(b"hello") == b"hello"
@@ -395,7 +395,7 @@ class TestCharPredicates:
     def test_is_blank_char(self) -> None:
         assert vstr.is_blank_char(" ")
         assert vstr.is_blank_char("\t")
-        assert vstr.is_blank_char("\u00A0")
+        assert vstr.is_blank_char("\u00a0")
         assert not vstr.is_blank_char("a")
         assert not vstr.is_blank_char("ab")
 

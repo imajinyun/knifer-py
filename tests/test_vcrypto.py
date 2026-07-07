@@ -1,18 +1,18 @@
-from pathlib import Path
 import sys
 import types
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
 
 import pytest
 from cryptography import x509
+from cryptography.exceptions import InvalidTag
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
-from datetime import datetime, timedelta, timezone
 
 from kniferpy import vcrypto
 from kniferpy.internal import cryptox
 from kniferpy.verr import CryptoError, ValidationError
-
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # SHA-family digests (existing)
@@ -108,12 +108,12 @@ def test_pbkdf2_empty_string() -> None:
     assert len(derived) == 32
 
 
-def test_pbkdf2_rejects_low_iterations() -> None:
+def test_pbkdf2_bytes_rejects_low_iterations() -> None:
     with pytest.raises(ValueError, match="iterations must be at least 100000"):
         vcrypto.pbkdf2_sha256_hex("password", "salt", iterations=10)
 
 
-def test_pbkdf2_sha256_hex_rejects_low_iterations() -> None:
+def test_pbkdf2_sha256_hex_rejects_low_iterations_again() -> None:
     with pytest.raises(ValueError, match="iterations must be at least 100000"):
         vcrypto.pbkdf2_sha256_hex("password", "salt", iterations=10)
 
@@ -532,6 +532,7 @@ def test_totp_verify() -> None:
 
 def test_totp_verify_with_window() -> None:
     import time
+
     secret = vcrypto.generate_otp_secret()
     now = time.time()
     code = vcrypto.totp(secret, now, step=30)
@@ -704,6 +705,7 @@ def test_rsa_sign_verify_pss() -> None:
     key = vcrypto.gen_rsa_key()
     pub = key.public_key()
     import hashlib
+
     digest = hashlib.sha256(b"hello").digest()
     sig = vcrypto.rsa_sign_pss(key, digest)
     assert vcrypto.rsa_verify_pss(pub, digest, sig)
@@ -713,6 +715,7 @@ def test_rsa_verify_pss_wrong_data() -> None:
     key = vcrypto.gen_rsa_key()
     pub = key.public_key()
     import hashlib
+
     digest = hashlib.sha256(b"hello").digest()
     sig = vcrypto.rsa_sign_pss(key, digest)
     wrong_digest = hashlib.sha256(b"wrong").digest()
@@ -742,6 +745,7 @@ def test_sign_with_rsa_options_pss() -> None:
     key = vcrypto.gen_rsa_key()
     pub = key.public_key()
     import hashlib
+
     digest = hashlib.sha256(b"hello").digest()
     sig = vcrypto.sign_with_rsa_options(digest, key, hash_alg="sha256", pss=True)
     assert vcrypto.verify_with_rsa_options(digest, sig, pub, hash_alg="sha256", pss=True)
@@ -751,6 +755,7 @@ def test_sign_with_rsa_options_pkcs1v15() -> None:
     key = vcrypto.gen_rsa_key()
     pub = key.public_key()
     import hashlib
+
     digest = hashlib.sha256(b"hello").digest()
     sig = vcrypto.sign_with_rsa_options(digest, key, hash_alg="sha256", pss=False)
     assert vcrypto.verify_with_rsa_options(digest, sig, pub, hash_alg="sha256", pss=False)
@@ -760,6 +765,7 @@ def test_verify_with_rsa_options_wrong() -> None:
     key = vcrypto.gen_rsa_key()
     pub = key.public_key()
     import hashlib
+
     digest = hashlib.sha256(b"hello").digest()
     sig = vcrypto.sign_with_rsa_options(digest, key)
     wrong_digest = hashlib.sha256(b"wrong").digest()
@@ -921,6 +927,7 @@ def test_select_jwk_by_key_id_not_found() -> None:
 
 def test_sign_params() -> None:
     import hashlib
+
     sig = vcrypto.sign_params(
         {"b": "2", "a": "1"},
         lambda data: hashlib.sha256(data).hexdigest(),
@@ -1154,7 +1161,7 @@ def test_sm4_gcm_validation_and_wrong_aad_paths() -> None:
         vcrypto.sm4_encrypt_gcm(b"hello", b"short", nonce, b"aad")
     with pytest.raises(CryptoError) as nonce_exc:
         vcrypto.sm4_decrypt_gcm(cipher, key, b"short", b"aad")
-    with pytest.raises(Exception):
+    with pytest.raises(InvalidTag):
         vcrypto.sm4_decrypt_gcm(cipher, key, nonce, b"wrong")
     assert key_exc.value.code == "crypto.invalid_key"
     assert nonce_exc.value.code == "crypto.invalid_nonce"
@@ -1171,8 +1178,12 @@ def test_rsa_options_sha384_and_unknown_hash_fallback() -> None:
 
     digest256 = hashlib.sha256(b"hello").digest()
     sig_default = vcrypto.sign_with_rsa_options(digest256, key, hash_alg="unknown", pss=False)
-    assert vcrypto.verify_with_rsa_options(digest256, sig_default, pub, hash_alg="unknown", pss=False)
-    assert not vcrypto.verify_with_rsa_options(digest384, sig_default, pub, hash_alg="sha384", pss=False)
+    assert vcrypto.verify_with_rsa_options(
+        digest256, sig_default, pub, hash_alg="unknown", pss=False
+    )
+    assert not vcrypto.verify_with_rsa_options(
+        digest384, sig_default, pub, hash_alg="sha384", pss=False
+    )
 
 
 # ═══════════════════════════════════════════════════════════════════════════════

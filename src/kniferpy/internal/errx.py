@@ -12,13 +12,11 @@ Ports knifer-go's internal/errx with Python-idiomatic mappings:
 from __future__ import annotations
 
 import logging
-import os
 import sys
 import threading
 import time
 import traceback
 from dataclasses import dataclass, field
-from datetime import timedelta
 from typing import Any, Callable, Protocol, runtime_checkable
 
 _logger = logging.getLogger("kniferpy.errx")
@@ -82,6 +80,7 @@ EmptyFormatter = type("EmptyFormatter", (), {})  # Go: empty formatter sentinel
 
 
 # ── Go-compat ResetStackFrameCache ──────────────────────────────────────────
+
 
 def reset_stack_frame_cache() -> None:
     """Reset the stack frame cache (Go compat, no-op in Python)."""
@@ -221,11 +220,13 @@ class PanicError(KniferError):
 
 def get_stack(skip: int = 2) -> str:
     """Capture the current call stack as a string."""
-    return "".join(traceback.format_stack(limit=10)[:-skip] if skip else traceback.format_stack(limit=10))
+    return "".join(
+        traceback.format_stack(limit=10)[:-skip] if skip else traceback.format_stack(limit=10)
+    )
 
 
 def get_stack_from_error(err: BaseException, skip: int = 2) -> str:
-    """Extract the stack from an error that implements WithStack, or fall back to the current stack."""
+    """Extract the stack from WithStack, or fall back to the current stack."""
     if isinstance(err, WithStack):
         return err.stack()
     if isinstance(err, PanicError):
@@ -236,12 +237,17 @@ def get_stack_from_error(err: BaseException, skip: int = 2) -> str:
 
 def get_stack_trace(skip: int = 2, depth: int = 50) -> list[str]:
     """Capture the current call stack as a list of frame strings."""
-    return traceback.format_stack(limit=depth)[:-skip] if skip else traceback.format_stack(limit=depth)
+    return (
+        traceback.format_stack(limit=depth)[:-skip] if skip else traceback.format_stack(limit=depth)
+    )
 
 
 def format_stack_frame(frame_summary: traceback.FrameSummary) -> str:
     """Format a single frame summary as a string."""
-    return f'  File "{frame_summary.filename}", line {frame_summary.lineno}, in {frame_summary.name}\n    {frame_summary.line or ""}\n'
+    return (
+        f'  File "{frame_summary.filename}", line {frame_summary.lineno}, '
+        f'in {frame_summary.name}\n    {frame_summary.line or ""}\n'
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -307,7 +313,7 @@ def recover_without_error(fn: Callable[[], None], error_format: str = "", *args:
     """Execute fn, catching exceptions silently."""
     try:
         fn()
-    except Exception as exc:
+    except Exception:
         if error_format:
             _logger.error(error_format % args if args else error_format, exc_info=True)
 
@@ -353,6 +359,7 @@ class Collector:
 
     def go_run(self, fn: Callable[[], Any], error_format: str = "", *args: Any) -> None:
         """Run fn in a background thread, collecting errors."""
+
         def _run() -> None:
             try:
                 fn()
@@ -382,6 +389,7 @@ class Collector:
     def wait_until(self, duration: float) -> tuple[bool, BaseException | None]:
         """Wait for a duration, checking if errors occurred."""
         import time
+
         deadline = time.monotonic() + duration
         while time.monotonic() < deadline:
             err = self.error()
@@ -401,7 +409,9 @@ class Collector:
         """Wait for a duration with options, checking if errors occurred."""
         return self.wait_until(duration)
 
-    def collect_error(self, fn: Callable[[], Any], error_format: str = "", *args: Any) -> BaseException | None:
+    def collect_error(
+        self, fn: Callable[[], Any], error_format: str = "", *args: Any
+    ) -> BaseException | None:
         """Execute fn, collect errors, return the error."""
         try:
             fn()
@@ -427,6 +437,7 @@ def init_sentry(dsn: str, **kwargs: Any) -> None:
     """Initialize Sentry with the given DSN."""
     try:
         import sentry_sdk
+
         sentry_sdk.init(dsn=dsn, **kwargs)
     except ImportError:
         _logger.warning("sentry-sdk not installed; skipping Sentry initialization")
@@ -436,6 +447,7 @@ def capture_exception(error: BaseException | None = None) -> str | None:
     """Capture an exception to Sentry."""
     try:
         import sentry_sdk
+
         return sentry_sdk.capture_exception(error)
     except ImportError:
         return None
@@ -524,8 +536,10 @@ class TimerFactory:
 
     def create(self) -> Callable[[], bool]:
         deadline = time.monotonic() + self._duration
+
         def _done() -> bool:
             return time.monotonic() >= deadline
+
         return _done
 
 

@@ -485,9 +485,7 @@ def test_connection_closes_when_quit_fails(monkeypatch: pytest.MonkeyPatch) -> N
 
 def test_implicit_tls_uses_ssl(fake_smtp: type[_FakeSMTP]) -> None:
     client = vmail.Client(
-        vmail.Config(
-            host="smtp.example.com", port=465, tls_policy=vmail.TLSPolicy.IMPLICIT
-        )
+        vmail.Config(host="smtp.example.com", port=465, tls_policy=vmail.TLSPolicy.IMPLICIT)
     )
     client.send(_basic_message())
     assert fake_smtp.instances[0].port == 465
@@ -502,9 +500,7 @@ def test_client_rejects_bad_address() -> None:
 
 
 def test_send_text(fake_smtp: type[_FakeSMTP]) -> None:
-    vmail.send_text(
-        "smtp.example.com", 587, "from@example.com", "to@example.com", "Hi", "body"
-    )
+    vmail.send_text("smtp.example.com", 587, "from@example.com", "to@example.com", "Hi", "body")
     data = fake_smtp.instances[0].sent[0][2]
     assert b"body" in data
 
@@ -549,9 +545,7 @@ def test_account_without_from_raises() -> None:
 
 
 def test_send_account_text(fake_smtp: type[_FakeSMTP]) -> None:
-    account = vmail.Account(
-        host="smtp.example.com", port=587, from_="from@example.com"
-    )
+    account = vmail.Account(host="smtp.example.com", port=587, from_="from@example.com")
     vmail.send_account_text(account, "to@example.com", "Subject", "text body")
     assert fake_smtp.instances[0].sent[0][0] == "from@example.com"
 

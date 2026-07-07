@@ -7,14 +7,15 @@ import json
 import secrets
 import string
 import struct
+import time as _time
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from cryptography.hazmat.primitives.asymmetric import padding, rsa
+from argon2.low_level import Type, hash_secret_raw, verify_secret
 from cryptography.hazmat.primitives import hashes, serialization
+from cryptography.hazmat.primitives.asymmetric import padding, rsa
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from argon2.low_level import hash_secret_raw, Type, verify_secret
 
 from kniferpy.verr import CryptoError, ValidationError
 
@@ -666,9 +667,7 @@ def sign_params(
     return digest_hex_fn(raw.encode("utf-8"))
 
 
-def sign_params_sha256(
-    params: dict[str, Any], *other_params: str
-) -> str:
+def sign_params_sha256(params: dict[str, Any], *other_params: str) -> str:
     return sign_params(
         params,
         lambda data: hashlib.sha256(data).hexdigest(),
@@ -763,7 +762,15 @@ def pbkdf2_sha256(
 class PasswordHashInfo:
     """Introspection for Argon2id password hash strings."""
 
-    __slots__ = ("algorithm", "version", "memory", "iterations", "parallelism", "salt_length", "key_length")
+    __slots__ = (
+        "algorithm",
+        "version",
+        "memory",
+        "iterations",
+        "parallelism",
+        "salt_length",
+        "key_length",
+    )
 
     def __init__(
         self,
@@ -816,6 +823,7 @@ def parse_password_hash(encoded: str) -> PasswordHashInfo:
 def parse_x509_certificate_pem(data: bytes) -> Any:
     """Parse a PEM-encoded X.509 certificate."""
     from cryptography import x509
+
     return x509.load_pem_x509_certificate(data)
 
 
@@ -826,9 +834,6 @@ def public_key_from_certificate_pem(data: bytes) -> Any:
 
 
 # ── OTP clock injection ──────────────────────────────────────────────────────
-
-
-import time as _time
 
 _otp_clock: Callable[[], float] | None = None
 
@@ -870,14 +875,18 @@ def totp_verify_now_with_options(
 # ── Random with options (Go compat) ──────────────────────────────────────────
 
 
-def secure_bytes_with_options(length: int, *, reader: Callable[[int], bytes] | None = None) -> bytes:
+def secure_bytes_with_options(
+    length: int, *, reader: Callable[[int], bytes] | None = None
+) -> bytes:
     """Generate secure random bytes with optional custom reader."""
     if reader is not None:
         return reader(length)
     return secrets.token_bytes(length)
 
 
-def gen_aes_key_with_options(size: int = 32, *, reader: Callable[[int], bytes] | None = None) -> bytes:
+def gen_aes_key_with_options(
+    size: int = 32, *, reader: Callable[[int], bytes] | None = None
+) -> bytes:
     """Generate an AES key with optional custom reader."""
     if size not in (16, 24, 32):
         raise CryptoError("AES key must be 16, 24, or 32 bytes", code="crypto.invalid_key_size")
@@ -894,7 +903,9 @@ def random_bytes(length: int) -> bytes:
     return secrets.token_bytes(length)
 
 
-def random_bytes_with_options(length: int, *, reader: Callable[[int], bytes] | None = None) -> bytes:
+def random_bytes_with_options(
+    length: int, *, reader: Callable[[int], bytes] | None = None
+) -> bytes:
     """Generate n random bytes with optional custom reader (Go compat)."""
     if reader is not None:
         return reader(length)
@@ -932,7 +943,6 @@ def sm3_equal(a: bytes, b: bytes) -> bool:
 
 def hmac_sm3_bytes(key: bytes, data: bytes) -> bytes:
     """Return HMAC-SM3 digest bytes."""
-    import hmac as _hmac
 
     from gmssl.sm3 import sm3_hash
 
@@ -1124,7 +1134,6 @@ def sm2_verify(data: bytes, sig: bytes, pub_key: str) -> bool:
 
 def sm2_private_key_to_pem(priv_key: Any) -> bytes:
     """Encode an SM2 private key as PKCS#8 PEM."""
-    from gmssl.sm2 import CryptSM2
     from gmssl.func import sm2_private_key_to_pem as _to_pem
 
     return _to_pem(priv_key).encode()

@@ -3,7 +3,7 @@ from __future__ import annotations
 import math
 from collections.abc import Callable, Iterable, Sequence
 from pathlib import Path
-from typing import Protocol
+from typing import Any, Protocol
 
 from kniferpy.internal import hashx
 from kniferpy.verr import ValidationError
@@ -272,7 +272,9 @@ def new_bitmap_bloom_filter_e(m: int) -> tuple[BitMapBloomFilter, None]:
     return BitMapBloomFilter(m), None
 
 
-def new_bitmap_bloom_filter_with_filters_e(m: int, *filters: BloomFilter) -> tuple[BitMapBloomFilter, None]:
+def new_bitmap_bloom_filter_with_filters_e(
+    m: int, *filters: BloomFilter
+) -> tuple[BitMapBloomFilter, None]:
     return BitMapBloomFilter(m, filters), None
 
 
@@ -367,7 +369,7 @@ class _BloomFileConfig:
 
 
 def _default_open_file(path: str) -> Any:
-    return open(path, "r", encoding="utf-8")
+    return open(path, encoding="utf-8")  # noqa: SIM115
 
 
 def with_open_file(open_file: Callable[[str], Any]) -> _FileOption:
