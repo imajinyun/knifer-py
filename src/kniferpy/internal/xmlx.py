@@ -349,7 +349,7 @@ def _et_to_element(et_elem: Any) -> Element:
 # ========== Element to Map / Bean ==========
 
 
-def xml_node_to_map(node: Element | None) -> dict[str, Any]:
+def xml_node_to_map(node: Element | None) -> Any:
     if node is None:
         return {}
     result: dict[str, Any] = {}
@@ -373,6 +373,8 @@ def xml_node_to_bean(node: Element | None, dst: type) -> Any:
 
 def xml_to_map_into(xml_str: str, result: dict[str, Any] | None = None) -> dict[str, Any]:
     m = xml_node_to_map(parse_xml(xml_str).root)
+    if not isinstance(m, dict):
+        return {CONTENT_KEY: m}
     if result is not None:
         result.update(m)
         return result
@@ -383,6 +385,8 @@ def xml_node_to_map_into(
     node: Element | None, result: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     m = xml_node_to_map(node)
+    if not isinstance(m, dict):
+        return {CONTENT_KEY: m}
     if result is not None:
         result.update(m)
         return result
@@ -399,7 +403,7 @@ def marshal_map(data: dict[str, Any], root_tag: str = "root", *, pretty: bool = 
 def marshal_bean(bean: Any, root_tag: str = "root", *, pretty: bool = False) -> str:
     import dataclasses
 
-    if dataclasses.is_dataclass(bean):
+    if dataclasses.is_dataclass(bean) and not isinstance(bean, type):
         d = dataclasses.asdict(bean)
         return marshal_map(d, root_tag, pretty=pretty)
     return marshal_map({"value": str(bean)}, root_tag, pretty=pretty)
@@ -724,9 +728,9 @@ def read_by_sax(
 
     try:
         parser = ElementTree.XMLParser(target=ElementTree.TreeBuilder())
-        parser.parser.StartElementHandler = _SAXHandler().start  # type: ignore[assignment]
-        parser.parser.EndElementHandler = _SAXHandler().end  # type: ignore[assignment]
-        parser.parser.CharacterDataHandler = _SAXHandler().data  # type: ignore[assignment]
+        parser.parser.StartElementHandler = _SAXHandler().start
+        parser.parser.EndElementHandler = _SAXHandler().end
+        parser.parser.CharacterDataHandler = _SAXHandler().data
         parser.feed(xml_str)
         parser.close()
     except ElementTree.ParseError as exc:

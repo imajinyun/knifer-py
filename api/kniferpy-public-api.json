@@ -20543,7 +20543,7 @@
         },
         "xml_node_to_map": {
           "kind": "function",
-          "signature": "(node: 'Element | None') -> 'dict[str, Any]'",
+          "signature": "(node: 'Element | None') -> 'Any'",
           "type": "builtins.function"
         },
         "xml_node_to_map_into": {

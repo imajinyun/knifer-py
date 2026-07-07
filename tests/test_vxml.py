@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from io import BytesIO, StringIO
 from pathlib import Path
+from xml.etree import ElementTree
 
 import pytest
 
@@ -127,7 +128,9 @@ def test_document_element_construction_navigation_and_owner() -> None:
     vxml.append(root, ["tail", 3, None])
     vxml.append(None, {"x": 1})
 
-    assert vxml.get_owner_document(child).root is root
+    owner_doc = vxml.get_owner_document(child)
+    assert owner_doc is not None
+    assert owner_doc.root is root
     assert vxml.get_owner_document(None) is None
     assert vxml.get_elements(root)
     assert vxml.get_elements(root, "name")[0].text == "kniferpy"
@@ -166,8 +169,12 @@ def test_xpath_helpers_support_document_element_string_and_return_types() -> Non
     root = doc.root
     assert root is not None
 
-    assert vxml.get_element_by_xpath("/root/item/name", doc).text == "a"
-    assert vxml.get_element_by_xpath("//name", root).text == "a"
+    first_name = vxml.get_element_by_xpath("/root/item/name", doc)
+    first_root_name = vxml.get_element_by_xpath("//name", root)
+    assert first_name is not None
+    assert first_root_name is not None
+    assert first_name.text == "a"
+    assert first_root_name.text == "a"
     assert [node.text for node in vxml.get_node_list_by_xpath("//name", xml)] == ["a", "b"]
     assert vxml.get_node_by_xpath("/root/missing", doc) is None
     assert vxml.get_node_list_by_xpath("/root/item", None) == []
@@ -212,7 +219,7 @@ def test_xml_node_to_map_and_into_variants() -> None:
     assert existing["a"] is True
     into = {"base": "x"}
     assert vxml.xml_node_to_map_into(doc.root, into) is into
-    assert into["item"] == [1, 2]
+    assert into["item"] == [1, 2]  # type: ignore[comparison-overlap]
     assert vxml.xml_node_to_map_into(None) == {}
 
 
@@ -280,7 +287,7 @@ def test_format_xml_and_get_by_path() -> None:
 
 
 def test_sax_callbacks_and_file_variant(tmp_path: Path) -> None:
-    events: list[tuple[str, object]] = []
+    events: list[tuple[str, object, object | None]] = []
     path = tmp_path / "sax.xml"
     xml = '<root id="7"><item>a</item><item>b</item></root>'
     path.write_text(xml, encoding="utf-8")
@@ -289,10 +296,10 @@ def test_sax_callbacks_and_file_variant(tmp_path: Path) -> None:
         events.append(("start", name, attrs))
 
     def on_end(name: str) -> None:
-        events.append(("end", name))
+        events.append(("end", name, None))
 
     def on_chars(text: str) -> None:
-        events.append(("text", text.strip()))
+        events.append(("text", text.strip(), None))
 
     try:
         vxml.read_by_sax(
@@ -306,8 +313,8 @@ def test_sax_callbacks_and_file_variant(tmp_path: Path) -> None:
         pytest.skip("ElementTree parser does not expose low-level SAX handlers")
 
     assert ("start", "root", {"id": "7"}) in events
-    assert ("text", "a") in events
-    assert ("end", "root") in events
+    assert ("text", "a", None) in events
+    assert ("end", "root", None) in events
 
 
 def test_sax_rejects_doctype_and_invalid_xml() -> None:
@@ -385,12 +392,12 @@ def test_xpath_and_walk_edge_branches() -> None:
 
 
 def test_et_to_element_preserves_tail_text_and_internal_value_helpers() -> None:
-    et_root = xmlx.ElementTree.fromstring(
+    et_root = ElementTree.fromstring(
         '<root xmlns:ns="urn"><ns:child code="7">1</ns:child>tail<empty /></root>'
     )
     converted = xmlx._et_to_element(et_root)
     value = xmlx._element_to_value(et_root)
-    scalar_empty = xmlx._element_to_value(xmlx.ElementTree.fromstring("<empty />"))
+    scalar_empty = xmlx._element_to_value(ElementTree.fromstring("<empty />"))
 
     assert converted.name == "root"
     assert converted.text == "tail"
