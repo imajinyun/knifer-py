@@ -1,3 +1,5 @@
+from collections.abc import Callable
+
 import pytest
 
 from kniferpy.verr import (
@@ -80,7 +82,7 @@ def test_empty_formatter() -> None:
 
 
 def test_reset_stack_frame_cache() -> None:
-    assert reset_stack_frame_cache() is None
+    reset_stack_frame_cache()
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -451,7 +453,12 @@ def test_collector_with_log_func() -> None:
 
 def test_collector_with_runner() -> None:
     runs = []
-    c = new_collector().with_runner(lambda fn: runs.append(fn) or fn())
+
+    def run_and_record(fn: Callable[[], None]) -> None:
+        runs.append(fn)
+        fn()
+
+    c = new_collector().with_runner(run_and_record)
 
     def task() -> None:
         raise ValueError("boom")
@@ -502,7 +509,12 @@ def test_new_collector_with_options() -> None:
 
 def test_new_collector_with_options_runner() -> None:
     runs = []
-    c = new_collector_with_options(runner=lambda fn: runs.append(fn) or fn())
+
+    def run_and_record(fn: Callable[[], None]) -> None:
+        runs.append(fn)
+        fn()
+
+    c = new_collector_with_options(runner=run_and_record)
     c.go_run(lambda: None)
     assert len(runs) == 1
 

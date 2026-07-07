@@ -1,3 +1,5 @@
+# mypy: disable-error-code="no-untyped-def, attr-defined"
+
 import io
 import os
 import stat

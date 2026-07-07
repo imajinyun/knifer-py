@@ -1,3 +1,7 @@
+# mypy: disable-error-code="no-untyped-def, no-untyped-call"
+
+from typing import Any, cast
+
 import pytest
 
 from kniferpy.vhan import (
@@ -22,7 +26,13 @@ from kniferpy.vhan import (
 
 
 class _Provider:
-    def __init__(self, convert_resp=None, convert_err=None, initials_resp=None, initials_err=None):
+    def __init__(
+        self,
+        convert_resp: ConvertResponse | None = None,
+        convert_err: Exception | None = None,
+        initials_resp: InitialsResponse | None = None,
+        initials_err: Exception | None = None,
+    ):
         self._convert_resp = convert_resp
         self._convert_err = convert_err
         self._initials_resp = initials_resp
@@ -263,12 +273,12 @@ def test_initials_shortcut():
 
 def test_convert_missing_provider_shortcut():
     with pytest.raises(ErrMissingProvider):
-        convert(None, ConvertRequest(Text="中国"))
+        convert(cast(Any, None), ConvertRequest(Text="中国"))
 
 
 def test_initials_missing_provider_shortcut():
     with pytest.raises(ErrMissingProvider):
-        initials(None, InitialsRequest(Text="中国"))
+        initials(cast(Any, None), InitialsRequest(Text="中国"))
 
 
 # --- Token dataclass -----------------------------------------------------------

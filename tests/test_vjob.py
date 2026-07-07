@@ -1,3 +1,5 @@
+# mypy: disable-error-code="no-untyped-def"
+
 import pytest
 
 from kniferpy.vjob import (
@@ -25,7 +27,7 @@ from kniferpy.vjob import (
 
 def test_run_nil_job():
     with pytest.raises(ErrNilJob, match="job is nil"):
-        run(None)
+        run(None)  # type: ignore[arg-type]
 
 
 def test_run_empty_job():
@@ -145,7 +147,7 @@ def test_new_map_invalid_fn():
 
 def test_new_map_invalid_data():
     with pytest.raises(ErrInvalidMapJob, match="dict"):
-        new_map(lambda k: None, [1, 2, 3])
+        new_map(lambda k: None, [1, 2, 3])  # type: ignore[arg-type]
 
 
 # --- new_map_keys --------------------------------------------------------
@@ -237,7 +239,7 @@ def test_concurrent_slice():
 
     j = new_slice(fn, 10).with_batch_size(2).with_max_concurrency(4)
     run(j)
-    all_indices = []
+    all_indices: list[int] = []
     for start, end in results:
         all_indices.extend(range(start, end))
     assert sorted(all_indices) == list(range(10))
@@ -357,13 +359,13 @@ def test_merge_exception_is_replayed_after_run() -> None:
 
 
 def test_slice_nil_run():
-    j = Slice(None, 5)
+    j = Slice(None, 5)  # type: ignore[arg-type]
     result = j.run(0, 5)
     assert result is None
 
 
 def test_batch_nil_run():
-    j = Batch(None, [1, 2, 3])
+    j = Batch(None, [1, 2, 3])  # type: ignore[arg-type]
     result = j.run(0, 3)
     assert result is None
 
