@@ -4548,19 +4548,19 @@
               "signature": "(self, query: 'str', args: 'dict[str, Any]') -> 'Any'"
             },
             "find": {
-              "signature": "(self, query: 'SQLBuilder') -> 'list[dict]'"
+              "signature": "(self, query: 'SQLBuilder') -> 'list[dict[str, Any]]'"
             },
             "find_all": {
-              "signature": "(self, table: 'str') -> 'list[dict]'"
+              "signature": "(self, table: 'str') -> 'list[dict[str, Any]]'"
             },
             "find_by": {
-              "signature": "(self, table: 'str', field: 'str', value: 'Any') -> 'list[dict]'"
+              "signature": "(self, table: 'str', field: 'str', value: 'Any') -> 'list[dict[str, Any]]'"
             },
             "find_like": {
-              "signature": "(self, table: 'str', field: 'str', value: 'Any', mode: 'str' = '') -> 'list[dict]'"
+              "signature": "(self, table: 'str', field: 'str', value: 'Any', mode: 'str' = '') -> 'list[dict[str, Any]]'"
             },
             "get": {
-              "signature": "(self, table: 'str', field: 'str', value: 'Any') -> 'tuple[dict | None, bool]'"
+              "signature": "(self, table: 'str', field: 'str', value: 'Any') -> 'tuple[dict[str, Any] | None, bool]'"
             },
             "insert": {
               "signature": "(self, entity: 'Entity') -> 'Any'"
@@ -4575,7 +4575,7 @@
               "signature": "(self) -> 'list[str]'"
             },
             "page": {
-              "signature": "(self, query: 'SQLBuilder', page: 'Page') -> 'PageResult'"
+              "signature": "(self, query: 'SQLBuilder', page: 'Page') -> 'PageResult[dict[str, Any]]'"
             },
             "ping": {
               "signature": "(self) -> 'None'"
@@ -4584,13 +4584,13 @@
               "signature": "(self, table: 'str') -> 'list[str]'"
             },
             "query_entities": {
-              "signature": "(self, query: 'str', *args: 'Any') -> 'list[dict]'"
+              "signature": "(self, query: 'str', *args: 'Any') -> 'list[dict[str, Any]]'"
             },
             "query_named": {
-              "signature": "(self, query: 'str', args: 'dict[str, Any]') -> 'list[dict]'"
+              "signature": "(self, query: 'str', args: 'dict[str, Any]') -> 'list[dict[str, Any]]'"
             },
             "query_one": {
-              "signature": "(self, query: 'str', *args: 'Any') -> 'tuple[dict | None, bool]'"
+              "signature": "(self, query: 'str', *args: 'Any') -> 'tuple[dict[str, Any] | None, bool]'"
             },
             "query_scalar": {
               "signature": "(self, query: 'str', *args: 'Any') -> 'tuple[Any, bool]'"
@@ -4749,7 +4749,7 @@
               "signature": "(self, field: 'str', value: 'Any') -> 'Entity'"
             }
           },
-          "signature": "()",
+          "signature": "(table: 'str' = '', fields: 'dict[str, Any]' = <factory>) -> None",
           "type": "builtins.type"
         },
         "In": {
@@ -4828,7 +4828,7 @@
           "kind": "class",
           "methods": {
             "join": {
-              "signature": "(self, join_sql)"
+              "signature": "(self, join_sql: 'str') -> 'SQLBuilder'"
             },
             "sql": {
               "signature": "(self, dialect: 'Dialect') -> 'tuple[str, list[Any]]'"
@@ -4837,14 +4837,14 @@
               "signature": "(self, dialect: 'Dialect') -> 'tuple[str, list[Any]]'"
             }
           },
-          "signature": "(_sql: 'str' = '', _is_raw: 'bool' = False, _select: 'list[str]' = <factory>, _from: 'list[str]' = <factory>, _where: 'list[str]' = <factory>, _conditions: 'list[Condition]' = <factory>, _group_by: 'list[str]' = <factory>, _having: 'list[str]' = <factory>, _order_by: 'list[Order]' = <factory>, _limit: 'int | None' = None, _offset: 'int | None' = None, _is_insert: 'bool' = False, _insert_entity: 'Entity | None' = None, _delete_from: 'str' = '', _update_table: 'str' = '', _update_set: 'list[tuple[str, Any]]' = <factory>) -> None",
+          "signature": "(_sql: 'str' = '', _is_raw: 'bool' = False, _select: 'list[str]' = <factory>, _from: 'list[str]' = <factory>, _where: 'list[str]' = <factory>, _conditions: 'list[Condition]' = <factory>, _group_by: 'list[str]' = <factory>, _having: 'list[str]' = <factory>, _order_by: 'list[Order]' = <factory>, _limit: 'int | None' = None, _offset: 'int | None' = None, _is_insert: 'bool' = False, _insert_entity: 'Entity | None' = None, _delete_from: 'str' = '', _update_table: 'str' = '', _update_set: 'list[tuple[str, Any]]' = <factory>, _joins: 'list[str]' = <factory>) -> None",
           "type": "builtins.type"
         },
         "SQLBuilder": {
           "kind": "class",
           "methods": {
             "join": {
-              "signature": "(self, join_sql)"
+              "signature": "(self, join_sql: 'str') -> 'SQLBuilder'"
             },
             "sql": {
               "signature": "(self, dialect: 'Dialect') -> 'tuple[str, list[Any]]'"
@@ -4853,7 +4853,7 @@
               "signature": "(self, dialect: 'Dialect') -> 'tuple[str, list[Any]]'"
             }
           },
-          "signature": "(_sql: 'str' = '', _is_raw: 'bool' = False, _select: 'list[str]' = <factory>, _from: 'list[str]' = <factory>, _where: 'list[str]' = <factory>, _conditions: 'list[Condition]' = <factory>, _group_by: 'list[str]' = <factory>, _having: 'list[str]' = <factory>, _order_by: 'list[Order]' = <factory>, _limit: 'int | None' = None, _offset: 'int | None' = None, _is_insert: 'bool' = False, _insert_entity: 'Entity | None' = None, _delete_from: 'str' = '', _update_table: 'str' = '', _update_set: 'list[tuple[str, Any]]' = <factory>) -> None",
+          "signature": "(_sql: 'str' = '', _is_raw: 'bool' = False, _select: 'list[str]' = <factory>, _from: 'list[str]' = <factory>, _where: 'list[str]' = <factory>, _conditions: 'list[Condition]' = <factory>, _group_by: 'list[str]' = <factory>, _having: 'list[str]' = <factory>, _order_by: 'list[Order]' = <factory>, _limit: 'int | None' = None, _offset: 'int | None' = None, _is_insert: 'bool' = False, _insert_entity: 'Entity | None' = None, _delete_from: 'str' = '', _update_table: 'str' = '', _update_set: 'list[tuple[str, Any]]' = <factory>, _joins: 'list[str]' = <factory>) -> None",
           "type": "builtins.type"
         },
         "SQLOpenFunc": {
@@ -4895,13 +4895,13 @@
               "signature": "(self, builder: 'SQLBuilder', factory: 'Callable[[Any], T]') -> 'list[T]'"
             },
             "query_entities": {
-              "signature": "(self, query: 'str', *args: 'Any') -> 'list[dict]'"
+              "signature": "(self, query: 'str', *args: 'Any') -> 'list[dict[str, Any]]'"
             },
             "query_one": {
               "signature": "(self, builder: 'SQLBuilder', factory: 'Callable[[Any], T]') -> 'T | None'"
             },
             "query_one_entity": {
-              "signature": "(self, query: 'str', *args: 'Any') -> 'tuple[dict | None, bool]'"
+              "signature": "(self, query: 'str', *args: 'Any') -> 'tuple[dict[str, Any] | None, bool]'"
             },
             "query_scalar": {
               "signature": "(self, query: 'str', *args: 'Any') -> 'tuple[Any, bool]'"
@@ -5008,7 +5008,7 @@
         },
         "exec": {
           "kind": "function",
-          "signature": "(db: 'DB', query: 'str', args: 'tuple | None' = None) -> 'object'",
+          "signature": "(db: 'DB', query: 'str', args: 'tuple[Any, ...] | None' = None) -> 'object'",
           "type": "builtins.function"
         },
         "from_tables": {
@@ -5178,12 +5178,12 @@
         },
         "scan_one": {
           "kind": "function",
-          "signature": "(cursor: 'object') -> 'tuple[dict | None, bool]'",
+          "signature": "(cursor: 'CursorLike | None') -> 'tuple[dict[str, Any] | None, bool]'",
           "type": "builtins.function"
         },
         "scan_rows": {
           "kind": "function",
-          "signature": "(cursor: 'object') -> 'list[dict]'",
+          "signature": "(cursor: 'CursorLike | None') -> 'list[dict[str, Any]]'",
           "type": "builtins.function"
         },
         "select": {

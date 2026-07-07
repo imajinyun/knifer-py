@@ -16,7 +16,7 @@ import re
 from collections.abc import Generator
 from dataclasses import dataclass, field
 from enum import IntEnum
-from typing import Any, Callable, Generic, Sequence, TypeVar
+from typing import Any, Callable, Generic, Protocol, Sequence, TypeVar, cast
 
 from kniferpy.verr import KniferError
 
@@ -133,16 +133,26 @@ class Table:
     columns: list[Column] = field(default_factory=list)
 
 
+@dataclass
 class Entity:
     """Base interface for database entity mapping."""
 
+    table: str = ""
+    fields: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def __table__(self) -> str:
+        return self.table or self.__class__.__name__.lower()
+
     def set(self, field: str, value: Any) -> Entity:
         setattr(self, field, value)
+        self.fields[field] = value
         return self
 
     def set_if_not_nil(self, field: str, value: Any) -> Entity:
         if value is not None:
             setattr(self, field, value)
+            self.fields[field] = value
         return self
 
     def select(self, *fields: str) -> Entity:
@@ -157,6 +167,16 @@ class Entity:
 
 Condition = Callable[[Dialect], tuple[str, list[Any]]]
 """Condition is a function that builds condition SQL and argument list for a given dialect."""
+
+
+class CursorLike(Protocol):
+    description: Sequence[Sequence[Any]] | None
+
+    def fetchall(self) -> Sequence[Sequence[Any]]: ...
+
+    def fetchone(self) -> Sequence[Any] | None: ...
+
+    def close(self) -> None: ...
 
 
 @dataclass
@@ -218,6 +238,7 @@ class SQLBuilder:
     _delete_from: str = ""
     _update_table: str = ""
     _update_set: list[tuple[str, Any]] = field(default_factory=list)
+    _joins: list[str] = field(default_factory=list)
 
     def to_sql(self, dialect: Dialect) -> tuple[str, list[Any]]:
         args: list[Any] = []
@@ -245,6 +266,8 @@ class SQLBuilder:
             parts.append(", ".join(set_clauses))
         elif self._select:
             parts.append(f"SELECT {', '.join(self._select)} FROM {', '.join(self._from)}")
+            if self._joins:
+                parts.extend(self._joins)
         else:
             raise DBError("invalid builder state: no SELECT/INSERT/UPDATE/DELETE")
 
@@ -276,6 +299,10 @@ class SQLBuilder:
     def sql(self, dialect: Dialect) -> tuple[str, list[Any]]:
         """Go-compat alias for to_sql()."""
         return self.to_sql(dialect)
+
+    def join(self, join_sql: str) -> SQLBuilder:
+        self._joins.append(join_sql)
+        return self
 
 
 # --- builder factories --------------------------------------------------------
@@ -708,17 +735,17 @@ class DB:
             results.append(self._conn.execute(query, batch))
         return results
 
-    def query_entities(self, query: str, *args: Any) -> list[dict]:
+    def query_entities(self, query: str, *args: Any) -> list[dict[str, Any]]:
         """Execute SQL and scan rows into dicts."""
         cursor = self._conn.execute(query, args or ())
         return scan_rows(cursor)
 
-    def query_named(self, query: str, args: dict[str, Any]) -> list[dict]:
+    def query_named(self, query: str, args: dict[str, Any]) -> list[dict[str, Any]]:
         """Execute named-parameter SQL and scan rows into dicts."""
         named = parse_named(query, args, self._dialect)
         return self.query_entities(named.sql, *named.args)
 
-    def query_one(self, query: str, *args: Any) -> tuple[dict | None, bool]:
+    def query_one(self, query: str, *args: Any) -> tuple[dict[str, Any] | None, bool]:
         """Execute SQL and return first row."""
         cursor = self._conn.execute(query, args or ())
         return scan_one(cursor)
@@ -746,7 +773,7 @@ class DB:
     def insert_get_id(self, entity: Entity) -> int:
         """Insert entity and return last row id."""
         cursor = self.insert(entity)
-        return cursor.lastrowid
+        return cast(int, cursor.lastrowid)
 
     def upsert(self, entity: Entity, conflict_fields: list[str], *update_fields: str) -> Any:
         """Insert or update entity on conflict."""
@@ -805,7 +832,7 @@ class DB:
         conds = conditions_from_entity(entity)
         return self.delete(getattr(entity, "__table__", "unknown"), *conds)
 
-    def get(self, table: str, field: str, value: Any) -> tuple[dict | None, bool]:
+    def get(self, table: str, field: str, value: Any) -> tuple[dict[str, Any] | None, bool]:
         """Find one row by field equality."""
         b = select(["*"])
         b = from_tables(b, [table])
@@ -813,7 +840,7 @@ class DB:
         sql, args = b.to_sql(self._dialect)
         return self.query_one(sql, *args)
 
-    def find(self, query: SQLBuilder) -> list[dict]:
+    def find(self, query: SQLBuilder) -> list[dict[str, Any]]:
         """Run a query and return rows."""
         b = select(["*"])
         if query._from:
@@ -833,20 +860,20 @@ class DB:
         sql, args = b.to_sql(self._dialect)
         return self.query_entities(sql, *args)
 
-    def find_all(self, table: str) -> list[dict]:
+    def find_all(self, table: str) -> list[dict[str, Any]]:
         """Return all rows from table."""
         b = select(["*"])
         b = from_tables(b, [table])
         return self.find(b)
 
-    def find_by(self, table: str, field: str, value: Any) -> list[dict]:
+    def find_by(self, table: str, field: str, value: Any) -> list[dict[str, Any]]:
         """Return rows where field equals value."""
         b = select(["*"])
         b = from_tables(b, [table])
         b = add_condition(b, eq(field, value))
         return self.find(b)
 
-    def find_like(self, table: str, field: str, value: Any, mode: str = "") -> list[dict]:
+    def find_like(self, table: str, field: str, value: Any, mode: str = "") -> list[dict[str, Any]]:
         """Return rows where field matches LIKE pattern."""
         pattern = build_like_value(str(value))
         b = select(["*"])
@@ -864,7 +891,7 @@ class DB:
         result, found = self.query_scalar(sql, *args)
         return int(result) if found else 0
 
-    def page(self, query: SQLBuilder, page: Page) -> PageResult:
+    def page(self, query: SQLBuilder, page: Page) -> PageResult[dict[str, Any]]:
         """Run a paged query and count query."""
         b = select(["*"])
         if query._from:
@@ -1005,12 +1032,12 @@ class Session:
             results.append(self._conn.execute(query, batch))
         return results
 
-    def query_entities(self, query: str, *args: Any) -> list[dict]:
+    def query_entities(self, query: str, *args: Any) -> list[dict[str, Any]]:
         """Execute SQL and scan rows into dicts."""
         cursor = self._conn.execute(query, args or ())
         return scan_rows(cursor)
 
-    def query_one_entity(self, query: str, *args: Any) -> tuple[dict | None, bool]:
+    def query_one_entity(self, query: str, *args: Any) -> tuple[dict[str, Any] | None, bool]:
         """Execute SQL and return first row."""
         cursor = self._conn.execute(query, args or ())
         return scan_one(cursor)
@@ -1073,7 +1100,7 @@ def _build_mysql_upsert(
     wrapper: Wrapper,
 ) -> str:
     """Build MySQL ON DUPLICATE KEY UPDATE clause."""
-    fields = sorted(entity.fields.keys()) if hasattr(entity, "fields") and entity.fields else []
+    fields = sorted(entity.fields.keys()) if entity.fields else []
     if not update_fields:
         update_fields = tuple(f for f in fields if f not in conflict_fields)
     if not update_fields:
@@ -1090,7 +1117,7 @@ def _build_pg_upsert(
     wrapper: Wrapper,
 ) -> str:
     """Build PostgreSQL/SQLite ON CONFLICT DO UPDATE clause."""
-    fields = sorted(entity.fields.keys()) if hasattr(entity, "fields") and entity.fields else []
+    fields = sorted(entity.fields.keys()) if entity.fields else []
     if not update_fields:
         update_fields = tuple(f for f in fields if f not in conflict_fields)
     if not update_fields:
@@ -1135,18 +1162,19 @@ def new_entity(table: str) -> Entity:
 def entity_from_map(table: str, data: dict[str, Any]) -> Entity:
     e = Entity(table=table)
     e.fields = {k: v for k, v in data.items() if v is not None}
+    for key, value in e.fields.items():
+        setattr(e, key, value)
     return e
 
 
 def assign_entity(target: Entity, source: Entity) -> None:
-    if not hasattr(target, "fields"):
-        target.fields = {}
-    target.fields.update(getattr(source, "fields", {}))
+    target.fields.update(source.fields)
+    for key, value in source.fields.items():
+        setattr(target, key, value)
 
 
 def conditions_from_entity(entity: Entity, dialect: Dialect | None = None) -> list[Condition]:
-    fields = getattr(entity, "fields", {})
-    return [eq(field, value) for field, value in fields.items()]
+    return [eq(field, value) for field, value in entity.fields.items()]
 
 
 def build_conditions(conds: Sequence[Condition]) -> list[Condition]:
@@ -1175,19 +1203,6 @@ In = in_list
 
 def new_query() -> SQLBuilder:
     return new_builder()
-
-
-# --- builder join support ------------------------------------------------------
-
-
-SQLBuilder.join = lambda self, join_sql: _join(self, join_sql)
-
-
-def _join(builder: SQLBuilder, join_sql: str) -> SQLBuilder:
-    if not hasattr(builder, "_joins"):
-        builder._joins = []
-    builder._joins.append(join_sql)
-    return builder
 
 
 # --- DB open helper ------------------------------------------------------------
@@ -1223,12 +1238,12 @@ def use(conn: object, opts: list[Callable[[Options], None]] | None = None) -> DB
     return DB(_conn=conn, _dialect=dialect, _wrapper=wrapper)
 
 
-def exec(db: DB, query: str, args: tuple | None = None) -> object:
+def exec(db: DB, query: str, args: tuple[Any, ...] | None = None) -> object:
     cursor = db._conn.execute(query, args or ())
     return cursor
 
 
-def scan_rows(cursor: object) -> list[dict]:
+def scan_rows(cursor: CursorLike | None) -> list[dict[str, Any]]:
     if cursor is None:
         return []
     try:
@@ -1242,7 +1257,7 @@ def scan_rows(cursor: object) -> list[dict]:
             cursor.close()
 
 
-def scan_one(cursor: object) -> tuple[dict | None, bool]:
+def scan_one(cursor: CursorLike | None) -> tuple[dict[str, Any] | None, bool]:
     if cursor is None:
         return None, False
     try:

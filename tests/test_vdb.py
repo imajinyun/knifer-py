@@ -1,8 +1,11 @@
+# mypy: disable-error-code="no-untyped-def, no-untyped-call"
+
 """Tests for vdb facade — SQL query builder, conditions, and helpers."""
 
 from __future__ import annotations
 
 import sqlite3
+from typing import Any, cast
 
 import pytest
 
@@ -598,17 +601,18 @@ class TestDBExtra:
 
         entity = MapEntity()
         entity.set("name", "alice").set_if_not_nil("age", 30).set_if_not_nil("skip", None)
-        assert entity.name == "alice"
-        assert entity.age == 30
+        assert cast(Any, entity).name == "alice"
+        assert cast(Any, entity).age == 30
         assert not hasattr(entity, "skip")
         assert entity.select("name") is entity
         assert entity.filter("name") is entity
         assert entity.remove("name") is entity
 
-        with pytest.raises(TypeError):
-            new_entity("users")
-        with pytest.raises(TypeError):
-            entity_from_map("users", {"name": "bob", "skip": None})
+        created = new_entity("users")
+        assert created.__table__ == "users"
+        from_helper = entity_from_map("users", {"name": "bob", "skip": None})
+        assert from_helper.fields == {"name": "bob"}
+        assert cast(Any, from_helper).name == "bob"
 
         from_map = MapEntity()
         from_map.fields = {"name": "bob"}
@@ -641,7 +645,7 @@ class TestDBExtra:
 
     def test_scan_helpers_handle_none_and_close_errors(self) -> None:
         class Cursor:
-            description = [("id",), ("name",)]
+            description: list[tuple[str, ...]] | None = [("id",), ("name",)]
 
             def __init__(self) -> None:
                 self.rows = [(1, "alice")]
@@ -659,11 +663,11 @@ class TestDBExtra:
             description = None
 
         assert scan_rows(None) == []
-        assert scan_rows(EmptyCursor()) == []
-        assert scan_rows(Cursor()) == [{"id": 1, "name": "alice"}]
+        assert scan_rows(cast(dbx.CursorLike, EmptyCursor())) == []
+        assert scan_rows(cast(dbx.CursorLike, Cursor())) == [{"id": 1, "name": "alice"}]
         assert scan_one(None) == (None, False)
-        assert scan_one(EmptyCursor()) == (None, False)
-        assert scan_one(Cursor()) == ({"id": 1, "name": "alice"}, True)
+        assert scan_one(cast(dbx.CursorLike, EmptyCursor())) == (None, False)
+        assert scan_one(cast(dbx.CursorLike, Cursor())) == ({"id": 1, "name": "alice"}, True)
 
     def test_db_sqlite_helpers(self) -> None:
         conn = sqlite3.connect(":memory:")
@@ -736,13 +740,19 @@ class TestDBExtra:
         with pytest.raises(sqlite3.ProgrammingError):
             db.update(entity(name="alice2", age=31), eq("id", 1))
         db.exec("UPDATE users SET name = ?, age = ? WHERE id = ?", "alice2", 31, 1)
-        assert db.get("users", "id", 1)[0]["name"] == "alice2"
+        row, ok = db.get("users", "id", 1)
+        assert ok and row is not None
+        assert row["name"] == "alice2"
         db.update_all(entity(age=32))
-        assert db.get("users", "id", 1)[0]["age"] == 32
+        row, ok = db.get("users", "id", 1)
+        assert ok and row is not None
+        assert row["age"] == 32
         with pytest.raises(sqlite3.OperationalError):
             db.upsert(entity(id=1, name="alice3", age=33), ["id"], "name", "age")
         db.exec("UPDATE users SET name = ?, age = ? WHERE id = ?", "alice3", 33, 1)
-        assert db.get("users", "id", 1)[0]["name"] == "alice3"
+        row, ok = db.get("users", "id", 1)
+        assert ok and row is not None
+        assert row["name"] == "alice3"
         db.delete_entity(entity(id=1))
         assert db.count("users") == 0
         conn.commit()
