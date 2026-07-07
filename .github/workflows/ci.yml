@@ -45,6 +45,9 @@ jobs:
       - name: Examples smoke
         run: poetry run python examples/smoke.py
 
+      - name: Benchmark smoke
+        run: poetry run python scripts/benchmark_smoke.py
+
       - name: Test
         run: poetry run pytest
 

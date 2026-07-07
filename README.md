@@ -31,6 +31,7 @@ make format
 make check
 make readme-smoke
 make examples-smoke
+make bench-smoke
 ```
 
 Runtime installs can stay lean and opt into heavier domains as needed:

@@ -1,4 +1,4 @@
-.PHONY: install test test-cov lint format typecheck api-check readme-smoke examples-smoke build check clean
+.PHONY: install test test-cov lint format typecheck api-check readme-smoke examples-smoke bench-smoke build check clean
 
 install:
 	.venv/bin/poetry install --all-extras
@@ -31,10 +31,13 @@ readme-smoke:
 examples-smoke:
 	.venv/bin/python examples/smoke.py
 
+bench-smoke:
+	.venv/bin/python scripts/benchmark_smoke.py
+
 build:
 	.venv/bin/poetry build
 
-check: lint typecheck api-check readme-smoke examples-smoke test
+check: lint typecheck api-check readme-smoke examples-smoke bench-smoke test
 
 clean:
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
