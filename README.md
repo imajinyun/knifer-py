@@ -43,6 +43,7 @@ make release-ready
 
 `make bench-smoke` writes `tmp/benchmark-smoke.json` and checks it against the
 committed benchmark baseline.
+Use `UPDATE_BENCH=1 make bench-smoke` after intentional baseline changes.
 `make sbom-smoke` writes `sbom.cdx.json` and validates the CycloneDX structure.
 
 Runtime installs can stay lean and opt into heavier domains as needed:

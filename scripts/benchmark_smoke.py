@@ -15,6 +15,7 @@ from kniferpy import vcodec, vjson, vstr, vurl
 
 SCHEMA_VERSION = 1
 DEFAULT_BASELINE_RATIO = 0.20
+DEFAULT_BASELINE = Path("api/benchmark-smoke-baseline.json")
 
 
 @dataclass(frozen=True)
@@ -121,6 +122,24 @@ def _baseline_results(data: dict[str, Any]) -> dict[str, float]:
     return results
 
 
+def baseline_payload(report: BenchReport) -> dict[str, Any]:
+    return {
+        "results": [
+            {"name": result.name, "ops_per_second": result.ops_per_second}
+            for result in sorted(report.results, key=lambda item: item.name)
+        ],
+        "schema_version": SCHEMA_VERSION,
+    }
+
+
+def write_baseline(path: Path, report: BenchReport) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        json.dumps(baseline_payload(report), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+
 def compare_with_baseline(
     report: BenchReport,
     baseline: dict[str, Any],
@@ -146,6 +165,25 @@ def compare_with_baseline(
     return errors
 
 
+def baseline_summary(report: BenchReport, baseline: dict[str, Any]) -> list[str]:
+    baseline_by_name = _baseline_results(baseline)
+    current_by_name = {result.name: result for result in report.results}
+    rows = ["Benchmark baseline summary:"]
+    for name in sorted(current_by_name.keys() & baseline_by_name.keys()):
+        actual_ops = current_by_name[name].ops_per_second
+        baseline_ops = baseline_by_name[name]
+        rows.append(
+            f"- {name}: current={actual_ops:.2f} ops/s "
+            f"baseline={baseline_ops:.2f} ops/s ratio={actual_ops / baseline_ops:.2f}"
+        )
+    for name in sorted(current_by_name.keys() - baseline_by_name.keys()):
+        actual_ops = current_by_name[name].ops_per_second
+        rows.append(f"- {name}: current={actual_ops:.2f} ops/s baseline=missing")
+    for name in sorted(baseline_by_name.keys() - current_by_name.keys()):
+        rows.append(f"- {name}: current=missing baseline={baseline_by_name[name]:.2f} ops/s")
+    return rows
+
+
 def _positive_int(value: str) -> int:
     parsed = int(value)
     if parsed <= 0:
@@ -169,7 +207,17 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="iterations per benchmark, defaults to BENCH_SMOKE_ITERS or 2000",
     )
     parser.add_argument("--output", type=Path, help="write benchmark JSON to this path")
-    parser.add_argument("--baseline", type=Path, help="compare results with this JSON baseline")
+    parser.add_argument(
+        "--baseline",
+        type=Path,
+        default=None,
+        help="compare results with this JSON baseline",
+    )
+    parser.add_argument(
+        "--update-baseline",
+        action="store_true",
+        help="rewrite the baseline file with current benchmark results",
+    )
     parser.add_argument(
         "--min-baseline-ratio",
         type=_ratio,
@@ -183,6 +231,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
+    baseline_path = args.baseline if args.baseline is not None else DEFAULT_BASELINE
     report = run_benchmarks(args.iterations)
     payload = report_to_dict(report)
     output = json.dumps(payload, indent=2, sort_keys=True)
@@ -193,10 +242,16 @@ def main(argv: list[str] | None = None) -> int:
 
     print(output)
 
-    if args.baseline is not None:
+    if args.update_baseline:
+        write_baseline(baseline_path, report)
+        print(f"updated benchmark baseline: {baseline_path}")
+    elif args.baseline is not None:
+        baseline = _load_json(args.baseline)
+        for line in baseline_summary(report, baseline):
+            print(line)
         errors = compare_with_baseline(
             report,
-            _load_json(args.baseline),
+            baseline,
             args.min_baseline_ratio,
         )
         if errors:

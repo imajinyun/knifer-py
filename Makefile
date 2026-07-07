@@ -44,7 +44,11 @@ examples-smoke:
 	.venv/bin/python examples/smoke.py
 
 bench-smoke:
-	.venv/bin/python scripts/benchmark_smoke.py --output $(BENCH_SMOKE_OUTPUT) --baseline $(BENCH_SMOKE_BASELINE)
+	@if [ "$(UPDATE_BENCH)" = "1" ]; then \
+		.venv/bin/python scripts/benchmark_smoke.py --output $(BENCH_SMOKE_OUTPUT) --baseline $(BENCH_SMOKE_BASELINE) --update-baseline; \
+	else \
+		.venv/bin/python scripts/benchmark_smoke.py --output $(BENCH_SMOKE_OUTPUT) --baseline $(BENCH_SMOKE_BASELINE); \
+	fi
 
 changelog:
 	.venv/bin/python scripts/generate_changelog.py --check
