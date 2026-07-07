@@ -17,7 +17,7 @@ import threading
 import time
 import traceback
 from dataclasses import dataclass, field
-from typing import Any, Callable, Protocol, runtime_checkable
+from typing import Any, Callable, Protocol, cast, runtime_checkable
 
 _logger = logging.getLogger("kniferpy.errx")
 
@@ -162,10 +162,11 @@ def errorf(code: str, message: str, *args: Any, **context: Any) -> KniferError:
 
 def code_of(err: BaseException) -> tuple[str, bool]:
     """Extract the error code from an error, if it carries one."""
-    while err is not None:
-        if hasattr(err, "error_code") and callable(err.error_code):
-            return err.error_code(), True
-        err = err.__cause__
+    current: BaseException | None = err
+    while current is not None:
+        if hasattr(current, "error_code") and callable(current.error_code):
+            return current.error_code(), True
+        current = current.__cause__
     return "", False
 
 
@@ -335,6 +336,7 @@ class Collector:
         self._lock = threading.Lock()
         self._log_func: LogFunc = _get_default_log_func()
         self._runner: Callable[[Callable[[], None]], None] | None = None
+        self._timer_factory: TimerFactory | None = None
 
     def with_log_func(self, log_func: LogFunc) -> Collector:
         self._log_func = log_func
@@ -436,7 +438,7 @@ def new_collector() -> Collector:
 def init_sentry(dsn: str, **kwargs: Any) -> None:
     """Initialize Sentry with the given DSN."""
     try:
-        import sentry_sdk
+        import sentry_sdk  # type: ignore[import-not-found]
 
         sentry_sdk.init(dsn=dsn, **kwargs)
     except ImportError:
@@ -448,7 +450,7 @@ def capture_exception(error: BaseException | None = None) -> str | None:
     try:
         import sentry_sdk
 
-        return sentry_sdk.capture_exception(error)
+        return cast(str | None, sentry_sdk.capture_exception(error))
     except ImportError:
         return None
 

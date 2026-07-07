@@ -180,7 +180,7 @@ def _resolve_field_alias(target: Any, field_name: str) -> str | None:
                 meta = f.metadata
                 for tag_name in ("ref", "json", "xml"):
                     if tag_name in meta:
-                        return meta[tag_name]
+                        return str(meta[tag_name])
     return None
 
 

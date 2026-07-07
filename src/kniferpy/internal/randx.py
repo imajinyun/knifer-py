@@ -4,7 +4,7 @@ import os
 import random
 import sys
 import threading
-from typing import Any, Callable, Sequence, TypeVar
+from typing import Callable, Generic, Sequence, TypeVar, cast
 
 T = TypeVar("T")
 
@@ -27,11 +27,11 @@ class _RandomOptions:
         self.strict_crypto: bool = False
 
 
-def _apply_options(opts: Sequence[Callable[[_RandomOptions], None]]) -> _RandomOptions:
+def _apply_options(opts: Sequence[Callable[[_RandomOptions], None] | None]) -> _RandomOptions:
     cfg = _RandomOptions()
     cfg.reader = os.urandom
     for opt in opts:
-        if opt:
+        if opt is not None:
             opt(cfg)
     if cfg.reader is None:
         cfg.reader = os.urandom
@@ -271,8 +271,8 @@ def random_ele_with_options(a: list[T], *opts: Callable[[_RandomOptions], None])
     """Return a random element with per-call options, or a zero value when a is empty."""
     if not a:
         if sys.version_info >= (3, 11):
-            return list.__new__(list)  # type: ignore[return-value]
-        return a[0:0]  # type: ignore[return-value]
+            return cast(T, list.__new__(list))
+        return cast(T, a[0:0])
     cfg = _apply_options(opts)
     return a[_random_intn(cfg, len(a))]
 
@@ -287,10 +287,12 @@ class _WeightedConfig:
         self.precision: float = 1e-12
 
 
-def _apply_weighted_options(opts: Sequence[Callable[[_WeightedConfig], None]]) -> _WeightedConfig:
+def _apply_weighted_options(
+    opts: Sequence[Callable[[_WeightedConfig], None] | None],
+) -> _WeightedConfig:
     cfg = _WeightedConfig()
     for opt in opts:
-        if opt:
+        if opt is not None:
             opt(cfg)
     return cfg
 
@@ -328,8 +330,8 @@ def _weighted_intn(cfg: _WeightedConfig, n: int) -> int:
         return _default_rand_locked().randrange(n)
 
 
-class _AliasPicker:
-    def __init__(self, items: list[Any], weights: list[float], cfg: _WeightedConfig):
+class _AliasPicker(Generic[T]):
+    def __init__(self, items: list[T], weights: list[float], cfg: _WeightedConfig):
         self._items = list(items)
         self._prob: list[float] = []
         self._alias: list[int] = []
@@ -370,7 +372,7 @@ class _AliasPicker:
             self._prob[i] = 1.0
             self._alias[i] = i
 
-    def pick(self) -> Any:
+    def pick(self) -> T:
         return self._items[self._pick_index()]
 
     def _pick_index(self) -> int:
@@ -388,7 +390,7 @@ def weighted_pick(
         raise ValueError("weighted pick items are empty")
     if len(items) != len(weights):
         raise ValueError("weighted pick items and weights length mismatch")
-    picker = _AliasPicker(items, weights, _apply_weighted_options(opts))
+    picker = _AliasPicker[T](items, weights, _apply_weighted_options(opts))
     return picker.pick()
 
 

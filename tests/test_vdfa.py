@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from kniferpy import vdfa
 
 
@@ -218,8 +220,12 @@ def test_package_aliases_and_filter_mode() -> None:
 
     assert vdfa.contains_any("abc")
     assert vdfa.contains_any_with_options("abc")
-    assert vdfa.get_found_first_any("abc").word == "ab"
-    assert vdfa.get_found_first_any_with_options("abc").word == "ab"
+    first_any = vdfa.get_found_first_any("abc")
+    first_any_options = vdfa.get_found_first_any_with_options("abc")
+    assert first_any is not None
+    assert first_any_options is not None
+    assert first_any.word == "ab"
+    assert first_any_options.word == "ab"
     assert [w.word for w in vdfa.get_found_all_any("abc")] == ["ab"]
     assert [w.word for w in vdfa.get_found_all_any_with_options("abc")] == ["ab"]
     assert [w.word for w in vdfa.get_found_all_with_options("abc")] == ["ab"]
@@ -244,7 +250,7 @@ def test_package_aliases_and_filter_mode() -> None:
 def test_async_runner_init_and_reset() -> None:
     calls: list[str] = []
 
-    def runner(fn):
+    def runner(fn: Callable[[], None]) -> None:
         calls.append("run")
         fn()
 
