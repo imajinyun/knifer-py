@@ -209,7 +209,7 @@ def _secure_intn(max_val: int, reader: Callable[[int], int] | None = None) -> in
         return 0
     if reader is None:
 
-        def reader(n):
+        def reader(n: int) -> int:
             return int.from_bytes(os.urandom(8), "big") % n
 
     return reader(max_val)
@@ -882,7 +882,7 @@ def _to_bytes(value: int) -> bytes:
 def _to_int(data: bytes) -> int:
     if len(data) < 4:
         return 0
-    return struct.unpack(">i", data[:4])[0]
+    return int(struct.unpack(">i", data[:4])[0])
 
 
 def _to_unsigned_byte_array(value: int) -> bytes:
