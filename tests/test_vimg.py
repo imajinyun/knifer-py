@@ -14,6 +14,7 @@ from kniferpy.internal import imgx
 from kniferpy.internal.imgx import ErrImageInvalidInput, ErrImageUnsupported
 from kniferpy.vimg import (
     BarcodeFormat,
+    BarcodeOutputFormat,
     GifCaptcha,
     LineCaptcha,
     MathGenerator,
@@ -55,6 +56,7 @@ from kniferpy.vimg import (
     qr_code_ascii,
     qr_code_ascii_with_chars,
     qr_code_base64_data,
+    qr_code_bytes,
     qr_code_image,
     qr_code_png,
     qr_code_svg,
@@ -571,6 +573,19 @@ class TestQRCode:
         ascii_str = qr_code_ascii_with_chars("test", "#", ".")
         assert "#" in ascii_str or "." in ascii_str
 
+    def test_qr_code_bytes_output_formats(self) -> None:
+        png = qr_code_bytes("test", BarcodeOutputFormat.PNG)
+        svg = qr_code_bytes("test", BarcodeOutputFormat.SVG)
+        ascii_bytes = qr_code_bytes("test", BarcodeOutputFormat.ASCII)
+        base64_data = qr_code_bytes("test", BarcodeOutputFormat.BASE64_DATA)
+        fallback = qr_code_bytes("test", BarcodeOutputFormat.UNKNOWN)
+
+        assert png.startswith(b"\x89PNG")
+        assert b"<svg" in svg
+        assert ascii_bytes
+        assert base64_data.startswith(b"data:image/png;base64,")
+        assert fallback.startswith(b"\x89PNG")
+
     def test_with_size(self) -> None:
         img = qr_code_image("test", [with_qr_code_size(128)])
         assert img.width == 128 and img.height == 128
@@ -593,6 +608,16 @@ class TestQRCode:
             [with_barcode_foreground((0, 0, 255)), with_barcode_background((255, 255, 200))],
         )
         assert img.width > 0
+
+    def test_invalid_qr_options_raise(self) -> None:
+        with pytest.raises(ErrImageInvalidInput):
+            qr_code_image("test", [with_qr_code_size(0)])
+        with pytest.raises(ErrImageInvalidInput):
+            qr_code_image("test", [with_qr_code_margin(-1)])
+        with pytest.raises(ErrImageInvalidInput):
+            qr_code_image("test", [with_qr_code_error_correction(QRErrorCorrectionLevel.UNKNOWN)])
+        with pytest.raises(ErrImageInvalidInput):
+            qr_code_image("test", [with_qr_code_version(41)])
 
 
 class TestBarcodeFormat:

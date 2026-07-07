@@ -5,8 +5,11 @@ from kniferpy.vjob import (
     ErrInvalidMapJob,
     ErrInvalidRange,
     ErrNilJob,
+    Merge,
     Options,
+    OptionCarrier,
     Slice,
+    Sliceable,
     new_batch,
     new_batch_single,
     new_map,
@@ -80,6 +83,11 @@ def test_new_slice_single_merge():
     assert side_effects == [0, 1, 2]
 
 
+def test_new_slice_single_none_fn() -> None:
+    j = new_slice_single(None, 2)  # type: ignore[arg-type]
+    run(j)
+
+
 # --- new_batch_single ----------------------------------------------------
 
 
@@ -103,6 +111,11 @@ def test_new_batch_single_with_opts():
     j = new_batch_single(fn, [1, 2, 3]).with_batch_size(1).with_max_concurrency(2)
     run(j)
     assert sorted(seen) == [1, 2, 3]
+
+
+def test_new_batch_single_none_fn() -> None:
+    j = new_batch_single(None, [1, 2])  # type: ignore[arg-type]
+    run(j)
 
 
 # --- new_map -------------------------------------------------------------
@@ -241,6 +254,16 @@ def test_concurrent_batch():
     assert sorted(results) == list(range(20))
 
 
+def test_concurrent_job_propagates_worker_error() -> None:
+    def fn(start: int, end: int):
+        if start == 2:
+            raise RuntimeError("worker failed")
+
+    j = new_slice(fn, 4).with_batch_size(2).with_max_concurrency(2)
+    with pytest.raises(RuntimeError, match="worker failed"):
+        run(j)
+
+
 # --- Options normalization -----------------------------------------------
 
 
@@ -313,6 +336,23 @@ def test_merge_side_effects():
     assert ops == ["merge_0", "merge_1", "merge_2"]
 
 
+def test_merge_exception_is_replayed_after_run() -> None:
+    ran: list[int] = []
+
+    def fn(start: int, end: int):
+        ran.append(start)
+
+        def merge() -> None:
+            raise RuntimeError("merge failed")
+
+        return merge
+
+    j = new_slice(fn, 1)
+    with pytest.raises(RuntimeError, match="merge failed"):
+        run(j)
+    assert ran == [0]
+
+
 # --- nil run function ----------------------------------------------------
 
 
@@ -326,3 +366,9 @@ def test_batch_nil_run():
     j = Batch(None, [1, 2, 3])
     result = j.run(0, 3)
     assert result is None
+
+
+def test_protocol_aliases_importable() -> None:
+    assert Merge is not None
+    assert OptionCarrier is not None
+    assert Sliceable is not None
