@@ -12,7 +12,7 @@ facades stay small and stable, while implementation details live under
 python3 -m venv .venv
 .venv/bin/python -m pip install --upgrade pip poetry
 .venv/bin/poetry config virtualenvs.in-project true
-.venv/bin/poetry install
+.venv/bin/poetry install --all-extras
 ```
 
 ## ✅ Validate
@@ -28,6 +28,12 @@ make check
 make install
 make format
 make check
+```
+
+Runtime installs can stay lean and opt into heavier domains as needed:
+
+```bash
+pip install "kniferpy[http,crypto,jwt,img,poi]"
 ```
 
 CI runs `ruff`, `mypy`, and `pytest` on Python 3.11, 3.12, and 3.13.

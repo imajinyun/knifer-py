@@ -1,7 +1,7 @@
 .PHONY: install test test-cov lint format typecheck api-check build check clean
 
 install:
-	.venv/bin/poetry install
+	.venv/bin/poetry install --all-extras
 
 test:
 	.venv/bin/python -m pytest
