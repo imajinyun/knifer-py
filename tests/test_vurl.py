@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from kniferpy import vurl
@@ -241,7 +243,7 @@ def test_data_uri_and_query_helpers() -> None:
     assert vurl.decode_query_map("a=1&a=2&blank=") == {"a": ["1", "2"], "blank": [""]}
 
 
-def test_file_url_and_path_helpers(tmp_path) -> None:
+def test_file_url_and_path_helpers(tmp_path: Path) -> None:
     first = tmp_path / "a.txt"
     second = tmp_path / "b.txt"
     first.write_text("a", encoding="utf-8")
@@ -267,7 +269,7 @@ def test_file_url_and_path_helpers(tmp_path) -> None:
     assert vurl.to_uri("relative path") == "relative path"
 
 
-def test_url_type_checks_and_normalization(tmp_path) -> None:
+def test_url_type_checks_and_normalization(tmp_path: Path) -> None:
     jar = tmp_path / "app.jar"
     jar.write_bytes(b"jar")
     jar_url = vurl.file_url(jar)
@@ -296,7 +298,7 @@ def test_url_type_checks_and_normalization(tmp_path) -> None:
     )
 
 
-def test_open_url_file_content_length_and_unsupported_scheme(tmp_path) -> None:
+def test_open_url_file_content_length_and_unsupported_scheme(tmp_path: Path) -> None:
     path = tmp_path / "data.txt"
     missing = tmp_path / "missing.txt"
     path.write_bytes(b"hello")
@@ -316,7 +318,9 @@ def test_open_url_file_content_length_and_unsupported_scheme(tmp_path) -> None:
     assert scheme_exc.value.code == "url.unsupported_scheme"
 
 
-def test_open_http_and_content_length_with_monkeypatched_urlopen(monkeypatch) -> None:
+def test_open_http_and_content_length_with_monkeypatched_urlopen(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     class FakeHTTPResponse:
         def __init__(self, body: bytes, status: int = 200) -> None:
             self._body = body
@@ -339,7 +343,7 @@ def test_open_http_and_content_length_with_monkeypatched_urlopen(monkeypatch) ->
     assert calls[0] == ("https://example.com/data", 1.5)
 
 
-def test_open_http_wraps_status_and_urlopen_errors(monkeypatch) -> None:
+def test_open_http_wraps_status_and_urlopen_errors(monkeypatch: pytest.MonkeyPatch) -> None:
     class StatusResponse:
         status = 404
 
@@ -363,7 +367,9 @@ def test_open_http_wraps_status_and_urlopen_errors(monkeypatch) -> None:
     assert open_exc.value.code == "url.open_failed"
 
 
-def test_open_safe_rejects_unsafe_inputs_and_supports_safe_http(monkeypatch) -> None:
+def test_open_safe_rejects_unsafe_inputs_and_supports_safe_http(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     class FakeHTTPResponse:
         status = 200
 

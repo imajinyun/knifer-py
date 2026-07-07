@@ -38,7 +38,7 @@ from kniferpy.internal.ftpx import (
 
 # ── Go-compat standalone constructors ────────────────────────────────────────
 
-new = Client  # type: ignore[assignment]
+new = Client
 
 # ── Go-compat EntryType constants ───────────────────────────────────────────
 
