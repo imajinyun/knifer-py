@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import io
 from pathlib import Path
-from typing import Any, Callable
+from typing import IO, Any, Callable
 
 from kniferpy.internal import filex
 from kniferpy.internal.filex import (
@@ -107,14 +108,6 @@ __all__ = [
 ]
 
 DEFAULT_MAX_BYTES = filex.DEFAULT_MAX_BYTES
-
-# Go-compat type aliases: functional option types
-WriteOption = Callable[[Any], None]
-DirOption = Callable[[Any], None]
-ReadOption = Callable[[Any], None]
-StatOption = Callable[[Any], None]
-DeleteOption = Callable[[Any], None]
-
 
 def safe_join(base: str | Path, *parts: str | Path) -> Path:
     return filex.safe_join(base, *parts)
@@ -222,7 +215,7 @@ def detect_file_type(data: bytes) -> FileType:
     return filex.detect_file_type(data)
 
 
-def detect_file_type_from_reader(reader) -> FileType:
+def detect_file_type_from_reader(reader: object) -> FileType:
     return filex.detect_file_type_from_reader(reader)
 
 
@@ -253,16 +246,18 @@ def is_document(ft: FileType) -> bool:
 # ── Reader/Writer helpers ──────────────────────────────────────────────────
 
 
-def read_all(r, *, max_bytes: int = DEFAULT_MAX_BYTES) -> bytes:
+def read_all(r: IO[bytes] | io.RawIOBase, *, max_bytes: int = DEFAULT_MAX_BYTES) -> bytes:
     return filex.read_all(r, max_bytes=max_bytes)
 
 
-def reader_read_string(r, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES) -> str:
+def reader_read_string(
+    r: IO[bytes] | io.RawIOBase, *, encoding: str = "utf-8", max_bytes: int = DEFAULT_MAX_BYTES
+) -> str:
     return filex.reader_read_string(r, encoding=encoding, max_bytes=max_bytes)
 
 
 def reader_read_lines(
-    r,
+    r: IO[bytes] | io.RawIOBase,
     *,
     encoding: str = "utf-8",
     max_bytes: int = DEFAULT_MAX_BYTES,
@@ -272,8 +267,8 @@ def reader_read_lines(
 
 
 def read_chunks(
-    r,
-    handler,
+    r: IO[bytes] | io.RawIOBase,
+    handler: Callable[[bytes], None],
     *,
     buffer_size: int = 8192,
     max_bytes: int = DEFAULT_MAX_BYTES,
@@ -281,19 +276,19 @@ def read_chunks(
     return filex.read_chunks(r, handler, buffer_size=buffer_size, max_bytes=max_bytes)
 
 
-def copy_stream(dst, src, *, buffer_size: int = 32768) -> int:
+def copy_stream(dst: IO[bytes], src: IO[bytes] | io.RawIOBase, *, buffer_size: int = 32768) -> int:
     return filex.copy_stream(dst, src, buffer_size=buffer_size)
 
 
-def close_quietly(c) -> None:
+def close_quietly(c: IO[bytes] | None) -> None:
     return filex.close_quietly(c)
 
 
-def reader_from_string(s: str):
+def reader_from_string(s: str) -> io.StringIO:
     return filex.reader_from_string(s)
 
 
-def reader_from_bytes(data: bytes):
+def reader_from_bytes(data: bytes) -> io.BytesIO:
     return filex.reader_from_bytes(data)
 
 
@@ -319,7 +314,7 @@ def read_file_lines(
 
 def read_file_chunks(
     path: str | Path,
-    handler,
+    handler: Callable[[bytes], None],
     *,
     buffer_size: int = 8192,
     max_bytes: int = DEFAULT_MAX_BYTES,

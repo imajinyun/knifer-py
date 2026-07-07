@@ -6745,7 +6745,7 @@
         },
         "close_quietly": {
           "kind": "function",
-          "signature": "(c) -> 'None'",
+          "signature": "(c: 'IO[bytes] | None') -> 'None'",
           "type": "builtins.function"
         },
         "copy_file": {
@@ -6755,7 +6755,7 @@
         },
         "copy_stream": {
           "kind": "function",
-          "signature": "(dst, src, *, buffer_size: 'int' = 32768) -> 'int'",
+          "signature": "(dst: 'IO[bytes]', src: 'IO[bytes] | io.RawIOBase', *, buffer_size: 'int' = 32768) -> 'int'",
           "type": "builtins.function"
         },
         "delete": {
@@ -6775,7 +6775,7 @@
         },
         "detect_file_type_from_reader": {
           "kind": "function",
-          "signature": "(reader) -> 'FileType'",
+          "signature": "(reader: 'object') -> 'FileType'",
           "type": "builtins.function"
         },
         "exists": {
@@ -6845,7 +6845,7 @@
         },
         "read_all": {
           "kind": "function",
-          "signature": "(r, *, max_bytes: 'int' = 67108864) -> 'bytes'",
+          "signature": "(r: 'IO[bytes] | io.RawIOBase', *, max_bytes: 'int' = 67108864) -> 'bytes'",
           "type": "builtins.function"
         },
         "read_bytes": {
@@ -6855,7 +6855,7 @@
         },
         "read_chunks": {
           "kind": "function",
-          "signature": "(r, handler, *, buffer_size: 'int' = 8192, max_bytes: 'int' = 67108864) -> 'None'",
+          "signature": "(r: 'IO[bytes] | io.RawIOBase', handler: 'Callable[[bytes], None]', *, buffer_size: 'int' = 8192, max_bytes: 'int' = 67108864) -> 'None'",
           "type": "builtins.function"
         },
         "read_file_bytes": {
@@ -6865,7 +6865,7 @@
         },
         "read_file_chunks": {
           "kind": "function",
-          "signature": "(path: 'str | Path', handler, *, buffer_size: 'int' = 8192, max_bytes: 'int' = 67108864) -> 'None'",
+          "signature": "(path: 'str | Path', handler: 'Callable[[bytes], None]', *, buffer_size: 'int' = 8192, max_bytes: 'int' = 67108864) -> 'None'",
           "type": "builtins.function"
         },
         "read_file_lines": {
@@ -6890,22 +6890,22 @@
         },
         "reader_from_bytes": {
           "kind": "function",
-          "signature": "(data: 'bytes')",
+          "signature": "(data: 'bytes') -> 'io.BytesIO'",
           "type": "builtins.function"
         },
         "reader_from_string": {
           "kind": "function",
-          "signature": "(s: 'str')",
+          "signature": "(s: 'str') -> 'io.StringIO'",
           "type": "builtins.function"
         },
         "reader_read_lines": {
           "kind": "function",
-          "signature": "(r, *, encoding: 'str' = 'utf-8', max_bytes: 'int' = 67108864, keepends: 'bool' = False) -> 'list[str]'",
+          "signature": "(r: 'IO[bytes] | io.RawIOBase', *, encoding: 'str' = 'utf-8', max_bytes: 'int' = 67108864, keepends: 'bool' = False) -> 'list[str]'",
           "type": "builtins.function"
         },
         "reader_read_string": {
           "kind": "function",
-          "signature": "(r, *, encoding: 'str' = 'utf-8', max_bytes: 'int' = 67108864) -> 'str'",
+          "signature": "(r: 'IO[bytes] | io.RawIOBase', *, encoding: 'str' = 'utf-8', max_bytes: 'int' = 67108864) -> 'str'",
           "type": "builtins.function"
         },
         "safe_join": {
