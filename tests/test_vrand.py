@@ -163,7 +163,7 @@ class TestRandomEle:
             assert val in items
 
     def test_empty_list(self) -> None:
-        result = vrand.random_ele([])
+        result: list[int] = vrand.random_ele([])
         assert result == [] or result == []
         assert isinstance(result, list)
 
@@ -196,7 +196,7 @@ class TestDefaultRandomSourceProvider:
 
     def test_none_provider_falls_back_to_random(self) -> None:
         try:
-            vrand.configure_default_random_source_provider(lambda: None)  # type: ignore[return-value]
+            vrand.configure_default_random_source_provider(lambda: None)  # type: ignore[arg-type, return-value]
             assert isinstance(vrand.random_int(1000), int)
         finally:
             vrand.reset_default_random_source()
@@ -205,7 +205,7 @@ class TestDefaultRandomSourceProvider:
         def clear_reader(cfg: randx._RandomOptions) -> None:
             cfg.reader = None
 
-        cfg = randx._apply_options([None, clear_reader])  # type: ignore[list-item]
+        cfg = randx._apply_options([None, clear_reader])
         assert cfg.reader is not None
 
 

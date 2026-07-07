@@ -194,7 +194,8 @@ def test_validation() -> None:
         s.acquire(3)  # exceeds capacity
     with pytest.raises(ValidationError):
         s.release(0)
-    assert s.release_e(0).code == "sem.invalid_weight"
+    err = s.release_e(0)
+    assert err is not None and err.code == "sem.invalid_weight"
 
 
 def test_release_too_many() -> None:
@@ -203,5 +204,6 @@ def test_release_too_many() -> None:
     with pytest.raises(ValidationError) as exc:
         s.release(2)
     assert exc.value.code == "sem.release_too_many"
-    assert s.release_e(2).code == "sem.release_too_many"
+    err = s.release_e(2)
+    assert err is not None and err.code == "sem.release_too_many"
     assert s.release_e(1) is None

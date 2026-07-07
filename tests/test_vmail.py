@@ -480,7 +480,7 @@ def test_connection_closes_when_quit_fails(monkeypatch: pytest.MonkeyPatch) -> N
     )
     client.send(_basic_message())
     assert isinstance(_FakeSMTP.instances[0], _QuitFailsSMTP)
-    assert _FakeSMTP.instances[0].close_called  # type: ignore[attr-defined]
+    assert _FakeSMTP.instances[0].close_called
 
 
 def test_implicit_tls_uses_ssl(fake_smtp: type[_FakeSMTP]) -> None:

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
+from typing import Any, cast
 
 import pytest
 
@@ -390,7 +391,7 @@ def test_union_and_non_assignable_conversion_paths() -> None:
 
     dst = UnionTarget()
     vbean.decode({"value": {"kept": True}, "required": "x"}, dst)
-    assert dst.value == {"kept": True}
+    assert cast(Any, dst).value == {"kept": True}
     assert dst.required == b"x"
 
     bytes_dst = UnionTarget()
@@ -422,7 +423,7 @@ def test_type_hints_failure_falls_back_to_existing_attrs() -> None:
 
     dst = BadHints()
     vbean.decode({"value": 123}, dst)
-    assert dst.value == 123
+    assert cast(Any, dst).value == 123
 
 
 def test_plain_object_target_and_source_errors() -> None:

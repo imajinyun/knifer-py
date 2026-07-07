@@ -10,6 +10,7 @@ GeoError = ValidationError  # Go: type Error = geoimpl.Error
 
 __all__ = [
     "GeoError",
+    "Coord",
     "CoordType",
     "convert",
     "wgs84_to_gcj02",

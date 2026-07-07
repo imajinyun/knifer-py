@@ -24,6 +24,7 @@ DateError = ValidationError  # Go: type Error = dateimpl.DateError
 __all__ = [
     "DateError",
     "SolarDate",
+    "LunarDate",
     "HTTP_PATTERN",
     "NORM_PATTERN",
     "NORM_DATE_PATTERN",

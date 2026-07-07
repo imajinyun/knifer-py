@@ -1,5 +1,8 @@
+import os
 import random
 import re
+import secrets
+import time
 
 import pytest
 
@@ -81,8 +84,8 @@ def test_nano_id_custom_alphabet_and_aliases() -> None:
 
 
 def test_object_id_counter_and_with_options(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(idx.time, "time", lambda: 1_700_000_000)
-    monkeypatch.setattr(idx.secrets, "token_bytes", lambda n: b"\x01" * n)
+    monkeypatch.setattr(time, "time", lambda: 1_700_000_000)
+    monkeypatch.setattr(secrets, "token_bytes", lambda n: b"\x01" * n)
     monkeypatch.setattr(idx, "_object_id_counter", 0xFFFFFE)
 
     first = vid.object_id()
@@ -94,7 +97,7 @@ def test_object_id_counter_and_with_options(monkeypatch: pytest.MonkeyPatch) -> 
 
 
 def test_snowflake_accessors_default_ids_and_aliases(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(idx.os, "getpid", lambda: 0x1234)
+    monkeypatch.setattr(os, "getpid", lambda: 0x1234)
     assert idx._default_ids() == (0x1234 & 31, (0x1234 >> 8) & 31)
     assert vid.get_worker_id(0) == (0x1234 & 31)
     assert vid.get_datacenter_id() == ((0x1234 >> 8) & 31)

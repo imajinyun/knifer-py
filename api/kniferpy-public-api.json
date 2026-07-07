@@ -4297,6 +4297,11 @@
           "kind": "value",
           "type": "builtins.str"
         },
+        "LunarDate": {
+          "kind": "class",
+          "signature": "(year: 'int', month: 'int', day: 'int', is_leap_month: 'bool' = False, year_gan_zhi: 'str' = '', month_gan_zhi: 'str' = '', day_gan_zhi: 'str' = '', zodiac: 'str' = '') -> 'None'",
+          "type": "builtins.type"
+        },
         "NORM_DATETIME_PATTERN": {
           "kind": "value",
           "type": "builtins.str"
@@ -7224,6 +7229,11 @@
     },
     "vgeo": {
       "exports": {
+        "Coord": {
+          "kind": "class",
+          "signature": "(lng: 'float', lat: 'float') -> None",
+          "type": "builtins.type"
+        },
         "CoordType": {
           "kind": "class",
           "methods": {

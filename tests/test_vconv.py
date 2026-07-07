@@ -1,6 +1,7 @@
 import pytest
 
 from kniferpy import vconv
+from kniferpy.internal import convx
 from kniferpy.verr import ValidationError
 
 
@@ -112,7 +113,7 @@ def test_to_bytes_empty() -> None:
 
 def test_error_sentinel_and_fail_context() -> None:
     assert vconv.ErrInvalidConversion.code == "knifer.conv.invalid"
-    err = vconv.convx._fail("x", "int")
+    err = convx._fail("x", "int")
     assert err.code == "knifer.conv.invalid"
     assert err.context == {"value": "'x'", "target": "int"}
 

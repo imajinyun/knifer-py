@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import dataclasses
 import inspect
+from typing import cast
 
 import pytest
 
@@ -291,11 +292,11 @@ def test_public_method_variants_and_direct_methods() -> None:
     greet_param = tuple(inspect.signature(user.greet).parameters.values())[0]
 
     assert vref.get_public_method(user, "greet") is not None
-    assert vref.get_public_method(user, "greet", greet_param) is not None
+    assert vref.get_public_method(user, "greet", cast(type, greet_param)) is not None
     assert vref.get_public_method(user, "missing") is None
     assert vref.get_method_of_obj(user, "greet", "hello") is None
     assert vref.get_method_ignore_case(user, "GREET") is not None
-    assert vref.get_method_ignore_case(user, "GREET", greet_param) is not None
+    assert vref.get_method_ignore_case(user, "GREET", cast(type, greet_param)) is not None
     assert vref.get_method_ignore_case(user, "GREET", str) is None
     assert vref.get_method_by_name(user, "greet") is not None
     direct = vref.get_methods_directly(user)
@@ -410,7 +411,9 @@ def test_new_instance_copy_failure_returns_knifer_error(monkeypatch: pytest.Monk
         pass
 
     monkeypatch.setattr(
-        refx.copy, "copy", lambda _obj: (_ for _ in ()).throw(RuntimeError("copy failed"))
+        refx.copy,  # type: ignore[attr-defined]
+        "copy",
+        lambda _obj: (_ for _ in ()).throw(RuntimeError("copy failed")),
     )
     with pytest.raises(KniferError) as exc_info:
         vref.new_instance(Copyable())
