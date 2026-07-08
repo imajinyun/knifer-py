@@ -57,13 +57,18 @@ REQUIREMENTS = (
     Requirement(".github/workflows/ci.yml", "scripts/run_core_tests.py", "CI runs core tests"),
     Requirement(
         ".github/workflows/release.yml",
-        "scripts/check_release_ready.py",
-        "release workflow runs release-ready",
+        "make install",
+        "release workflow uses Makefile install target",
     ),
     Requirement(
         ".github/workflows/release.yml",
-        "scripts/check_sbom_smoke.py",
-        "release workflow generates SBOM",
+        "make release-ready",
+        "release workflow uses Makefile release readiness target",
+    ),
+    Requirement(
+        ".github/workflows/release.yml",
+        "make sbom-smoke",
+        "release workflow uses Makefile SBOM target",
     ),
     Requirement(
         ".github/workflows/release.yml",
