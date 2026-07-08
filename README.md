@@ -29,6 +29,7 @@ make test-cov
 make install
 make format
 make check
+make test-core
 make taxonomy-check
 make facade-check
 make facade-status-check

@@ -1,4 +1,4 @@
-.PHONY: install test test-cov lint format typecheck api-check taxonomy-check facade-check facade-status-check readme-smoke examples-smoke bench-smoke changelog build check-dist sbom-smoke release-ready check clean
+.PHONY: install test test-core test-cov lint format typecheck api-check taxonomy-check facade-check facade-status-check readme-smoke examples-smoke bench-smoke changelog build check-dist sbom-smoke release-ready check clean
 
 BENCH_SMOKE_OUTPUT ?= tmp/benchmark-smoke.json
 BENCH_SMOKE_BASELINE ?= api/benchmark-smoke-baseline.json
@@ -8,6 +8,9 @@ install:
 
 test:
 	.venv/bin/python -m pytest
+
+test-core:
+	.venv/bin/python scripts/run_core_tests.py
 
 test-cov:
 	.venv/bin/python -m pytest --cov=kniferpy --cov-branch --cov-report=term-missing --cov-report=xml --cov-fail-under=95
