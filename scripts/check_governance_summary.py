@@ -102,8 +102,10 @@ def collect_checks() -> list[Check]:
         Check(
             "minimum.deps",
             _exists("requirements-min.txt")
+            and _exists("scripts/check_min_deps_smoke.py")
+            and _has("Makefile", "min-deps-smoke:")
             and _has(".github/workflows/ci.yml", "minimum runtime dependencies"),
-            "minimum dependency smoke job",
+            "local and workflow minimum dependency smoke",
         ),
         Check(
             "pypy.smoke",

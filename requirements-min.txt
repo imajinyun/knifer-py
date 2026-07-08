@@ -1,6 +1,6 @@
 argon2-cffi==25.1.0
 cryptography==49.0.0
-gmssl==3.2.0
+gmssl==3.2.2
 openpyxl==3.1.0
 pillow==12.2.0
 PyJWT==2.13.0

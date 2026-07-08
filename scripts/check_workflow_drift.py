@@ -25,6 +25,7 @@ REQUIREMENTS = (
     Requirement("Makefile", "release-ready:", "Makefile exposes release readiness gate"),
     Requirement("Makefile", "sbom-smoke:", "Makefile exposes SBOM smoke gate"),
     Requirement("Makefile", "security-audit:", "Makefile exposes security audit gate"),
+    Requirement("Makefile", "min-deps-smoke:", "Makefile exposes minimum dependency smoke"),
     Requirement("Makefile", "release-workflow-check:", "Makefile exposes provenance check"),
     Requirement("Makefile", "governance-summary:", "Makefile exposes governance summary"),
     Requirement(".github/workflows/ci.yml", "scripts/check_api_snapshot.py", "CI runs API check"),
