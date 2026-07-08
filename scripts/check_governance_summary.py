@@ -87,6 +87,12 @@ def collect_checks() -> list[Check]:
             "release artifact and SBOM provenance",
         ),
         Check(
+            "workflow.drift",
+            _exists("scripts/check_workflow_drift.py")
+            and _has("Makefile", "workflow-drift-check:"),
+            "workflow and Makefile gate consistency",
+        ),
+        Check(
             "security.audit",
             _exists(".github/workflows/security.yml")
             and _has(".github/workflows/security.yml", "pip-audit"),

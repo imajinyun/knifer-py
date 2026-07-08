@@ -1,4 +1,4 @@
-.PHONY: install test test-core test-cov lint format typecheck api-check api-index taxonomy-check facade-check facade-status-check readme-smoke examples-smoke bench-smoke changelog build check-dist sbom-smoke release-workflow-check governance-summary release-ready check clean
+.PHONY: install test test-core test-cov lint format typecheck api-check api-index taxonomy-check facade-check facade-status-check readme-smoke examples-smoke bench-smoke changelog build check-dist sbom-smoke release-workflow-check workflow-drift-check governance-summary release-ready check clean
 
 BENCH_SMOKE_OUTPUT ?= tmp/benchmark-smoke.json
 BENCH_SMOKE_BASELINE ?= api/benchmark-smoke-baseline.json
@@ -70,6 +70,9 @@ sbom-smoke:
 
 release-workflow-check:
 	.venv/bin/python scripts/check_release_workflow.py
+
+workflow-drift-check:
+	.venv/bin/python scripts/check_workflow_drift.py
 
 governance-summary:
 	.venv/bin/python scripts/check_governance_summary.py

@@ -41,6 +41,7 @@ make changelog
 make check-dist
 make sbom-smoke
 make release-workflow-check
+make workflow-drift-check
 make governance-summary
 make release-ready
 ```
