@@ -35,6 +35,7 @@ make taxonomy-check
 make facade-check
 make facade-status-check
 make capability-check
+make capability-test-policy-check
 make readme-smoke
 make examples-smoke
 make bench-smoke

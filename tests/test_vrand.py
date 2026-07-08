@@ -88,6 +88,13 @@ class TestRandomBytes:
     def test_secure_non_positive_returns_empty(self) -> None:
         assert vrand.secure_random_bytes(0) == b""
 
+    def test_secure_random_bytes_uses_strict_reader_errors(self) -> None:
+        def invalid_reader(_n: int) -> bytes:
+            raise RuntimeError("invalid entropy")
+
+        with pytest.raises(RuntimeError, match="invalid entropy"):
+            vrand.secure_random_bytes_with_options(8, vrand.with_random_reader(invalid_reader))
+
     def test_reader_option_and_fallback(self) -> None:
         assert (
             vrand.random_bytes_with_options(4, vrand.with_random_reader(lambda n: b"x" * n))

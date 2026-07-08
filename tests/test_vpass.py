@@ -18,6 +18,11 @@ def test_common_weak_password_is_capped() -> None:
     assert vpass.analyze("123456").common_weak
 
 
+def test_rejects_common_password_as_security_sensitive_signal() -> None:
+    assert vpass.is_weak("password")
+    assert vpass.score("password") <= 10
+
+
 def test_all_common_weak_passwords() -> None:
     common = {
         "000000",

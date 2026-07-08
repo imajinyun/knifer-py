@@ -60,6 +60,12 @@ def collect_checks() -> list[Check]:
             "public facade capability domain registry",
         ),
         Check(
+            "capability.test-policy",
+            _exists("scripts/check_capability_test_policy.py")
+            and _has("Makefile", "capability-test-policy-check:"),
+            "star and security-sensitive facade test policy",
+        ),
+        Check(
             "error.taxonomy",
             _exists("scripts/check_error_taxonomy.py")
             and _has("Makefile", "taxonomy-check:"),

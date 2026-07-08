@@ -8,7 +8,11 @@ def test_render_summary_reports_pass_and_fail_counts() -> None:
         [
             Check("api.snapshot", True, "public API snapshot gate"),
             Check("workflow.drift", True, "workflow and Makefile gate consistency"),
-            Check("capability.domains", False, "public facade capability domain registry"),
+            Check(
+                "capability.test-policy",
+                False,
+                "star and security-sensitive facade test policy",
+            ),
         ]
     )
 
@@ -18,5 +22,5 @@ Total: 2/3 checks passed
 
 - PASS api.snapshot: public API snapshot gate
 - PASS workflow.drift: workflow and Makefile gate consistency
-- FAIL capability.domains: public facade capability domain registry
+- FAIL capability.test-policy: star and security-sensitive facade test policy
 """

@@ -1,4 +1,4 @@
-.PHONY: install test test-core test-cov lint format typecheck api-check api-index taxonomy-check facade-check facade-status-check capability-check readme-smoke examples-smoke bench-smoke changelog build check-dist sbom-smoke security-audit min-deps-smoke release-workflow-check workflow-drift-check governance-summary release-ready check clean
+.PHONY: install test test-core test-cov lint format typecheck api-check api-index taxonomy-check facade-check facade-status-check capability-check capability-test-policy-check readme-smoke examples-smoke bench-smoke changelog build check-dist sbom-smoke security-audit min-deps-smoke release-workflow-check workflow-drift-check governance-summary release-ready check clean
 
 BENCH_SMOKE_OUTPUT ?= tmp/benchmark-smoke.json
 BENCH_SMOKE_BASELINE ?= api/benchmark-smoke-baseline.json
@@ -45,6 +45,9 @@ facade-status-check:
 
 capability-check:
 	.venv/bin/python scripts/check_capability_domains.py
+
+capability-test-policy-check:
+	.venv/bin/python scripts/check_capability_test_policy.py
 
 readme-smoke:
 	.venv/bin/python scripts/check_readme_smoke.py
