@@ -34,6 +34,7 @@ make api-index
 make taxonomy-check
 make facade-check
 make facade-status-check
+make capability-check
 make readme-smoke
 make examples-smoke
 make bench-smoke

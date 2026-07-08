@@ -19,6 +19,7 @@ REQUIREMENTS = (
     Requirement("Makefile", "taxonomy-check:", "Makefile exposes error taxonomy gate"),
     Requirement("Makefile", "facade-check:", "Makefile exposes facade consistency gate"),
     Requirement("Makefile", "facade-status-check:", "Makefile exposes facade status gate"),
+    Requirement("Makefile", "capability-check:", "Makefile exposes capability domain gate"),
     Requirement("Makefile", "readme-smoke:", "Makefile exposes README smoke gate"),
     Requirement("Makefile", "bench-smoke:", "Makefile exposes benchmark smoke gate"),
     Requirement("Makefile", "test-core:", "Makefile exposes core test subset"),

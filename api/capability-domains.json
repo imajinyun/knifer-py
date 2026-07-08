@@ -1,0 +1,314 @@
+{
+  "domains": {
+    "collection_algorithms": {
+      "description": "Collection, algorithm, and data-structure helpers."
+    },
+    "crypto_security": {
+      "description": "Cryptography, token, password, identity, and masking helpers."
+    },
+    "data_format": {
+      "description": "Data serialization, parsing, validation, and encoding helpers."
+    },
+    "data_transform": {
+      "description": "Pure transformations for strings, numbers, dates, objects, and text."
+    },
+    "filesystem_io": {
+      "description": "Filesystem, archive, spreadsheet, image, and local file workflows."
+    },
+    "integration_provider": {
+      "description": "Provider-oriented adapters and integration facades."
+    },
+    "network_transport": {
+      "description": "Network, HTTP, socket, SSH, FTP, and mail transport helpers."
+    },
+    "runtime_ops": {
+      "description": "Runtime, CLI, logging, scheduling, configuration, and system helpers."
+    },
+    "trust_boundary": {
+      "description": "Boundary-facing validation, URL, HTTP, filesystem, and safety helpers."
+    }
+  },
+  "modules": {
+    "vai": {
+      "domain": "integration_provider",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vbean": {
+      "domain": "data_transform",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vblf": {
+      "domain": "collection_algorithms",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vbool": {
+      "domain": "data_transform",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vcache": {
+      "domain": "collection_algorithms",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vcli": {
+      "domain": "runtime_ops",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vcodec": {
+      "domain": "data_format",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vconf": {
+      "domain": "runtime_ops",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vconv": {
+      "domain": "data_transform",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vcron": {
+      "domain": "runtime_ops",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vcrypto": {
+      "domain": "crypto_security",
+      "security_sensitive": true,
+      "star": true
+    },
+    "vcsv": {
+      "domain": "data_format",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vdate": {
+      "domain": "data_transform",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vdb": {
+      "domain": "integration_provider",
+      "security_sensitive": true,
+      "star": false
+    },
+    "vdfa": {
+      "domain": "data_transform",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vdict": {
+      "domain": "collection_algorithms",
+      "security_sensitive": false,
+      "star": false
+    },
+    "verr": {
+      "domain": "runtime_ops",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vfile": {
+      "domain": "filesystem_io",
+      "security_sensitive": true,
+      "star": true
+    },
+    "vform": {
+      "domain": "data_format",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vftp": {
+      "domain": "network_transport",
+      "security_sensitive": true,
+      "star": false
+    },
+    "vgeo": {
+      "domain": "data_transform",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vhan": {
+      "domain": "data_transform",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vhash": {
+      "domain": "data_format",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vhttp": {
+      "domain": "trust_boundary",
+      "security_sensitive": true,
+      "star": true
+    },
+    "vid": {
+      "domain": "crypto_security",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vident": {
+      "domain": "crypto_security",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vimg": {
+      "domain": "filesystem_io",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vjob": {
+      "domain": "runtime_ops",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vjson": {
+      "domain": "data_format",
+      "security_sensitive": false,
+      "star": true
+    },
+    "vjwt": {
+      "domain": "crypto_security",
+      "security_sensitive": true,
+      "star": true
+    },
+    "vlog": {
+      "domain": "runtime_ops",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vmail": {
+      "domain": "network_transport",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vmap": {
+      "domain": "collection_algorithms",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vmask": {
+      "domain": "crypto_security",
+      "security_sensitive": true,
+      "star": false
+    },
+    "vnet": {
+      "domain": "network_transport",
+      "security_sensitive": true,
+      "star": false
+    },
+    "vnum": {
+      "domain": "data_transform",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vobj": {
+      "domain": "data_transform",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vpass": {
+      "domain": "crypto_security",
+      "security_sensitive": true,
+      "star": false
+    },
+    "vpoi": {
+      "domain": "filesystem_io",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vrand": {
+      "domain": "crypto_security",
+      "security_sensitive": true,
+      "star": true
+    },
+    "vref": {
+      "domain": "runtime_ops",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vregex": {
+      "domain": "data_transform",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vsem": {
+      "domain": "runtime_ops",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vseq": {
+      "domain": "collection_algorithms",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vset": {
+      "domain": "collection_algorithms",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vskt": {
+      "domain": "network_transport",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vslice": {
+      "domain": "collection_algorithms",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vssh": {
+      "domain": "network_transport",
+      "security_sensitive": true,
+      "star": false
+    },
+    "vstr": {
+      "domain": "data_transform",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vsys": {
+      "domain": "runtime_ops",
+      "security_sensitive": true,
+      "star": false
+    },
+    "vtok": {
+      "domain": "integration_provider",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vtpl": {
+      "domain": "data_format",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vurl": {
+      "domain": "trust_boundary",
+      "security_sensitive": true,
+      "star": true
+    },
+    "vver": {
+      "domain": "data_transform",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vxml": {
+      "domain": "data_format",
+      "security_sensitive": false,
+      "star": false
+    },
+    "vzip": {
+      "domain": "filesystem_io",
+      "security_sensitive": true,
+      "star": false
+    }
+  },
+  "schema_version": 1
+}

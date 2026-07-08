@@ -53,6 +53,13 @@ def collect_checks() -> list[Check]:
             "facade lifecycle registry",
         ),
         Check(
+            "capability.domains",
+            _exists("api/capability-domains.json")
+            and _exists("scripts/check_capability_domains.py")
+            and _has("Makefile", "capability-check:"),
+            "public facade capability domain registry",
+        ),
+        Check(
             "error.taxonomy",
             _exists("scripts/check_error_taxonomy.py")
             and _has("Makefile", "taxonomy-check:"),
