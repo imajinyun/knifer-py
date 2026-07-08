@@ -94,9 +94,10 @@ def collect_checks() -> list[Check]:
         ),
         Check(
             "security.audit",
-            _exists(".github/workflows/security.yml")
-            and _has(".github/workflows/security.yml", "pip-audit"),
-            "dependency audit workflow",
+            _exists("scripts/check_security_audit.py")
+            and _has("Makefile", "security-audit:")
+            and _has(".github/workflows/security.yml", "scripts/check_security_audit.py"),
+            "local and workflow dependency audit gate",
         ),
         Check(
             "minimum.deps",

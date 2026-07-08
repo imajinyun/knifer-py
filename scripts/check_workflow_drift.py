@@ -24,6 +24,7 @@ REQUIREMENTS = (
     Requirement("Makefile", "test-core:", "Makefile exposes core test subset"),
     Requirement("Makefile", "release-ready:", "Makefile exposes release readiness gate"),
     Requirement("Makefile", "sbom-smoke:", "Makefile exposes SBOM smoke gate"),
+    Requirement("Makefile", "security-audit:", "Makefile exposes security audit gate"),
     Requirement("Makefile", "release-workflow-check:", "Makefile exposes provenance check"),
     Requirement("Makefile", "governance-summary:", "Makefile exposes governance summary"),
     Requirement(".github/workflows/ci.yml", "scripts/check_api_snapshot.py", "CI runs API check"),
@@ -68,11 +69,10 @@ REQUIREMENTS = (
         "actions/attest-build-provenance@v2",
         "release workflow attests artifacts",
     ),
-    Requirement(".github/workflows/security.yml", "pip-audit", "security workflow runs pip-audit"),
     Requirement(
         ".github/workflows/security.yml",
-        "poetry export",
-        "security workflow exports locked requirements",
+        "scripts/check_security_audit.py",
+        "security workflow runs shared audit script",
     ),
 )
 

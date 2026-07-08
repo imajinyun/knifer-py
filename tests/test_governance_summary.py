@@ -8,7 +8,7 @@ def test_render_summary_reports_pass_and_fail_counts() -> None:
         [
             Check("api.snapshot", True, "public API snapshot gate"),
             Check("workflow.drift", True, "workflow and Makefile gate consistency"),
-            Check("release.provenance", False, "release artifact and SBOM provenance"),
+            Check("security.audit", False, "local and workflow dependency audit gate"),
         ]
     )
 
@@ -18,5 +18,5 @@ Total: 2/3 checks passed
 
 - PASS api.snapshot: public API snapshot gate
 - PASS workflow.drift: workflow and Makefile gate consistency
-- FAIL release.provenance: release artifact and SBOM provenance
+- FAIL security.audit: local and workflow dependency audit gate
 """
