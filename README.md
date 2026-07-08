@@ -40,6 +40,7 @@ make bench-smoke
 make changelog
 make check-dist
 make sbom-smoke
+make release-workflow-check
 make release-ready
 ```
 
@@ -69,6 +70,7 @@ make check-dist
 
 Tagged releases such as `v0.1.0` run the release workflow and publish through
 PyPI trusted publishing. Release builds also upload a CycloneDX SBOM artifact.
+Release artifacts and SBOMs are published with GitHub provenance attestations.
 See [`docs/release.md`](docs/release.md).
 
 ## ⭐ Start With These Modules
