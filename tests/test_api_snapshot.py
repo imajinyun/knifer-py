@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from scripts.check_api_snapshot import diff_snapshot
+from scripts.check_api_snapshot import diff_snapshot, render_api_index
 
 
 def _snapshot(signature: str = "(x: int) -> str") -> dict[str, Any]:
@@ -57,3 +57,29 @@ def test_diff_snapshot_reports_method_signature_change() -> None:
     diffs = diff_snapshot(expected, actual)
 
     assert any(diff.startswith("changed method signature: vfoo.Thing.run") for diff in diffs)
+
+
+def test_render_api_index_outputs_stable_markdown() -> None:
+    snapshot = _snapshot()
+    snapshot["modules"]["vfoo"]["exports"]["VERSION"] = {
+        "kind": "value",
+        "type": "builtins.str",
+    }
+
+    rendered = render_api_index(snapshot)
+
+    assert rendered == """# kniferpy Public API Index
+
+## Root Exports
+
+- vfoo
+
+## Modules
+
+### kniferpy.vfoo
+
+- class `Thing()`
+  - method `run(self) -> None`
+- value `VERSION`
+- function `convert(x: int) -> str`
+"""

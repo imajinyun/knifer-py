@@ -30,6 +30,7 @@ make install
 make format
 make check
 make test-core
+make api-index
 make taxonomy-check
 make facade-check
 make facade-status-check

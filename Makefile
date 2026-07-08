@@ -1,4 +1,4 @@
-.PHONY: install test test-core test-cov lint format typecheck api-check taxonomy-check facade-check facade-status-check readme-smoke examples-smoke bench-smoke changelog build check-dist sbom-smoke release-ready check clean
+.PHONY: install test test-core test-cov lint format typecheck api-check api-index taxonomy-check facade-check facade-status-check readme-smoke examples-smoke bench-smoke changelog build check-dist sbom-smoke release-ready check clean
 
 BENCH_SMOKE_OUTPUT ?= tmp/benchmark-smoke.json
 BENCH_SMOKE_BASELINE ?= api/benchmark-smoke-baseline.json
@@ -30,6 +30,9 @@ api-check:
 	else \
 		.venv/bin/python scripts/check_api_snapshot.py; \
 	fi
+
+api-index:
+	.venv/bin/python scripts/check_api_snapshot.py --print-index
 
 taxonomy-check:
 	.venv/bin/python scripts/check_error_taxonomy.py

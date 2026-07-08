@@ -170,13 +170,77 @@ def _write_snapshot(path: Path, snapshot: dict[str, Any]) -> None:
     path.write_text(json.dumps(snapshot, indent=2, sort_keys=True) + "\n", encoding="utf-8")
 
 
+def _format_api_entry(kind: str, name: str, signature: str | None) -> str:
+    if signature is None:
+        return f"- {kind} `{name}`"
+    return f"- {kind} `{name}{signature}`"
+
+
+def render_api_index(snapshot: dict[str, Any]) -> str:
+    package = str(snapshot.get("package", "kniferpy"))
+    lines = [f"# {package} Public API Index", "", "## Root Exports", ""]
+
+    root_exports = sorted(str(name) for name in snapshot.get("root_exports", ()))
+    if root_exports:
+        lines.extend(f"- {name}" for name in root_exports)
+    else:
+        lines.append("- None")
+
+    lines.extend(["", "## Modules", ""])
+    modules = snapshot.get("modules", {})
+    if not isinstance(modules, dict) or not modules:
+        lines.append("- None")
+        return "\n".join(lines).rstrip() + "\n"
+
+    for module_name in sorted(str(name) for name in modules):
+        module = modules[module_name]
+        lines.append(f"### {package}.{module_name}")
+        lines.append("")
+        exports = module.get("exports", {}) if isinstance(module, dict) else {}
+        if not isinstance(exports, dict) or not exports:
+            lines.append("- None")
+            lines.append("")
+            continue
+        for export_name in sorted(str(name) for name in exports):
+            entry = exports[export_name]
+            if not isinstance(entry, dict):
+                lines.append(f"- value `{export_name}`")
+                continue
+            kind = str(entry.get("kind", "value"))
+            signature = entry.get("signature")
+            signature_text = signature if isinstance(signature, str) else None
+            lines.append(_format_api_entry(kind, export_name, signature_text))
+            methods = entry.get("methods", {})
+            if isinstance(methods, dict) and methods:
+                for method_name in sorted(str(name) for name in methods):
+                    method = methods[method_name]
+                    method_signature = (
+                        method.get("signature") if isinstance(method, dict) else None
+                    )
+                    signature_text = (
+                        method_signature if isinstance(method_signature, str) else None
+                    )
+                    if signature_text is None:
+                        lines.append(f"  - method `{method_name}`")
+                    else:
+                        lines.append(f"  - method `{method_name}{signature_text}`")
+        lines.append("")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check kniferpy public API snapshot.")
     parser.add_argument("--snapshot", type=Path, default=DEFAULT_SNAPSHOT)
     parser.add_argument("--update", action="store_true", help="rewrite the public API snapshot")
+    parser.add_argument("--print-index", action="store_true", help="print a public API index")
     args = parser.parse_args()
 
     actual = build_snapshot()
+    if args.print_index:
+        print(render_api_index(actual), end="")
+        return 0
+
     if args.update:
         _write_snapshot(args.snapshot, actual)
         print(f"updated API snapshot: {args.snapshot}")
